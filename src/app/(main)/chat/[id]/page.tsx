@@ -117,6 +117,8 @@ export default function ChatPage() {
         title: "Calling...",
         description: `Starting a voice call with ${otherUser.name}. ${CHARGE_COSTS.call} coins deducted.`
     });
+
+    router.push(`/call/${convoId}?otherUserId=${otherUser.id}`);
   }
 
   return (

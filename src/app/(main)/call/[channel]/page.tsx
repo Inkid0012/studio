@@ -1,0 +1,166 @@
+
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import AgoraRTC, {
+  IAgoraRTCClient,
+  IAgoraRTCRemoteUser,
+  IMicrophoneAudioTrack,
+} from 'agora-rtc-sdk-ng';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Mic, MicOff, PhoneOff } from 'lucide-react';
+import { MainHeader } from '@/components/layout/main-header';
+import { useToast } from '@/hooks/use-toast';
+import { getUserById, getCurrentUser } from '@/lib/data';
+import type { User } from '@/types';
+import { cn } from '@/lib/utils';
+
+const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
+const token = process.env.NEXT_PUBLIC_AGORA_TEMP_TOKEN || null;
+
+export default function CallPage() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  
+  const channelName = params.channel as string;
+  const otherUserId = searchParams.get('otherUserId');
+
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [callStatus, setCallStatus] = useState('Connecting...');
+  
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user || !appId || !otherUserId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Invalid call session.' });
+      router.push('/discover');
+      return;
+    }
+    setCurrentUser(user);
+
+    const fetchOtherUser = async () => {
+        const userProfile = await getUserById(otherUserId);
+        if (userProfile) {
+            setOtherUser(userProfile);
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find user to call.' });
+            router.push('/chat');
+        }
+    }
+    fetchOtherUser();
+
+  }, [router, toast, otherUserId]);
+
+  useEffect(() => {
+    if (!currentUser || !otherUser) return;
+    
+    const initAgora = async () => {
+      clientRef.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+      clientRef.current.on('user-published', async (user, mediaType) => {
+        await clientRef.current?.subscribe(user, mediaType);
+        if (mediaType === 'audio') {
+          user.audioTrack?.play();
+          setCallStatus('Connected');
+        }
+      });
+
+      clientRef.current.on('user-unpublished', () => {
+        setCallStatus('User left');
+      });
+      
+       clientRef.current.on('user-left', () => {
+        setCallStatus('User has left the call');
+        toast({ title: 'Call Ended', description: 'The other user has left the call.' });
+        setTimeout(() => handleLeave(), 2000);
+      });
+
+      try {
+        await clientRef.current.join(appId, channelName, token, currentUser.id);
+        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        localAudioTrackRef.current = micTrack;
+        await clientRef.current.publish([micTrack]);
+        setCallStatus('Ringing...');
+      } catch (error) {
+        console.error('Agora initialization failed:', error);
+        setCallStatus('Failed to connect');
+        toast({
+          variant: 'destructive',
+          title: 'Call Failed',
+          description: 'Could not connect to the call service.',
+        });
+      }
+    };
+
+    initAgora();
+
+    return () => {
+      localAudioTrackRef.current?.close();
+      clientRef.current?.leave();
+    };
+  }, [currentUser, otherUser, channelName, toast]);
+
+  const handleLeave = async () => {
+    setCallStatus('Leaving...');
+    localAudioTrackRef.current?.close();
+    await clientRef.current?.leave();
+    router.back();
+  };
+
+  const toggleMute = async () => {
+    if (localAudioTrackRef.current) {
+      await localAudioTrackRef.current.setMuted(!isMuted);
+      setIsMuted(!isMuted);
+    }
+  };
+
+  if (!otherUser) {
+    return <div>Loading call...</div>;
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-background">
+      <MainHeader title="Voice Call" />
+      <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-8">
+        <div className="flex flex-col items-center space-y-4">
+          <Avatar className="w-40 h-40 border-4 border-accent">
+            <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} data-ai-hint="portrait person" />
+            <AvatarFallback className="text-5xl">{otherUser.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <h2 className="text-3xl font-bold">{otherUser.name}</h2>
+          <p className="text-muted-foreground text-lg">{callStatus}</p>
+        </div>
+      </div>
+      <div className="fixed bottom-0 left-0 right-0 p-8 bg-background/80 backdrop-blur-sm border-t">
+        <div className="flex justify-center items-center gap-8">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={toggleMute}
+            className={cn(
+              'rounded-full w-20 h-20',
+              isMuted ? 'bg-primary text-primary-foreground' : 'bg-muted'
+            )}
+          >
+            {isMuted ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+          </Button>
+          <Button
+            size="lg"
+            onClick={handleLeave}
+            className="rounded-full w-20 h-20 bg-destructive hover:bg-destructive/90"
+          >
+            <PhoneOff className="w-8 h-8" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
