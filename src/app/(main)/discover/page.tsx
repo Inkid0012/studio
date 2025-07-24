@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Search, Wallet, X } from "lucide-react";
+import { PlayCircle, Search, Wallet, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileListItem } from "@/components/profile-list-item";
@@ -55,13 +55,12 @@ export default function DiscoverPage() {
     
     setIsLoading(true);
     setIsSearching(true);
+    setSearchOpen(false);
 
     const lowerCaseQuery = searchQuery.toLowerCase();
     
-    // In a real app, this would be an API call to a search endpoint.
-    // For this mock, we will filter the existing list of all users.
     const currentUser = getCurrentUser();
-    const allUsers = await getDiscoverProfiles(currentUser?.id, true); // Get all users for search
+    const allUsers = await getDiscoverProfiles(currentUser?.id, true); 
     const results = allUsers.filter(user => 
         user.name.toLowerCase().includes(lowerCaseQuery) ||
         user.id.toLowerCase().includes(lowerCaseQuery)
@@ -69,7 +68,6 @@ export default function DiscoverPage() {
     
     setDisplayedProfiles(results);
     setIsLoading(false);
-    setSearchOpen(false);
   };
 
   const clearSearch = () => {
@@ -119,8 +117,8 @@ export default function DiscoverPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
-                    <Button type="submit" onClick={handleSearch}>
-                        Search
+                    <Button type="submit" onClick={handleSearch} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Search'}
                     </Button>
                 </div>
             </DialogContent>
@@ -168,7 +166,7 @@ export default function DiscoverPage() {
           <TabsContent value="recommend">
              {isLoading ? (
                 <div className="flex items-center justify-center h-48">
-                    <p className="text-muted-foreground">Loading...</p>
+                    <Loader2 className="w-8 h-8 animate-spin text-primary"/>
                 </div>
             ) : showPlaceholder ? (
                 <div className="flex items-center justify-center h-48">

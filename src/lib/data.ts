@@ -307,28 +307,25 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
         allUsers.push(doc.data() as User);
     });
 
+    if (forSearch && currentUserId) {
+      return allUsers.filter(user => user.id !== currentUserId);
+    }
+
     if (!currentUserId) {
-        return allUsers.filter(u => u.gender === 'female'); // Default to showing female profiles if no user
+        return allUsers.filter(u => u.gender === 'female');
     }
 
     const currentUser = await getUserById(currentUserId);
-    if (!currentUser) {
-         return allUsers.filter(u => u.gender === 'female');
-    }
-
     let otherUsers = allUsers.filter(user => user.id !== currentUserId);
 
-    if (forSearch) {
-        return otherUsers;
-    }
-    
-    if (currentUser.gender === 'male') {
+    if (currentUser && currentUser.gender === 'male') {
         return otherUsers.filter(user => user.gender === 'female');
-    } else if (currentUser.gender === 'female') {
+    } else if (currentUser && currentUser.gender === 'female') {
         return otherUsers.filter(user => user.gender === 'male');
     }
     
-    return []; // Return empty for 'other' gender for now
+    // Default fallback for new users or 'other' gender
+    return otherUsers.filter(u => u.gender === 'female');
 }
 
 export async function getConversationById(id: string): Promise<Conversation | null> {
