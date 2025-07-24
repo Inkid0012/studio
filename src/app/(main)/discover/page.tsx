@@ -3,10 +3,8 @@
 
 import { getDiscoverProfiles } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
-import { FizuLogo } from "@/components/icons/fizu-logo";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlayCircle, Search, Wallet } from "lucide-react";
@@ -28,11 +26,11 @@ export default function DiscoverPage() {
     fetchProfiles();
   }, []);
 
+  const showPlaceholder = !isLoading && profiles.length === 0;
+
   return (
     <div>
-      <MainHeader title="Discover" showBackButton={false}>
-        <FizuLogo className="text-3xl" />
-      </MainHeader>
+      <MainHeader title="" showBackButton={false} />
       <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <Card className="bg-orange-400 text-white shadow-lg overflow-hidden">
@@ -68,17 +66,12 @@ export default function DiscoverPage() {
           </div>
           <TabsContent value="recommend">
              {isLoading ? (
-                <div className="space-y-4 mt-4">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-center space-x-4">
-                            <Skeleton className="h-20 w-20 rounded-lg" />
-                            <div className="space-y-2 flex-1">
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                            </div>
-                            <Skeleton className="h-10 w-20 rounded-full" />
-                        </div>
-                    ))}
+                <div className="flex items-center justify-center h-48">
+                    <p className="text-muted-foreground">[users will appear here]</p>
+                </div>
+            ) : showPlaceholder ? (
+                <div className="flex items-center justify-center h-48">
+                    <p className="text-muted-foreground">[users will appear here]</p>
                 </div>
             ) : (
                 <div className="space-y-2 mt-4">
