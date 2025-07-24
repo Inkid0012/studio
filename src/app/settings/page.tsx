@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MainHeader } from "@/components/layout/main-header";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ChevronRight, Palette, BellOff, Trash2, Shield, Settings as CogIcon, Languages, Info, XCircle } from "lucide-react";
+import { ChevronRight, Palette, BellOff, Trash2, Shield, Settings as CogIcon, Languages, Info, XCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
@@ -61,7 +60,7 @@ export default function SettingsPage() {
             <MainHeader title="Settings" showBackButton={true}/>
             <div className="flex-1 p-4 space-y-4">
                <div className="bg-card rounded-lg p-2">
-                    <SettingsItem label="Account and Security" icon={Shield} value="Unprotected" valueColor="text-destructive" onClick={() => router.push('/settings/account')} />
+                    <SettingsItem label="Account" icon={User} onClick={() => router.push('/settings/account')} />
                     <SettingsItem label="Chat settings" icon={CogIcon} onClick={() => router.push('/settings/chat')} />
                     <SettingsItem label="Blocked List" icon={XCircle} onClick={() => router.push('/settings/blocked')} />
                     <SettingsItem label="Language" icon={Languages} onClick={() => router.push('/settings/language')} />
@@ -85,31 +84,6 @@ export default function SettingsPage() {
                         <Switch id="dnd-mode" checked={dndMode} onCheckedChange={setDndMode} />
                     </div>
                </div>
-
-                <div className="bg-card rounded-lg p-2">
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                             <button className="flex items-center w-full py-4 text-left text-destructive">
-                                <Trash2 className="h-5 w-5 mr-4"/>
-                                <span className="flex-1 text-base">Delete Account</span>
-                                <ChevronRight className="w-5 h-5 text-muted-foreground/50" />
-                            </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete your
-                                account and remove your data from our servers.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </div>
             </div>
             <div className="p-4 mt-auto">
                  <AlertDialog>
