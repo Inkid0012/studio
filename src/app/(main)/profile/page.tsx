@@ -38,9 +38,19 @@ export default function ProfilePage() {
 
   return (
     <div className="bg-background">
-      <div className="relative h-64 bg-gradient-to-b from-yellow-200 via-orange-200 to-red-200 p-4">
+      <div className="relative h-64">
+        <Image 
+          src={user.profilePicture}
+          alt="Profile background"
+          layout="fill"
+          objectFit="cover"
+          className="blur-sm"
+          data-ai-hint="portrait person"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+
         <div className="absolute -bottom-16 left-4 right-4">
-          <Card className="shadow-lg">
+          <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
             <CardContent className="p-4 flex items-center space-x-4">
               <Avatar className="w-16 h-16 border-4 border-white">
                 <AvatarImage src={user.profilePicture} alt={user.name} data-ai-hint="portrait person" />
