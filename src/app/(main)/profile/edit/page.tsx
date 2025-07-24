@@ -124,7 +124,7 @@ export default function EditProfilePage() {
                                     <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person"/>
                                     <AvatarFallback className="text-5xl">{currentUser?.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                                <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if(!open) setShowCamera(false); }}>
                                     <DialogTrigger asChild>
                                         <Button type="button" size="icon" className="absolute bottom-2 right-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
                                             <Camera className="h-5 w-5"/>
@@ -132,16 +132,18 @@ export default function EditProfilePage() {
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className={cn(showCamera && "max-w-3xl")}>
+                                        <DialogHeader>
+                                            <DialogTitle>Change Profile Photo</DialogTitle>
+                                             {!showCamera && (
+                                                <DialogDescription>
+                                                    Take a new photo or upload one from your gallery.
+                                                </DialogDescription>
+                                             )}
+                                        </DialogHeader>
                                         {showCamera ? (
                                             <CameraView onCapture={handleCapture} onCancel={() => setShowCamera(false)} />
                                         ) : (
                                             <>
-                                                <DialogHeader>
-                                                    <DialogTitle>Change Profile Photo</DialogTitle>
-                                                    <DialogDescription>
-                                                        Take a new photo or upload one from your gallery.
-                                                    </DialogDescription>
-                                                </DialogHeader>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <Button variant="outline" onClick={() => setShowCamera(true)}>
                                                         <Video className="mr-2 h-5 w-5"/>
@@ -248,4 +250,5 @@ export default function EditProfilePage() {
             </div>
         </div>
     );
-}
+
+    
