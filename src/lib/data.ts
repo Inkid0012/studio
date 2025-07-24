@@ -1,6 +1,6 @@
 import type { User, Conversation, Message, PersonalInfoOption, Transaction } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 
 const defaultCurrentUser: User = {
@@ -63,7 +63,7 @@ export const users: User[] = [
     profilePicture: 'https://placehold.co/400x400.png',
     interests: ['Painting', 'Dogs', 'Yoga', 'Indie Music', 'Thrift Shopping'],
     isCertified: true,
-    coins: 0,
+    coins: 1000,
     friends: 120,
     following: 50,
     followers: 80,
@@ -99,7 +99,7 @@ export const users: User[] = [
     profilePicture: 'https://placehold.co/400x400.png',
     interests: ['Weightlifting', 'Running', 'Meal Prep', 'Podcasts', 'Beach Days'],
     isCertified: true,
-    coins: 0,
+    coins: 200,
     friends: 200,
     following: 75,
     followers: 150,
@@ -135,7 +135,7 @@ export const users: User[] = [
     profilePicture: 'https://placehold.co/400x400.png',
     interests: ['Reading', 'Creative Writing', 'Cats', 'Tea', 'Museums'],
     isCertified: false,
-    coins: 0,
+    coins: 50,
     friends: 150,
     following: 90,
     followers: 120,
@@ -164,11 +164,12 @@ export const conversations: Conversation[] = [
     },
 ];
 
-export const transactions: Transaction[] = [
-    { id: 'txn-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
-    { id: 'txn-2', type: 'spent', amount: 10, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
-    { id: 'txn-3', type: 'spent', amount: 50, description: 'Voice call with @Diana', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-    { id: 'txn-4', type: 'purchase', amount: 1000, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+// This is a mock, in a real app this would be a firestore collection
+let mockTransactions: Transaction[] = [
+    { id: 'txn-1', userId: 'user-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+    { id: 'txn-2', userId: 'user-1', type: 'spent', amount: 10, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
+    { id: 'txn-3', userId: 'user-1', type: 'spent', amount: 50, description: 'Voice call with @Diana', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+    { id: 'txn-4', userId: 'user-1', type: 'purchase', amount: 1000, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
 ];
 
 
@@ -194,14 +195,29 @@ export async function getUserById(id: string): Promise<User | null> {
     return null;
 }
 
-export function getDiscoverProfiles(): User[] {
+export async function getDiscoverProfiles(): Promise<User[]> {
     const currentUser = getCurrentUser();
     if (!currentUser) {
         return [];
     }
+    
+    // In a real app, you'd have more complex discovery logic.
+    // Here we just get all users and filter them.
+    const usersCollection = collection(db, 'users');
+    const q = query(usersCollection, where("id", "!=", currentUser.id));
+    const querySnapshot = await getDocs(q);
+    const allUsers: User[] = [];
+    querySnapshot.forEach((doc) => {
+        allUsers.push(doc.data() as User);
+    });
+
+    // Fallback to mock data if firestore is empty
+    if (allUsers.length === 0) {
+        allUsers.push(...users);
+    }
 
     // Filter out the current user first
-    const otherUsers = users.filter(user => user.id !== currentUser.id);
+    const otherUsers = allUsers.filter(user => user.id !== currentUser.id);
 
     // Then, filter by opposite gender
     if (currentUser.gender === 'male') {
@@ -210,9 +226,6 @@ export function getDiscoverProfiles(): User[] {
         return otherUsers.filter(user => user.gender === 'male');
     }
     
-    // For 'other' or unset gender, we will not show anyone based on the rule.
-    // Or we could return all users except the current one. 
-    // For now, let's stick to the strict opposite-gender rule.
     return [];
 }
 
@@ -314,7 +327,18 @@ export const personalInfoOptions: PersonalInfoOption[] = [
   ];
 
   export function getTransactionsForUser(userId: string): Transaction[] {
-    // In a real app, this would filter transactions based on the userId.
-    // For this demo, we'll return all mock transactions.
-    return transactions;
+    // In a real app, this would filter transactions based on the userId from firestore
+    return mockTransactions.filter(tx => tx.userId === userId);
+  }
+
+  export async function addTransaction(data: Omit<Transaction, 'id' | 'timestamp'>) {
+      const newTransaction: Transaction = {
+          ...data,
+          id: `txn-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+      };
+      // In a real app, this would be saved to a 'transactions' collection in Firestore
+      mockTransactions.push(newTransaction);
+      console.log('Transaction added:', newTransaction);
+      return newTransaction;
   }

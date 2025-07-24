@@ -51,6 +51,7 @@ export type PersonalInfoOption = {
 
 export type Transaction = {
   id: string;
+  userId: string;
   type: 'purchase' | 'spent';
   amount: number;
   description: string;
