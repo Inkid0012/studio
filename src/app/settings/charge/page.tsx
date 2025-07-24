@@ -3,6 +3,7 @@
 
 import { MainHeader } from "@/components/layout/main-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CHARGE_COSTS } from "@/lib/data";
 import { MessageSquare, Phone } from "lucide-react";
 
 const ChargeItem = ({ icon: Icon, label, value, valueUnit }: { icon: React.ElementType, label: string, value: string, valueUnit: string }) => (
@@ -29,8 +30,8 @@ export default function ChargeSettingsPage() {
                         <CardTitle className="font-headline text-lg">Coin Charges</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                       <ChargeItem icon={MessageSquare} label="Message Charges" value="-30" valueUnit="coins" />
-                       <ChargeItem icon={Phone} label="Call Charges" value="-150" valueUnit="coins" />
+                       <ChargeItem icon={MessageSquare} label="Message Charges" value={`-${CHARGE_COSTS.message}`} valueUnit="coins" />
+                       <ChargeItem icon={Phone} label="Call Charges" value={`-${CHARGE_COSTS.call}`} valueUnit="coins" />
                     </CardContent>
                 </Card>
             </div>

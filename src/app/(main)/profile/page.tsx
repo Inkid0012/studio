@@ -15,6 +15,17 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Stat = ({ value, label, href }: { value: number, label: string, href: string }) => (
   <Link href={href} className="text-center group">
@@ -23,12 +34,22 @@ const Stat = ({ value, label, href }: { value: number, label: string, href: stri
   </Link>
 );
 
-const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false }: { href: string, icon: React.ElementType, label: string, onClick?: () => void, disabled?: boolean }) => (
-  <Link href={href} onClick={onClick} className={cn("flex flex-col items-center space-y-2 group", disabled && "opacity-50 pointer-events-none")}>
-    <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
-    <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
-  </Link>
-);
+const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false, as, children }: { href?: string, icon: React.ElementType, label: string, onClick?: (e: React.MouseEvent) => void, disabled?: boolean, as?: React.ElementType, children?: React.ReactNode }) => {
+    const Component = as || 'div';
+    const content = (
+        <div className={cn("flex flex-col items-center space-y-2 group", disabled && "opacity-50 pointer-events-none")}>
+            <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
+            <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
+        </div>
+    );
+    
+    if (href) {
+        return <Link href={href} onClick={onClick}>{content}</Link>
+    }
+
+    return <Component onClick={onClick}>{children || content}</Component>;
+};
+
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -202,7 +223,26 @@ export default function ProfilePage() {
                     />
                     <OtherLink href="#" icon={ShieldQuestion} label="Customer service" />
                     <OtherLink href="/settings" icon={Settings} label="Settings" />
-                    <OtherLink href="#" icon={LogOut} label="Logout" onClick={(e) => {e.preventDefault(); handleLogout(); }}/>
+                    <AlertDialog>
+                       <AlertDialogTrigger asChild>
+                         <div className="flex flex-col items-center space-y-2 group cursor-pointer">
+                            <LogOut className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
+                            <span className="text-xs text-center text-muted-foreground group-hover:text-primary">Logout</span>
+                        </div>
+                       </AlertDialogTrigger>
+                       <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Are you sure you want to log out?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleLogout} className="bg-primary hover:bg-primary/90">Logout</AlertDialogAction>
+                            </AlertDialogFooter>
+                       </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </CardContent>
         </Card>

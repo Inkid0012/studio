@@ -1,18 +1,19 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getUserById, getCurrentUser, setCurrentUser, createUserInFirestore } from '@/lib/data';
+import { addTransaction, getConversationById, getUserById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Mic, Paperclip, Send } from 'lucide-react';
+import { Phone, Mic, Paperclip, Send, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function ChatPage() {
   const params = useParams();
@@ -24,6 +25,8 @@ export default function ChatPage() {
   const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
 
   useEffect(() => {
     const fetchConvo = async () => {
@@ -47,26 +50,30 @@ export default function ChatPage() {
     return <div>Loading chat...</div>;
   }
 
+  const handleInsufficientCoins = (type: 'message' | 'call') => {
+      const cost = type === 'message' ? CHARGE_COSTS.message : CHARGE_COSTS.call;
+      setRechargeContext({
+          title: 'Insufficient Coins',
+          description: `You need ${cost} coins to ${type === 'message' ? 'send a message' : 'make a voice call'}. Please recharge.`
+      });
+      setShowRechargeDialog(true);
+  };
+
   const handleSendMessage = async () => {
       if (!messageText.trim()) return;
 
-      const cost = 20;
       if (currentUser.gender === 'male') {
-          if (currentUser.coins < cost) {
-              toast({
-                  variant: 'destructive',
-                  title: 'Insufficient Coins',
-                  description: `You need ${cost} coins to send a message. Please recharge.`,
-              });
+          if (currentUser.coins < CHARGE_COSTS.message) {
+              handleInsufficientCoins('message');
               return;
           }
-          const updatedUser = { ...currentUser, coins: currentUser.coins - cost };
+          const updatedUser = { ...currentUser, coins: currentUser.coins - CHARGE_COSTS.message };
           setCurrentUserFromState(updatedUser);
           setCurrentUser(updatedUser);
           await createUserInFirestore(updatedUser);
           await addTransaction({
               type: 'spent',
-              amount: cost,
+              amount: CHARGE_COSTS.message,
               description: `Message to ${otherUser.name}`,
               userId: currentUser.id,
           });
@@ -90,30 +97,25 @@ export default function ChatPage() {
   };
 
   const handleCall = async () => {
-    const cost = 150;
-     if (currentUser.coins < cost) {
-        toast({
-            variant: 'destructive',
-            title: 'Insufficient Coins',
-            description: `You need ${cost} coins to make a voice call. Please recharge.`,
-        });
+     if (currentUser.coins < CHARGE_COSTS.call) {
+        handleInsufficientCoins('call');
         return;
     }
 
-    const updatedUser = { ...currentUser, coins: currentUser.coins - cost };
+    const updatedUser = { ...currentUser, coins: currentUser.coins - CHARGE_COSTS.call };
     setCurrentUserFromState(updatedUser);
     setCurrentUser(updatedUser);
     await createUserInFirestore(updatedUser);
     await addTransaction({
         type: 'spent',
-        amount: cost,
+        amount: CHARGE_COSTS.call,
         description: `Voice call with ${otherUser.name}`,
         userId: currentUser.id,
     });
       
     toast({
         title: "Calling...",
-        description: `Starting a voice call with ${otherUser.name}. ${cost} coins deducted.`
+        description: `Starting a voice call with ${otherUser.name}. ${CHARGE_COSTS.call} coins deducted.`
     });
   }
 
@@ -178,6 +180,23 @@ export default function ChatPage() {
           </Button>
         </div>
       </div>
+       <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>{rechargeContext.title}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {rechargeContext.description}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => router.push('/wallet')} className="bg-green-500 hover:bg-green-600">
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Recharge
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

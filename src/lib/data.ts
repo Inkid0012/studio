@@ -1,7 +1,13 @@
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from './firebase';
+
+export const CHARGE_COSTS = {
+  message: 30,
+  call: 150,
+};
 
 let mockUsers: User[] = [
   {
