@@ -9,7 +9,7 @@ import { auth } from "@/lib/firebase";
 import { signInAnonymously } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getUserById } from "@/lib/data";
+import { getUserById, setCurrentUser } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
@@ -27,10 +27,17 @@ export default function LoginPage() {
       const userProfile = await getUserById(firebaseUser.uid);
 
       if (userProfile) {
-        // User exists, redirect to discover
+        setCurrentUser(userProfile);
         router.push('/discover');
       } else {
-        // New user, redirect to gender selection
+        // For new anonymous users, we create a temporary local profile
+        // This will be properly created in firestore on the gender selection page
+         const tempUser = {
+          id: firebaseUser.uid,
+          name: `User-${firebaseUser.uid.substring(0, 5)}`,
+        };
+        // We set this temporary user so other parts of the app can access the ID
+        setCurrentUser(tempUser as any);
         router.push('/gender');
       }
     } catch (error) {

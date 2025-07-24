@@ -35,10 +35,6 @@ export function getCurrentUser(): User {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      // Make sure we have the correct ID from the default user object if it's the default user.
-      if (user.name === 'NightWhisper') {
-          user.id = defaultCurrentUser.id;
-      }
       return {...defaultCurrentUser, ...user};
     }
   }
@@ -158,12 +154,20 @@ export const conversations: Conversation[] = [
 ];
 
 export async function getUserById(id: string): Promise<User | null> {
-    const userRef = doc(db, 'users', id);
-    const userSnap = await getDoc(userRef);
+    try {
+        const userRef = doc(db, 'users', id);
+        const userSnap = await getDoc(userRef);
 
-    if (userSnap.exists()) {
-        return userSnap.data() as User;
-    } else {
+        if (userSnap.exists()) {
+            return userSnap.data() as User;
+        } else {
+            // Fallback to local data if not in Firestore, useful for dev/demo
+            const localUser = users.find(user => user.id === id);
+            if (localUser) return localUser;
+        }
+    } catch (error) {
+        console.error("Error fetching user from Firestore:", error);
+        // If firestore fails (e.g., offline), fallback to local data
         const localUser = users.find(user => user.id === id);
         if (localUser) return localUser;
     }
