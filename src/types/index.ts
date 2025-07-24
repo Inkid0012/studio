@@ -1,6 +1,8 @@
 export type User = {
   id: string;
   name: string;
+  email: string;
+  isAnonymous: boolean;
   age: number;
   dob: string; // ISO 8601 date string
   gender: 'male' | 'female' | 'other';

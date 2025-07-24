@@ -9,8 +9,9 @@ import { auth } from "@/lib/firebase";
 import { signInAnonymously } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getUserById, setCurrentUser } from "@/lib/data";
+import { getUserById, setCurrentUser, createUserInFirestore } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
+import type { User as AppUser } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,20 +25,34 @@ export default function LoginPage() {
       const firebaseUser = userCredential.user;
 
       // Check if user exists in Firestore
-      const userProfile = await getUserById(firebaseUser.uid);
+      let userProfile = await getUserById(firebaseUser.uid);
 
       if (userProfile) {
         setCurrentUser(userProfile);
         router.push('/discover');
       } else {
-        // For new anonymous users, we create a temporary local profile
-        // This will be properly created in firestore on the gender selection page
-         const tempUser = {
+        // Create a new user profile in Firestore
+        const newUser: AppUser = {
           id: firebaseUser.uid,
           name: `User-${firebaseUser.uid.substring(0, 5)}`,
+          email: '', // Anonymous users don't have an email
+          isAnonymous: true,
+          // Set other default fields
+          age: 0,
+          dob: new Date().toISOString(),
+          gender: 'other',
+          bio: '',
+          profilePicture: 'https://placehold.co/400x400.png',
+          interests: [],
+          isCertified: false,
+          coins: 0,
+          friends: 0,
+          following: 0,
+          followers: 0,
+          visitors: 0,
         };
-        // We set this temporary user so other parts of the app can access the ID
-        setCurrentUser(tempUser as any);
+        await createUserInFirestore(newUser);
+        setCurrentUser(newUser);
         router.push('/gender');
       }
     } catch (error) {
@@ -63,13 +78,13 @@ export default function LoginPage() {
         </div>
         <div className="space-y-4">
           <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 text-base" >
-            <Link href="/gender">
+            <Link href="/login/email">
               <Mail className="mr-2 h-5 w-5" />
               Continue with Email
             </Link>
           </Button>
           <Button variant="outline" asChild className="w-full font-bold py-6 text-base border-primary/30 hover:bg-primary/5">
-            <Link href="/gender">
+            <Link href="#">
               <Facebook className="mr-2 h-5 w-5 text-blue-600" />
               Continue with Facebook
             </Link>

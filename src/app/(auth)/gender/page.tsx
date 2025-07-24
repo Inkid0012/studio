@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { FizuLogo } from '@/components/icons/fizu-logo';
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { createUserInFirestore } from '@/lib/data';
+import { createUserInFirestore, getCurrentUser, setCurrentUser } from '@/lib/data';
 import type { User } from '@/types';
 
 export default function GenderSelectionPage() {
@@ -28,30 +29,35 @@ export default function GenderSelectionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user || !user.id) {
+       toast({
+        variant: 'destructive',
+        title: 'Not Authenticated',
+        description: 'You must be logged in to select a gender.',
+      });
+      router.push('/login');
+    } else {
+        setCurrentUserFromState(user);
+    }
+  }, [router, toast]);
+
 
   const handleContinue = async () => {
-    if (selectedGender) {
+    if (selectedGender && currentUser) {
         setIsLoading(true);
-        const firebaseUser = auth.currentUser;
-
-        if (!firebaseUser) {
-            toast({
-                variant: 'destructive',
-                title: 'Not Authenticated',
-                description: 'You must be logged in to select a gender.',
-            });
-            router.push('/login');
-            return;
-        }
-
+        
         try {
-            const newUser: Partial<User> = {
-                id: firebaseUser.uid,
+            const updatedUser: User = {
+                ...currentUser,
                 gender: selectedGender as 'male' | 'female' | 'other',
-                name: `User-${firebaseUser.uid.substring(0, 5)}`,
             };
 
-            await createUserInFirestore(newUser as User);
+            await createUserInFirestore(updatedUser);
+            setCurrentUser(updatedUser); // Update local state as well
 
             toast({
                 title: 'Welcome!',
@@ -60,11 +66,11 @@ export default function GenderSelectionPage() {
             router.push('/discover');
 
         } catch (error) {
-            console.error('Error creating user profile:', error);
+            console.error('Error updating user profile:', error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Could not create your profile. Please try again.',
+                description: 'Could not update your profile. Please try again.',
             });
             setIsLoading(false);
         }

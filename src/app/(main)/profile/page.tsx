@@ -1,18 +1,19 @@
 
 'use client';
-import { getCurrentUser, getUserById } from "@/lib/data";
+import { getCurrentUser, getUserById, setCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart } from 'lucide-react';
+import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart, LogOut } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
 import type { User } from "@/types";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
 
 const Stat = ({ value, label }: { value: number, label: string }) => (
   <div className="text-center">
@@ -34,8 +35,8 @@ const IconLink = ({ href, icon: Icon, label, hasNotification = false }: { href: 
 );
 
 
-const OtherLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => (
-  <Link href={href} className="flex flex-col items-center space-y-2 group">
+const OtherLink = ({ href, icon: Icon, label, onClick }: { href: string, icon: React.ElementType, label: string, onClick?: () => void }) => (
+  <Link href={href} onClick={onClick} className="flex flex-col items-center space-y-2 group">
     <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
     <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
   </Link>
@@ -44,20 +45,46 @@ const OtherLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elem
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // If there's a firebase user, always fetch the latest profile from firestore
         const userProfile = await getUserById(firebaseUser.uid);
-        setUser(userProfile);
+        if(userProfile){
+            setUser(userProfile);
+            setCurrentUser(userProfile); // also update local storage
+        } else {
+            // This can happen if the user signed up but didn't finish profile creation
+            // Or if there's a lag in firestore replication.
+            // We rely on locally stored user for a moment.
+            const localUser = getCurrentUser();
+            if (localUser && localUser.id === firebaseUser.uid) {
+              setUser(localUser);
+            } else {
+              // If no local user, or mismatch, redirect to login
+              router.push('/login');
+            }
+        }
       } else {
-        // Fallback to local user if not logged in via firebase
-        setUser(getCurrentUser());
+        // No firebase user, clear local storage and go to login
+        localStorage.removeItem('currentUser');
+        setUser(null);
+        router.push('/login');
       }
     });
 
+    // Also check for local user on initial mount in case auth state takes time
+    if(!user) {
+        const localUser = getCurrentUser();
+        if(localUser) {
+            setUser(localUser);
+        }
+    }
+
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   const handleCopyId = () => {
     if (user?.id) {
@@ -67,6 +94,17 @@ export default function ProfilePage() {
         description: "Your user ID has been copied to the clipboard.",
       });
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    localStorage.removeItem('currentUser');
+    setUser(null);
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    router.push('/login');
   };
 
 
@@ -123,12 +161,14 @@ export default function ProfilePage() {
                 </Avatar>
                 <div className="flex-grow">
                   <h2 className="text-xl font-bold flex items-center">{user.name} 
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M17.293 5.293a1 1 0 011.414 1.414l-11 11a1 1 0 01-1.414 0l-5-5a1 1 0 011.414-1.414L6 14.586l10.293-10.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                    {user.isCertified && 
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M17.293 5.293a1 1 0 011.414 1.414l-11 11a1 1 0 01-1.414 0l-5-5a1 1 0 011.414-1.414L6 14.586l10.293-10.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    }
                   </h2>
                   <div className="text-xs text-muted-foreground flex items-center">
-                    <span>ID: {user.id}</span>
+                    <span>ID: {user.id.substring(0,10)}...</span>
                     <Copy className="w-3 h-3 ml-2 cursor-pointer" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyId(); }} />
                   </div>
                 </div>
@@ -175,10 +215,7 @@ export default function ProfilePage() {
                     <OtherLink href="#" icon={ShieldQuestion} label="Customer service" />
                     <OtherLink href="#" icon={MessageSquare} label="User Feedback" />
                     <OtherLink href="/settings" icon={Settings} label="Settings" />
-                    <div className="flex flex-col items-center space-y-2 group">
-                      <Image src="https://placehold.co/40x40.png" alt="romance" width={28} height={28} data-ai-hint="couple romance" />
-                      <span className="text-xs text-center text-muted-foreground group-hover:text-primary">Love</span>
-                    </div>
+                    <OtherLink href="#" icon={LogOut} label="Logout" onClick={handleLogout}/>
                 </div>
             </CardContent>
         </Card>

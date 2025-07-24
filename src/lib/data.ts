@@ -6,6 +6,8 @@ import { db } from './firebase';
 const defaultCurrentUser: User = {
   id: 'user-1',
   name: 'NightWhisper',
+  email: 'nightwhisper@example.com',
+  isAnonymous: false,
   age: 28,
   dob: new Date('1996-05-15').toISOString(),
   gender: 'male',
@@ -30,15 +32,14 @@ const defaultCurrentUser: User = {
 };
 
 // Use a function to get the current user, prioritizing localStorage
-export function getCurrentUser(): User {
+export function getCurrentUser(): User | null {
   if (typeof window !== 'undefined') {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      const user = JSON.parse(storedUser);
-      return {...defaultCurrentUser, ...user};
+      return JSON.parse(storedUser);
     }
   }
-  return defaultCurrentUser;
+  return null;
 }
 
 // Use a function to set the current user in localStorage
@@ -49,10 +50,12 @@ export function setCurrentUser(user: User) {
 }
 
 export const users: User[] = [
-  defaultCurrentUser,
+  // defaultCurrentUser is no longer needed here as users are fetched from Firestore
   {
     id: 'user-2',
     name: 'Bella',
+    email: 'bella@example.com',
+    isAnonymous: false,
     age: 26,
     dob: new Date('1998-03-20').toISOString(),
     gender: 'female',
@@ -69,6 +72,8 @@ export const users: User[] = [
   {
     id: 'user-3',
     name: 'Charlie',
+    email: 'charlie@example.com',
+    isAnonymous: false,
     age: 31,
     dob: new Date('1993-08-10').toISOString(),
     gender: 'male',
@@ -85,6 +90,8 @@ export const users: User[] = [
   {
     id: 'user-4',
     name: 'Diana',
+    email: 'diana@example.com',
+    isAnonymous: false,
     age: 29,
     dob: new Date('1995-11-25').toISOString(),
     gender: 'female',
@@ -101,6 +108,8 @@ export const users: User[] = [
     {
     id: 'user-5',
     name: 'Ethan',
+    email: 'ethan@example.com',
+    isAnonymous: false,
     age: 27,
     dob: new Date('1997-02-12').toISOString(),
     gender: 'male',
@@ -117,6 +126,8 @@ export const users: User[] = [
   {
     id: 'user-6',
     name: 'Fiona',
+    email: 'fiona@example.com',
+    isAnonymous: false,
     age: 25,
     dob: new Date('1999-07-01').toISOString(),
     gender: 'female',
@@ -130,7 +141,7 @@ export const users: User[] = [
     followers: 120,
     visitors: 250,
   },
-].map(u => u.id === 'user-1' ? getCurrentUser() : u);
+];
 
 const messages: Message[] = [
     { id: 'msg-1', senderId: 'user-2', text: 'Hey! I saw you like hiking. Me too!', timestamp: new Date(Date.now() - 1000 * 60 * 5), type: 'text', content: 'Hey! I saw you like hiking. Me too!' },
@@ -142,13 +153,13 @@ export const conversations: Conversation[] = [
     {
         id: 'convo-1',
         participantIds: ['user-1', 'user-2'],
-        participants: [getCurrentUser(), users.find(u => u.id === 'user-2')!],
+        participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-2')!],
         messages: [messages[0], messages[1]],
     },
     {
         id: 'convo-2',
         participantIds: ['user-1', 'user-3'],
-        participants: [getCurrentUser(), users.find(u => u.id === 'user-3')!],
+        participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-3')!],
         messages: [messages[2]],
     },
 ];
@@ -161,6 +172,7 @@ export async function getUserById(id: string): Promise<User | null> {
         if (userSnap.exists()) {
             return userSnap.data() as User;
         } else {
+            console.log(`User ${id} not found in Firestore.`);
             // Fallback to local data if not in Firestore, useful for dev/demo
             const localUser = users.find(user => user.id === id);
             if (localUser) return localUser;
@@ -175,8 +187,9 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export function getDiscoverProfiles(): User[] {
+    const currentUser = getCurrentUser();
     // For now, this returns local data. This could be changed to fetch from Firestore.
-    return users.filter(user => user.id !== getCurrentUser().id);
+    return users.filter(user => user.id !== currentUser?.id);
 }
 
 export function getConversationsForUser(userId: string): Conversation[] {
