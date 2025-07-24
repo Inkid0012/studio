@@ -1,3 +1,4 @@
+
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,7 +44,7 @@ export default function EditProfilePage() {
         resolver: zodResolver(profileSchema),
         defaultValues: {
             name: currentUser.name,
-            dob: new Date(currentUser.dob),
+            dob: currentUser.dob ? new Date(currentUser.dob) : new Date(),
             bio: currentUser.bio,
         },
     });
