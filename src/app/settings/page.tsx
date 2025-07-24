@@ -61,7 +61,6 @@ export default function SettingsPage() {
             <div className="flex-1 p-4 space-y-4">
                <div className="bg-card rounded-lg p-2">
                     <SettingsItem label="Account" icon={User} onClick={() => router.push('/settings/account')} />
-                    <SettingsItem label="Chat settings" icon={CogIcon} onClick={() => router.push('/settings/chat')} />
                     <SettingsItem label="Blocked List" icon={XCircle} onClick={() => router.push('/settings/blocked')} />
                     <SettingsItem label="Language" icon={Languages} onClick={() => router.push('/settings/language')} />
                     <SettingsItem label="Clear Cache" icon={Trash2} onClick={handleClearCache} />
