@@ -20,11 +20,20 @@ export default function ChatListPage() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-        setCurrentUser(user);
-        setConversations(getConversationsForUser(user.id));
+      setCurrentUser(user);
     }
     setIsLoading(false);
   }, []);
+  
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = getConversationsForUser(currentUser.id, (convos) => {
+      setConversations(convos);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   if (!currentUser && !isLoading) {
     return <div>Loading...</div>
@@ -54,7 +63,7 @@ export default function ChatListPage() {
             <div className="space-y-2">
                 {conversations.map((convo) => {
                 const otherUser = convo.participants.find(p => p.id !== currentUser?.id);
-                const lastMessage = convo.messages[convo.messages.length - 1];
+                const lastMessage = convo.lastMessage;
                 if (!otherUser) return null;
 
                 return (
@@ -67,11 +76,13 @@ export default function ChatListPage() {
                         <div className="ml-4 flex-1">
                         <div className="flex justify-between items-center">
                             <h3 className="font-bold font-headline">{otherUser.name}</h3>
-                            <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(lastMessage.timestamp), { addSuffix: true })}
-                            </p>
+                            {lastMessage?.timestamp && (
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(lastMessage.timestamp.toDate(), { addSuffix: true })}
+                                </p>
+                            )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">{lastMessage.text}</p>
+                        <p className="text-sm text-muted-foreground truncate">{lastMessage?.text || 'No messages yet'}</p>
                         </div>
                     </div>
                     </Link>

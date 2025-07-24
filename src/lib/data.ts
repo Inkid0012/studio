@@ -1,7 +1,7 @@
 
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const CHARGE_COSTS = {
@@ -250,45 +250,6 @@ export function setCurrentUser(user: User | null) {
     }
 }
 
-export const users: User[] = mockUsers;
-
-const messages: Message[] = [
-    { id: 'msg-1', senderId: 'user-2', text: 'Hey! I saw you like hiking. Me too!', timestamp: new Date(Date.now() - 1000 * 60 * 5), type: 'text', content: 'Hey! I saw you like hiking. Me too!' },
-    { id: 'msg-2', senderId: 'user-1', text: 'Awesome! We should totally go sometime. Any favorite trails?', timestamp: new Date(Date.now() - 1000 * 60 * 4), type: 'text', content: 'Awesome! We should totally go sometime. Any favorite trails?' },
-    { id: 'msg-3', senderId: 'user-3', text: 'Hi there! Your bio is intriguing.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), type: 'text', content: 'Hi there! Your bio is intriguing.' },
-    { id: 'msg-4', senderId: 'user-4', text: 'That gym picture on your profile is impressive!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), type: 'text', content: 'That gym picture on your profile is impressive!' },
-    { id: 'msg-5', senderId: 'user-1', text: 'Thanks! I try to stay consistent.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000*60*5), type: 'text', content: 'Thanks! I try to stay consistent.' },
-    { id: 'msg-6', senderId: 'user-8', text: 'I love your art style, Bella!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), type: 'text', content: 'I love your art style, Bella!' },
-    { id: 'msg-7', senderId: 'user-2', text: 'Thank you so much, Hannah! :)', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 7), type: 'text', content: 'Thank you so much, Hannah! :)' },
-];
-
-export const conversations: Conversation[] = [
-    {
-        id: 'convo-1',
-        participantIds: ['user-1', 'user-2'],
-        participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-2')!],
-        messages: [messages[0], messages[1]],
-    },
-    {
-        id: 'convo-2',
-        participantIds: ['user-1', 'user-3'],
-        participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-3')!],
-        messages: [messages[2]],
-    },
-     {
-        id: 'convo-3',
-        participantIds: ['user-1', 'user-4'],
-        participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-4')!],
-        messages: [messages[3], messages[4]],
-    },
-     {
-        id: 'convo-4',
-        participantIds: ['user-2', 'user-8'],
-        participants: [users.find(u => u.id === 'user-2')!, users.find(u => u.id === 'user-8')!],
-        messages: [messages[5], messages[6]],
-    },
-];
-
 // This is a mock, in a real app this would be a firestore collection
 let mockTransactions: Transaction[] = [
     { id: 'txn-1', userId: 'user-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
@@ -357,17 +318,119 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
     return []; // Return empty for 'other' gender for now
 }
 
-export function getConversationsForUser(userId: string): Conversation[] {
-    return conversations.filter(convo => convo.participantIds.includes(userId));
+export async function getConversationById(id: string): Promise<Conversation | null> {
+    try {
+        const convoRef = doc(db, 'conversations', id);
+        const convoSnap = await getDoc(convoRef);
+
+        if (convoSnap.exists()) {
+            const convoData = convoSnap.data();
+            const participants = await Promise.all(convoData.participantIds.map((id: string) => getUserById(id)));
+            return {
+                id: convoSnap.id,
+                participantIds: convoData.participantIds,
+                participants: participants.filter(p => p !== null) as User[],
+                messages: [], // Messages will be fetched via a separate real-time listener
+                lastMessage: convoData.lastMessage,
+            };
+        } else {
+            console.warn(`Conversation ${id} not found.`);
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching conversation:", error);
+        return null;
+    }
 }
 
-export async function getConversationById(id: string): Promise<Conversation | undefined> {
-    const convo = conversations.find(convo => convo.id === id);
-    if(convo) {
-        const participants = await Promise.all(convo.participantIds.map(id => getUserById(id)));
-        convo.participants = participants.filter(p => p !== null) as User[];
+export async function findOrCreateConversation(userId1: string, userId2: string): Promise<string> {
+    const conversationsRef = collection(db, "conversations");
+    
+    const participantIds = [userId1, userId2].sort();
+    
+    const q = query(conversationsRef, where("participantIds", "==", participantIds));
+    
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        // Conversation already exists
+        return querySnapshot.docs[0].id;
+    } else {
+        // Create a new conversation
+        const newConversationRef = await addDoc(conversationsRef, {
+            participantIds: participantIds,
+            lastMessage: null,
+        });
+        return newConversationRef.id;
     }
-    return convo;
+}
+
+export async function sendMessage(conversationId: string, senderId: string, text: string) {
+    const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+    const conversationRef = doc(db, 'conversations', conversationId);
+
+    const newMessage: Omit<Message, 'id'> = {
+        senderId,
+        text,
+        timestamp: Timestamp.now(),
+        type: 'text',
+        content: text
+    };
+    
+    await addDoc(messagesRef, newMessage);
+    
+    // Update the last message on the conversation for preview purposes
+    await updateDoc(conversationRef, {
+        lastMessage: {
+            text,
+            timestamp: Timestamp.now(),
+            senderId,
+        }
+    });
+}
+
+export function getMessages(conversationId: string, callback: (messages: Message[]) => void) {
+    const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const messages: Message[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            messages.push({ 
+                id: doc.id, 
+                ...data,
+                timestamp: (data.timestamp as Timestamp).toDate()
+            } as Message);
+        });
+        callback(messages);
+    });
+
+    return unsubscribe; // Return the unsubscribe function to be called on cleanup
+}
+
+export function getConversationsForUser(userId: string, callback: (conversations: Conversation[]) => void) {
+  const conversationsRef = collection(db, "conversations");
+  const q = query(conversationsRef, where("participantIds", "array-contains", userId), orderBy("lastMessage.timestamp", "desc"));
+
+  const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+    const conversations: Conversation[] = await Promise.all(
+      querySnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        const participants = await Promise.all(
+          data.participantIds.map((id: string) => getUserById(id))
+        );
+        return {
+          id: docSnap.id,
+          ...data,
+          participants: participants.filter((p): p is User => p !== null),
+        } as Conversation;
+      })
+    );
+    callback(conversations);
+  });
+
+  return unsubscribe;
 }
 
 
@@ -528,7 +591,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
         mockUsers[currentUserIndex].following = mockUsers[currentUserIndex].following.filter(id => id !== targetUserId);
     }
     if (targetUserIndex !== -1) {
-        mockUsers[targetUserIndex].followers = mockUsers[targetUserIndex].followers.filter(id => id !== currentUserId);
+        mockUsers[targetUserIndex].followers = mockUsers[targetUserIndex].followers.filter(id => id !== targetUserId);
     }
 }
 

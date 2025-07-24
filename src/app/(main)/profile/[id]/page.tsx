@@ -1,22 +1,23 @@
+
 'use client';
-import { notFound, useParams } from 'next/navigation';
-import Image from 'next/image';
-import { getUserById, addVisitor, getCurrentUser } from '@/lib/data';
+import { notFound, useParams, useRouter } from 'next/navigation';
+import { getUserById, addVisitor, getCurrentUser, findOrCreateConversation } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, MoreVertical, MessageSquare, ShieldAlert, XCircle } from 'lucide-react';
+import { CheckCircle, MoreVertical, MessageSquare, ShieldAlert, XCircle, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { User } from '@/types';
 
 export default function UserProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const userId = params.id as string;
   const [user, setUser] = useState<User | null>(null);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   const currentUser = getCurrentUser();
 
   useEffect(() => {
@@ -39,6 +40,13 @@ export default function UserProfilePage() {
   if (!user || !currentUser) {
     return <div>Loading profile...</div>; // Or a skeleton loader
   }
+
+  const handleChat = async () => {
+      setIsCreatingChat(true);
+      const conversationId = await findOrCreateConversation(currentUser.id, user.id);
+      setIsCreatingChat(false);
+      router.push(`/chat/${conversationId}`);
+  };
 
   const canChat = currentUser.id !== user.id && currentUser.gender !== user.gender;
 
@@ -80,11 +88,13 @@ export default function UserProfilePage() {
         </Card>
 
         {canChat && (
-          <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
-              <Link href={`/chat/convo-placeholder`}>
-                  <MessageSquare className="mr-2 h-5 w-5"/>
-                  Send Message
-              </Link>
+          <Button onClick={handleChat} disabled={isCreatingChat} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
+                {isCreatingChat ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                    <MessageSquare className="mr-2 h-5 w-5"/>
+                )}
+                Send Message
           </Button>
         )}
 

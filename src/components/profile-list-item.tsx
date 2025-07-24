@@ -1,16 +1,34 @@
 
+'use client';
+
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { User } from "@/types";
 import { Card } from "./ui/card";
+import { findOrCreateConversation, getCurrentUser } from "@/lib/data";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 interface ProfileListItemProps {
   user: User;
 }
 
 export function ProfileListItem({ user }: ProfileListItemProps) {
+  const router = useRouter();
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const currentUser = getCurrentUser();
+  
+  const handleChat = async () => {
+      if (!currentUser) return;
+      setIsCreatingChat(true);
+      const conversationId = await findOrCreateConversation(currentUser.id, user.id);
+      setIsCreatingChat(false);
+      router.push(`/chat/${conversationId}`);
+  };
+
   return (
     <Card className="p-3">
         <div className="flex items-center space-x-4">
@@ -37,11 +55,9 @@ export function ProfileListItem({ user }: ProfileListItemProps) {
                     </Badge>
                 </div>
             </div>
-            <Link href={`/chat/convo-placeholder`}>
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6">
-                    Chat
-                </Button>
-            </Link>
+             <Button onClick={handleChat} disabled={isCreatingChat} className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6">
+                {isCreatingChat ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Chat'}
+            </Button>
         </div>
     </Card>
   );

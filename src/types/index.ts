@@ -1,4 +1,6 @@
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type Visitor = {
   userId: string;
   timestamp: string; // ISO 8601 date string
@@ -35,7 +37,7 @@ export type Message = {
   id: string;
   senderId: string;
   text: string;
-  timestamp: Date;
+  timestamp: Date | Timestamp;
   type: 'text' | 'image' | 'voice';
   content: string; 
 };
@@ -45,6 +47,11 @@ export type Conversation = {
   participantIds: string[];
   participants: User[];
   messages: Message[];
+  lastMessage?: {
+    text: string;
+    senderId: string;
+    timestamp: Timestamp;
+  }
 };
 
 export type PersonalInfoOption = {

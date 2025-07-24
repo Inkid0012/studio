@@ -1,7 +1,7 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getUserById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS } from '@/lib/data';
+import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Phone, Mic, Paperclip, Send, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -22,11 +22,13 @@ export default function ChatPage() {
   const convoId = params.id as string;
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchConvo = async () => {
@@ -39,13 +41,34 @@ export default function ChatPage() {
         notFound();
       }
     };
+
     if (currentUser) {
         fetchConvo();
     } else {
         router.push('/login');
     }
   }, [convoId, currentUser, router]);
+
+  useEffect(() => {
+    if (!convoId) return;
+
+    const unsubscribe = getMessages(convoId, (newMessages) => {
+        setMessages(newMessages);
+    });
+
+    return () => unsubscribe();
+  }, [convoId]);
   
+  useEffect(() => {
+    // Scroll to bottom when new messages arrive
+    if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTo({
+            top: scrollAreaRef.current.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+  }, [messages]);
+
   if (!conversation || !currentUser || !otherUser) {
     return <div>Loading chat...</div>;
   }
@@ -79,21 +102,8 @@ export default function ChatPage() {
           });
       }
 
-      const newMessage: Message = {
-          id: `msg-${Date.now()}`,
-          senderId: currentUser.id,
-          text: messageText,
-          timestamp: new Date(),
-          type: 'text',
-          content: messageText,
-      };
-
-      setConversation(prev => prev ? { ...prev, messages: [...prev.messages, newMessage] } : null);
+      await sendMessage(convoId, currentUser.id, messageText);
       setMessageText('');
-
-      toast({
-          title: 'Message Sent',
-      });
   };
 
   const handleCall = async () => {
@@ -133,9 +143,9 @@ export default function ChatPage() {
             </Button>
         </MainHeader>
       
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef as any}>
         <div className="space-y-4">
-          {conversation.messages.map((message) => (
+          {messages.map((message) => (
             <div
               key={message.id}
               className={cn('flex items-end gap-2', 
