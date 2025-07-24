@@ -1,4 +1,5 @@
-import type { User, Conversation, Message } from '@/types';
+import type { User, Conversation, Message, PersonalInfoOption } from '@/types';
+import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 
 const defaultCurrentUser: User = {
   id: 'user-1',
@@ -15,6 +16,15 @@ const defaultCurrentUser: User = {
   following: 0,
   followers: 0,
   visitors: 0,
+  country: 'Kenya',
+  exercise: 'Sometimes',
+  education: 'Bachelor\'s Degree',
+  smoking: 'Non-smoker',
+  liquor: 'Socially',
+  superpower: 'Invisibility',
+  pets: 'Dog Person',
+  personalityType: 'INTJ',
+  horoscope: 'Taurus',
 };
 
 // Use a function to get the current user, prioritizing localStorage
@@ -22,7 +32,8 @@ export function getCurrentUser(): User {
   if (typeof window !== 'undefined') {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      return JSON.parse(storedUser);
+      const user = JSON.parse(storedUser);
+      return {...defaultCurrentUser, ...user};
     }
   }
   return defaultCurrentUser;
@@ -163,3 +174,82 @@ export function getConversationById(id: string): Conversation | undefined {
     }
     return convo;
 }
+
+
+export const personalInfoOptions: PersonalInfoOption[] = [
+    {
+      key: 'exercise',
+      label: 'Exercise',
+      icon: Dumbbell,
+      options: ['Frequently', 'Sometimes', 'Rarely', 'Never'],
+    },
+    {
+      key: 'education',
+      label: 'Education',
+      icon: GraduationCap,
+      options: ['High School', 'Some College', 'Associate Degree', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD'],
+    },
+    {
+      key: 'smoking',
+      label: 'Smoking',
+      icon: Cigarette,
+      options: ['Smoker', 'Social smoker', 'Non-smoker', 'Trying to quit'],
+    },
+    {
+      key: 'liquor',
+      label: 'Liquor',
+      icon: Beer,
+      options: ['Frequently', 'Socially', 'Rarely', 'Sober'],
+    },
+    {
+      key: 'superpower',
+      label: 'Superpower',
+      icon: Sparkles,
+      options: ['Flying', 'Invisibility', 'Super strength', 'Teleportation', 'Time travel'],
+    },
+    {
+      key: 'pets',
+      label: 'Pets',
+      icon: Ghost,
+      options: ['Dog Person', 'Cat Person', 'Both', 'Neither', 'Have other pets'],
+    },
+    {
+      key: 'personalityType',
+      label: 'Personality type',
+      icon: Smile,
+      options: ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'],
+    },
+    {
+      key: 'horoscope',
+      label: 'Horoscopes',
+      icon: Atom,
+      options: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'],
+    },
+  ];
+
+  export const countries = [
+    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+    "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+    "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo, Democratic Republic of the", "Congo, Republic of the", "Costa Rica", "Cote d'Ivoire", "Croatia", "Cuba", "Cyprus", "Czechia",
+    "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+    "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+    "Fiji", "Finland", "France",
+    "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+    "Haiti", "Honduras", "Hungary",
+    "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+    "Jamaica", "Japan", "Jordan",
+    "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait", "Kyrgyzstan",
+    "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+    "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia",
+    "Oman",
+    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+    "Qatar",
+    "Romania", "Russia", "Rwanda",
+    "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States of America", "Uruguay", "Uzbekistan",
+    "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+    "Yemen",
+    "Zambia", "Zimbabwe"
+  ];

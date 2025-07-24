@@ -13,6 +13,15 @@ export type User = {
   following: number;
   followers: number;
   visitors: number;
+  country?: string;
+  exercise?: string;
+  education?: string;
+  smoking?: string;
+  liquor?: string;
+  superpower?: string;
+  pets?: string;
+  personalityType?: string;
+  horoscope?: string;
 };
 
 export type Message = {
@@ -29,4 +38,11 @@ export type Conversation = {
   participantIds: string[];
   participants: User[];
   messages: Message[];
+};
+
+export type PersonalInfoOption = {
+    key: keyof User;
+    label: string;
+    icon: React.ElementType;
+    options: string[];
 };

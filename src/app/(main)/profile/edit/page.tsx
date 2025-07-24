@@ -1,5 +1,4 @@
 
-
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarIcon, Camera, Save, Upload } from 'lucide-react';
+import { CalendarIcon, Camera, ChevronRight, Save, Upload, User as UserIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,6 +22,7 @@ import { Calendar } from '@/components/ui/calendar';
 import type { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageCropper } from '@/components/image-cropper';
+import Link from 'next/link';
 
 
 const profileSchema = z.object({
@@ -130,7 +130,7 @@ export default function EditProfilePage() {
                         <div className="flex justify-center">
                             <div className="relative">
                                 <Avatar className="w-40 h-40 border-4 border-accent">
-                                    <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person"/>
+                                    <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person" className="object-cover" />
                                     <AvatarFallback className="text-5xl">{currentUser?.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
@@ -223,6 +223,7 @@ export default function EditProfilePage() {
                                         />
                                         <div className="p-2 border-t border-border">
                                             <Button
+                                                type="button"
                                                 className="w-full"
                                                 onClick={() => {
                                                     field.onChange(tempDate);
@@ -256,6 +257,17 @@ export default function EditProfilePage() {
                                 </FormItem>
                             )}
                         />
+
+                        <Link href="/profile/edit/personal" className="block w-full">
+                            <Button type="button" variant="outline" className="w-full justify-between py-6 text-base">
+                                <div className='flex items-center'>
+                                <UserIcon className="mr-2 h-5 w-5 text-accent"/>
+                                Personal Information
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                            </Button>
+                        </Link>
+
 
                         <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
                             <Save className="mr-2 h-5 w-5"/>
