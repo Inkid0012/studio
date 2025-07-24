@@ -2,7 +2,7 @@ import type { User, Conversation, Message } from '@/types';
 
 export const currentUser: User = {
   id: 'user-1',
-  name: 'Alex',
+  name: 'NightWhisper',
   age: 28,
   gender: 'male',
   bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey. I enjoy hiking, photography, and trying new craft beers.',
@@ -10,6 +10,10 @@ export const currentUser: User = {
   interests: ['Hiking', 'Photography', 'Craft Beer', 'Traveling', 'Sci-Fi Movies'],
   isCertified: true,
   coins: 250,
+  friends: 0,
+  following: 0,
+  followers: 0,
+  visitors: 0,
 };
 
 export const users: User[] = [
@@ -24,6 +28,10 @@ export const users: User[] = [
     interests: ['Painting', 'Dogs', 'Yoga', 'Indie Music', 'Thrift Shopping'],
     isCertified: true,
     coins: 0,
+    friends: 120,
+    following: 50,
+    followers: 80,
+    visitors: 300,
   },
   {
     id: 'user-3',
@@ -35,6 +43,10 @@ export const users: User[] = [
     interests: ['Cooking', 'Wine Tasting', 'Jazz Music', 'Cycling', 'History'],
     isCertified: false,
     coins: 150,
+    friends: 40,
+    following: 100,
+    followers: 25,
+    visitors: 150,
   },
   {
     id: 'user-4',
@@ -46,6 +58,10 @@ export const users: User[] = [
     interests: ['Weightlifting', 'Running', 'Meal Prep', 'Podcasts', 'Beach Days'],
     isCertified: true,
     coins: 0,
+    friends: 200,
+    following: 75,
+    followers: 150,
+    visitors: 400,
   },
     {
     id: 'user-5',
@@ -57,6 +73,10 @@ export const users: User[] = [
     interests: ['Guitar', 'Songwriting', 'Coffee', 'Live Music', 'Philosophy'],
     isCertified: false,
     coins: 500,
+    friends: 80,
+    following: 30,
+    followers: 50,
+    visitors: 200,
   },
   {
     id: 'user-6',
@@ -68,6 +88,10 @@ export const users: User[] = [
     interests: ['Reading', 'Creative Writing', 'Cats', 'Tea', 'Museums'],
     isCertified: false,
     coins: 0,
+    friends: 150,
+    following: 90,
+    followers: 120,
+    visitors: 250,
   },
 ];
 

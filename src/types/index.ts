@@ -8,6 +8,10 @@ export type User = {
   interests: string[];
   isCertified: boolean;
   coins: number;
+  friends: number;
+  following: number;
+  followers: number;
+  visitors: number;
 };
 
 export type Message = {
