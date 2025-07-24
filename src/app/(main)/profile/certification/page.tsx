@@ -92,10 +92,6 @@ export default function CertificationPage() {
                                 <CheckCircle className="h-5 w-5 text-green-500" />
                                 <span>Make sure that the photo and avatar are the same person</span>
                             </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                <span>Ok gesture</span>
-                            </li>
                         </ul>
                     </CardContent>
                 </Card>
@@ -105,7 +101,7 @@ export default function CertificationPage() {
                         {capturedImage ? (
                             <Image src={capturedImage} alt="Captured photo for certification" layout="fill" objectFit="cover" />
                         ) : (
-                            <Image src="https://placehold.co/600x800.png" data-ai-hint="person ok gesture" alt="Certification example" layout="fill" objectFit="cover" />
+                            <Image src="https://placehold.co/600x800.png" data-ai-hint="person" alt="Certification example" layout="fill" objectFit="cover" />
                         )}
                     </CardContent>
                 </Card>
