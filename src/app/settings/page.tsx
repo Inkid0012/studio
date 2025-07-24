@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ChevronRight, Palette, BellOff, Trash2, Shield, Settings as CogIcon, ShieldAlert, Languages, Info, XCircle } from "lucide-react";
+import { ChevronRight, Palette, BellOff, Trash2, Shield, Settings as CogIcon, Languages, Info, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
@@ -62,8 +62,6 @@ export default function SettingsPage() {
             <div className="flex-1 p-4 space-y-4">
                <div className="bg-card rounded-lg p-2">
                     <SettingsItem label="Account and Security" icon={Shield} value="Unprotected" valueColor="text-destructive" onClick={() => router.push('/settings/account')} />
-                    <SettingsItem label="Charge settings" icon={CogIcon} onClick={() => router.push('/settings/charge')} />
-                    <SettingsItem label="Rights Center" icon={ShieldAlert} onClick={() => router.push('/settings/rights')} />
                     <SettingsItem label="Chat settings" icon={CogIcon} onClick={() => router.push('/settings/chat')} />
                     <SettingsItem label="Blocked List" icon={XCircle} onClick={() => router.push('/settings/blocked')} />
                     <SettingsItem label="Language" icon={Languages} onClick={() => router.push('/settings/language')} />
