@@ -4,7 +4,7 @@ import { getCurrentUser, getUserById, setCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart, LogOut } from 'lucide-react';
+import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart, LogOut, ShieldAlert } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const Stat = ({ value, label }: { value: number, label: string }) => (
   <div className="text-center">
@@ -35,8 +36,8 @@ const IconLink = ({ href, icon: Icon, label, hasNotification = false }: { href: 
 );
 
 
-const OtherLink = ({ href, icon: Icon, label, onClick }: { href: string, icon: React.ElementType, label: string, onClick?: () => void }) => (
-  <Link href={href} onClick={onClick} className="flex flex-col items-center space-y-2 group">
+const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false }: { href: string, icon: React.ElementType, label: string, onClick?: () => void, disabled?: boolean }) => (
+  <Link href={href} onClick={onClick} className={cn("flex flex-col items-center space-y-2 group", disabled && "opacity-50 pointer-events-none")}>
     <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
     <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
   </Link>
@@ -51,17 +52,20 @@ export default function ProfilePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Always fetch the latest profile from local storage first for speed
+        const localUser = getCurrentUser();
+        if (localUser && localUser.id === firebaseUser.uid) {
+            setUser(localUser);
+        }
+
+        // Then, fetch from Firestore to get any updates
         const userProfile = await getUserById(firebaseUser.uid);
         if(userProfile){
             setUser(userProfile);
             setCurrentUser(userProfile); 
-        } else {
-            const localUser = getCurrentUser();
-            if (localUser && localUser.id === firebaseUser.uid) {
-              setUser(localUser);
-            } else {
-              router.push('/login');
-            }
+        } else if (!localUser) {
+            // If not in local storage or firestore, they need to login
+             router.push('/login');
         }
       } else {
         localStorage.removeItem('currentUser');
@@ -212,7 +216,12 @@ export default function ProfilePage() {
                     <OtherLink href="#" icon={Briefcase} label="Bag" />
                     <OtherLink href="#" icon={Star} label="Level" />
                     <OtherLink href="#" icon={Gift} label="Badge" />
-                    <OtherLink href="#" icon={ShieldCheck} label="Uncertified" />
+                    <OtherLink 
+                        href={user.isCertified ? '#' : '/profile/certification'} 
+                        icon={user.isCertified ? ShieldCheck : ShieldAlert} 
+                        label={user.isCertified ? "Certified" : "Uncertified"} 
+                        disabled={user.isCertified}
+                    />
                     <OtherLink href="#" icon={ShieldQuestion} label="Customer service" />
                     <OtherLink href="#" icon={MessageSquare} label="User Feedback" />
                     <OtherLink href="/settings" icon={Settings} label="Settings" />
