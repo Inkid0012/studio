@@ -114,6 +114,8 @@ export default function EditProfilePage() {
 
 
     async function onSubmit(values: ProfileFormValues) {
+        if (!currentUser) return;
+
         const today = new Date();
         const birthDate = new Date(values.dob);
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -123,12 +125,12 @@ export default function EditProfilePage() {
         }
 
         const updatedUser: User = { 
-            ...currentUser!, 
+            ...currentUser, 
             name: values.name, 
             bio: values.bio, 
             dob: values.dob.toISOString(), 
             age: age, 
-            profilePicture: profilePic || currentUser!.profilePicture 
+            profilePicture: profilePic || currentUser.profilePicture 
         };
         
         setCurrentUser(updatedUser); // Update local storage for immediate reflection
