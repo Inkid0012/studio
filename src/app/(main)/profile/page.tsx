@@ -50,6 +50,12 @@ const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false, as, chi
     return <Component onClick={onClick}>{children || content}</Component>;
 };
 
+const CoinIcon = () => (
+    <div className="relative w-6 h-6 flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shadow-md">
+        <span className="font-bold text-lg text-white italic">S</span>
+    </div>
+);
+
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -206,8 +212,17 @@ export default function ProfilePage() {
         </div>
         
         <div className="grid grid-cols-1 gap-4">
-            <Button asChild className="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-6 text-base rounded-lg">
-                <Link href="/wallet">Recharge</Link>
+             <Button asChild className="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-6 text-base rounded-lg">
+                <Link href="/wallet" className="flex items-center justify-center gap-2">
+                    {user.coins > 0 ? (
+                        <>
+                            <CoinIcon />
+                            <span className="text-lg">{user.coins.toLocaleString()}</span>
+                        </>
+                    ) : (
+                        'Recharge'
+                    )}
+                </Link>
             </Button>
         </div>
 
