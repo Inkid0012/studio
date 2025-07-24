@@ -7,22 +7,28 @@ import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Camera, Save, Upload, Video } from 'lucide-react';
+import { CalendarIcon, Camera, Save, Upload, Video } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useRef, useState } from 'react';
 import { CameraView } from '@/components/camera-view';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
 
 const profileSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters."),
-    age: z.coerce.number().min(18, "You must be at least 18 years old."),
+    dob: z.date({
+        required_error: "A date of birth is required.",
+    }),
     bio: z.string().max(500, "Bio can't be more than 500 characters.").min(10, "Bio must be at least 10 characters."),
 });
 
-type ProfileFormValues = Omit<z.infer<typeof profileSchema>, 'gender'>;
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function EditProfilePage() {
     const { toast } = useToast();
@@ -37,13 +43,21 @@ export default function EditProfilePage() {
         resolver: zodResolver(profileSchema),
         defaultValues: {
             name: currentUser.name,
-            age: currentUser.age,
+            dob: new Date(currentUser.dob),
             bio: currentUser.bio,
         },
     });
 
     function onSubmit(values: ProfileFormValues) {
-        const updatedUser = { ...currentUser, ...values, profilePicture: profilePic };
+        const today = new Date();
+        const birthDate = new Date(values.dob);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        const updatedUser = { ...currentUser, name: values.name, bio: values.bio, dob: values.dob.toISOString(), age: age, profilePicture: profilePic };
         setCurrentUser(updatedUser);
         
         toast({
@@ -141,13 +155,44 @@ export default function EditProfilePage() {
 
                          <FormField
                             control={form.control}
-                            name="age"
+                            name="dob"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="font-headline">Age</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="Your age" {...field} />
-                                    </FormControl>
+                                <FormItem className="flex flex-col">
+                                    <FormLabel className="font-headline">Date of birth</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full pl-3 text-left font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                            >
+                                            {field.value ? (
+                                                format(field.value, "PPP")
+                                            ) : (
+                                                <span>Pick a date</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            disabled={(date) =>
+                                            date > new Date() || date < new Date("1900-01-01")
+                                            }
+                                            initialFocus
+                                        />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormDescription>
+                                        Your age will be calculated from your date of birth.
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}

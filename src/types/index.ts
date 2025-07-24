@@ -2,6 +2,7 @@ export type User = {
   id: string;
   name: string;
   age: number;
+  dob: string; // ISO 8601 date string
   gender: 'male' | 'female' | 'other';
   bio: string;
   profilePicture: string;
