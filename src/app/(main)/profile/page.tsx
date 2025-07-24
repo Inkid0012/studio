@@ -4,7 +4,7 @@ import { getCurrentUser, getUserById, setCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart, LogOut, ShieldAlert, Eye } from 'lucide-react';
+import { ChevronRight, Copy, ShieldCheck, Users, Settings, LogOut, ShieldAlert } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,20 +33,15 @@ const Stat = ({ value, label, href }: { value: number, label: string, href: stri
   </Link>
 );
 
-const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false, as, children }: { href?: string, icon: React.ElementType, label: string, onClick?: (e: React.MouseEvent) => void, disabled?: boolean, as?: React.ElementType, children?: React.ReactNode }) => {
-    const Component = as || 'div';
+const OtherLink = ({ href, icon: Icon, label, disabled = false }: { href: string, icon: React.ElementType, label: string, disabled?: boolean }) => {
     const content = (
-        <div className={cn("flex flex-col items-center space-y-2 group", disabled && "opacity-50 pointer-events-none")}>
+        <div className={`flex flex-col items-center space-y-2 group ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
             <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
             <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
         </div>
     );
     
-    if (href) {
-        return <Link href={href} onClick={onClick}>{content}</Link>
-    }
-
-    return <Component onClick={onClick}>{children || content}</Component>;
+    return <Link href={href}>{content}</Link>;
 };
 
 const CoinIcon = () => (
@@ -66,25 +60,24 @@ export default function ProfilePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Always fetch the latest profile from local storage first for speed
-        let localUser = getCurrentUser();
-        
-        if (localUser && localUser.id === firebaseUser.uid) {
-            setUser(localUser);
-        }
-
-        // Then, fetch from Firestore to get any updates
+        // Fetch from Firestore to get the most up-to-date profile
         const userProfile = await getUserById(firebaseUser.uid);
         if(userProfile){
             setUser(userProfile);
             setCurrentUser(userProfile);
-            localUser = userProfile;
-        } 
-        
-        if (!localUser) {
-             router.push('/login');
+        } else {
+            // This can happen if the user authenticated but their Firestore record doesn't exist yet
+            // Or if they are an anonymous user going through the setup flow.
+            const localUser = getCurrentUser();
+            if (localUser && localUser.id === firebaseUser.uid) {
+                setUser(localUser);
+            } else {
+                // Fallback if no local user is found, redirect to login to restart the flow
+                router.push('/login');
+            }
         }
       } else {
+        // No firebase user, clear local state and go to login
         setCurrentUser(null);
         setUser(null);
         router.push('/login');
@@ -157,6 +150,7 @@ export default function ProfilePage() {
   }
   
   if (!user) {
+    // This can briefly happen if the user is logged out, the useEffect will redirect.
     return null; 
   }
 
@@ -170,8 +164,9 @@ export default function ProfilePage() {
           src={user.profilePicture}
           alt="Profile background"
           fill
-          objectFit="cover"
+          className="object-cover"
           data-ai-hint="portrait person"
+          priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
@@ -186,15 +181,13 @@ export default function ProfilePage() {
                 <div className="flex-grow">
                   <h2 className="text-xl font-bold flex items-center">{user.name} 
                     {user.isCertified && 
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M17.293 5.293a1 1 0 011.414 1.414l-11 11a1 1 0 01-1.414 0l-5-5a1 1 0 011.414-1.414L6 14.586l10.293-10.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+                        <ShieldCheck className="h-5 w-5 ml-2 text-green-400" />
                     }
                   </h2>
-                  <div className="text-xs text-muted-foreground flex items-center">
+                  <button className="text-xs text-muted-foreground flex items-center" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyId(); }}>
                     <span>ID: {user.id.substring(0,10)}...</span>
-                    <Copy className="w-3 h-3 ml-2 cursor-pointer" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyId(); }} />
-                  </div>
+                    <Copy className="w-3 h-3 ml-2" />
+                  </button>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </CardContent>
@@ -236,14 +229,14 @@ export default function ProfilePage() {
                         label={user.isCertified ? "Certified" : "Uncertified"} 
                         disabled={user.isCertified}
                     />
-                    <OtherLink href="#" icon={ShieldQuestion} label="Customer service" />
+                    <OtherLink href="/profile/improve" icon={Users} label="AI Coach" />
                     <OtherLink href="/settings" icon={Settings} label="Settings" />
                     <AlertDialog>
                        <AlertDialogTrigger asChild>
-                         <div className="flex flex-col items-center space-y-2 group cursor-pointer">
+                         <button className="flex flex-col items-center space-y-2 group cursor-pointer">
                             <LogOut className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
                             <span className="text-xs text-center text-muted-foreground group-hover:text-primary">Logout</span>
-                        </div>
+                        </button>
                        </AlertDialogTrigger>
                        <AlertDialogContent>
                             <AlertDialogHeader>

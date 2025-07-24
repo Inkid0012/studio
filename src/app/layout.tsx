@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
+import { I18nProvider } from '@/contexts/i18n';
 
 export const metadata: Metadata = {
   title: 'FIZU',
@@ -23,14 +24,16 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-        >
-            {children}
-            <Toaster />
-        </ThemeProvider>
+        <I18nProvider>
+            <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            >
+                {children}
+                <Toaster />
+            </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

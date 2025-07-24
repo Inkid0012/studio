@@ -1,3 +1,4 @@
+
 "use client";
 
 import { MainHeader } from "@/components/layout/main-header";
@@ -6,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ChevronRight, Palette, BellOff, Trash2, Shield, Settings as CogIcon, Info, XCircle, User } from "lucide-react";
+import { ChevronRight, Palette, BellOff, Trash2, Shield, Settings as CogIcon, Info, XCircle, User, Languages } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useState } from "react";
+import { setCurrentUser } from "@/lib/data";
 
 const SettingsItem = ({ label, value, onClick, valueColor, icon: Icon }: { label: string, value?: string, onClick?: () => void, valueColor?: string, icon: React.ElementType }) => (
   <button onClick={onClick} className="flex items-center w-full py-4 text-left border-b last:border-b-0">
@@ -40,7 +42,7 @@ export default function SettingsPage() {
      const handleLogout = async () => {
         try {
           await signOut(auth);
-          localStorage.removeItem('currentUser');
+          setCurrentUser(null);
           toast({
             title: "Logged Out",
             description: "You have been successfully logged out.",
@@ -62,6 +64,7 @@ export default function SettingsPage() {
                <div className="bg-card rounded-lg p-2">
                     <SettingsItem label="Account" icon={User} onClick={() => router.push('/settings/account')} />
                     <SettingsItem label="Blocked List" icon={XCircle} onClick={() => router.push('/settings/blocked')} />
+                    <SettingsItem label="Language" icon={Languages} onClick={() => router.push('/settings/language')} />
                     <SettingsItem label="Clear Cache" icon={Trash2} onClick={handleClearCache} />
                     <SettingsItem label="About Fizu" icon={Info} onClick={() => router.push('/settings/about')} />
                </div>

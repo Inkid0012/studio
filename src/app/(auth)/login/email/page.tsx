@@ -65,12 +65,28 @@ export default function EmailAuthPage() {
       const userProfile = await getUserById(firebaseUser.uid);
       if (userProfile) {
         setCurrentUser(userProfile);
-        router.push('/discover');
+        router.push(userProfile.gender === 'other' ? '/gender' : '/discover');
       } else {
-        // This case should ideally not happen for a user who is signing in,
-        // but as a fallback, we send them to the gender page to create a profile.
-        const newUser: Partial<User> = { id: firebaseUser.uid, email: firebaseUser.email || '' };
-        setCurrentUser(newUser as User);
+        // This case can happen if user record was deleted or failed to create
+        const newUser: User = {
+          id: firebaseUser.uid,
+          name: `User-${firebaseUser.uid.substring(0, 5)}`,
+          email: firebaseUser.email || '',
+          isAnonymous: false,
+          age: 0,
+          dob: new Date().toISOString(),
+          gender: 'other',
+          bio: '',
+          profilePicture: 'https://placehold.co/400x400.png',
+          interests: [],
+          isCertified: false,
+          coins: 0,
+          followers: [],
+          following: [],
+          visitors: [],
+        };
+        await createUserInFirestore(newUser);
+        setCurrentUser(newUser);
         router.push('/gender');
       }
     } catch (error: any) {
@@ -78,11 +94,12 @@ export default function EmailAuthPage() {
         variant: 'destructive',
         title: 'Sign In Failed',
         description:
-          error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'
+          error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
             ? 'Invalid email or password.'
             : 'An unexpected error occurred. Please try again.',
       });
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -101,7 +118,6 @@ export default function EmailAuthPage() {
         name: `User-${firebaseUser.uid.substring(0, 5)}`,
         email: firebaseUser.email || '',
         isAnonymous: false,
-        // Set other default fields
         age: 0,
         dob: new Date().toISOString(),
         gender: 'other',
@@ -128,6 +144,7 @@ export default function EmailAuthPage() {
             ? 'This email is already registered.'
             : 'An unexpected error occurred. Please try again.',
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -153,12 +170,12 @@ export default function EmailAuthPage() {
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             <TabsContent value="signin">
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-4 pt-2">
                 Welcome back! Sign in to your account.
               </p>
             </TabsContent>
              <TabsContent value="signup">
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-4 pt-2">
                 Create a new account to find your spark.
               </p>
             </TabsContent>

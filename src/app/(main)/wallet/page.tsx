@@ -50,8 +50,11 @@ export default function WalletPage() {
   const displayedPackages = isFolded ? coinPackages.slice(0, 6) : coinPackages;
 
   if (!currentUser) {
-    // Handle case where user is not logged in
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+      </div>
+    );
   }
   
   const handlePurchase = async () => {
@@ -68,7 +71,7 @@ export default function WalletPage() {
         setCurrentUser(updatedUser);
         setCurrentUserFromState(updatedUser);
 
-        await addTransaction({
+        addTransaction({
             userId: currentUser.id,
             type: 'purchase',
             amount: selectedPackage.amount,
@@ -107,14 +110,14 @@ export default function WalletPage() {
                 <p className="text-sm text-muted-foreground">My Balance</p>
                 <div className="flex items-center gap-2 mt-2">
                     <CoinIcon />
-                    <span className="text-4xl font-bold">{currentUser.coins}</span>
+                    <span className="text-4xl font-bold">{currentUser.coins.toLocaleString()}</span>
                 </div>
             </CardContent>
         </Card>
 
         <div>
             <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold">My Balance</p>
+                <p className="font-semibold">Recharge</p>
                 <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 text-orange-600 text-xs">
                     <WalletCards className="h-4 w-4" />
                     <span>{currentUser.country || 'Kenya'}</span>
@@ -174,7 +177,7 @@ export default function WalletPage() {
 
 
 const ChevronRight = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5" {...props}>
       <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
     </svg>
   );

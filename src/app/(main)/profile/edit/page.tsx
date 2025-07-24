@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarIcon, Camera, ChevronRight, Save, Upload } from 'lucide-react';
+import { CalendarIcon, Camera, ChevronRight, Save, Upload, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -45,9 +45,9 @@ export default function EditProfilePage() {
     const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [isMounted, setIsMounted] = useState(false);
     const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
     const [selectedOption, setSelectedOption] = useState<PersonalInfoOption | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
 
     const form = useForm<ProfileFormValues>({
@@ -59,7 +59,6 @@ export default function EditProfilePage() {
     });
 
     useEffect(() => {
-        setIsMounted(true);
         const user = getCurrentUser();
         if (user) {
             setCurrentUserFromState(user);
@@ -78,12 +77,11 @@ export default function EditProfilePage() {
         if (currentUser) {
             const updatedUser = { ...currentUser, [key]: value };
             setCurrentUserFromState(updatedUser);
-            setCurrentUser(updatedUser); // Update local storage
-            // No toast here to avoid spamming. We save all at once.
+            // Don't update local storage here to avoid partial saves. We save all at once on submit.
         }
     };
 
-    if (!isMounted || !currentUser) {
+    if (!currentUser) {
         return (
             <div>
                 <MainHeader title="Edit Profile" />
@@ -117,6 +115,7 @@ export default function EditProfilePage() {
 
     async function onSubmit(values: ProfileFormValues) {
         if (!currentUser) return;
+        setIsSaving(true);
 
         const today = new Date();
         const birthDate = new Date(values.dob);
@@ -135,14 +134,25 @@ export default function EditProfilePage() {
             profilePicture: profilePic || currentUser.profilePicture,
         };
         
-        setCurrentUser(updatedUser); // Update local storage for immediate reflection
-        await createUserInFirestore(updatedUser); // Update firestore
-        
-        toast({
-            title: "Profile Updated",
-            description: "Your changes have been saved successfully.",
-        });
-        router.push('/profile');
+        try {
+            await createUserInFirestore(updatedUser); // Update firestore
+            setCurrentUser(updatedUser); // Update local storage for immediate reflection
+            
+            toast({
+                title: "Profile Updated",
+                description: "Your changes have been saved successfully.",
+            });
+            router.push('/profile');
+
+        } catch (error) {
+             toast({
+                variant: 'destructive',
+                title: "Update Failed",
+                description: "Could not save your changes. Please try again.",
+            });
+        } finally {
+            setIsSaving(false);
+        }
     }
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +169,7 @@ export default function EditProfilePage() {
     
     const handleCroppedImage = (croppedImage: string) => {
         setProfilePic(croppedImage);
+        handleUpdate('profilePicture', croppedImage);
         setImageToCrop(null);
     }
 
@@ -234,6 +245,7 @@ export default function EditProfilePage() {
                                         <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
+                                            type="button"
                                             variant={"outline"}
                                             className={cn(
                                                 "w-full pl-3 text-left font-normal",
@@ -322,9 +334,9 @@ export default function EditProfilePage() {
                         </Card>
 
 
-                        <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
-                            <Save className="mr-2 h-5 w-5"/>
-                            Save Changes
+                        <Button type="submit" disabled={isSaving} className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
+                            {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5"/>}
+                            {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </form>
                 </Form>
@@ -357,7 +369,7 @@ const CountryRow = ({ label, value, onCountryChange }: { label: string; value?: 
     <div className="w-full flex items-center justify-between py-3 text-sm border-b border-border">
         <span className="font-medium">{label}</span>
         <Select value={value} onValueChange={onCountryChange}>
-            <SelectTrigger className="w-[180px] border-none text-right justify-end gap-2 pr-0">
+            <SelectTrigger className="w-[180px] border-none text-right justify-end gap-2 pr-0 focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Select Country" />
             </SelectTrigger>
             <SelectContent>

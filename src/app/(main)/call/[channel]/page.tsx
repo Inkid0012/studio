@@ -38,6 +38,7 @@ export default function CallPage() {
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const callConnectedRef = useRef(false);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -71,8 +72,11 @@ export default function CallPage() {
         await clientRef.current?.subscribe(user, mediaType);
         if (mediaType === 'audio') {
           user.audioTrack?.play();
-          setCallStatus('Connected');
-          startTimer();
+          if (!callConnectedRef.current) {
+            setCallStatus('Connected');
+            startTimer();
+            callConnectedRef.current = true;
+          }
         }
       });
 
@@ -109,20 +113,26 @@ export default function CallPage() {
       stopTimer();
       localAudioTrackRef.current?.close();
       clientRef.current?.leave();
+      callConnectedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, otherUser, channelName, toast]);
 
   const startTimer = () => {
     if(timerIntervalRef.current) return;
     
-    // Initial deduction
+    // Initial deduction for the first minute
     handleCoinDeduction();
 
     timerIntervalRef.current = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-        if ((callDuration + 1) % 60 === 0) {
-            handleCoinDeduction();
-        }
+        setCallDuration(prev => {
+            const newDuration = prev + 1;
+            // Deduct coins at the start of each new minute (e.g., at 60s, 120s, etc.)
+            if (newDuration > 0 && newDuration % 60 === 0) {
+                handleCoinDeduction();
+            }
+            return newDuration;
+        });
     }, 1000);
   };
 
@@ -135,17 +145,23 @@ export default function CallPage() {
 
   const handleCoinDeduction = async () => {
     if(!currentUser) return;
+
+    // Fetch the latest user data to ensure coin balance is accurate
+    const latestUser = await getUserById(currentUser.id);
+    if (!latestUser) {
+        handleLeave('Could not verify your coin balance.', true);
+        return;
+    }
     
-    const updatedCoins = (currentUser.coins || 0) - CHARGE_COSTS.call;
+    const updatedCoins = (latestUser.coins || 0) - CHARGE_COSTS.call;
     
     if (updatedCoins < 0) {
         handleLeave('You have insufficient coins.', true);
         return;
     }
 
-    const updatedUser = { ...currentUser, coins: updatedCoins };
+    const updatedUser = { ...latestUser, coins: updatedCoins };
     
-    // These would ideally be batched and handled by a backend transaction
     await createUserInFirestore(updatedUser);
     await addTransaction({
         userId: currentUser.id,
@@ -163,6 +179,7 @@ export default function CallPage() {
     setCallStatus('Leaving...');
     localAudioTrackRef.current?.close();
     await clientRef.current?.leave();
+    callConnectedRef.current = false;
     if(reason) {
         toast({ title: 'Call Ended', description: reason, variant: isError ? 'destructive' : 'default' });
     }
@@ -182,8 +199,12 @@ export default function CallPage() {
     return `${mins}:${secs}`;
   }
 
-  if (!otherUser) {
-    return <div>Loading call...</div>;
+  if (!otherUser || !currentUser) {
+    return (
+       <div className="flex items-center justify-center h-screen bg-background">
+            <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+       </div>
+    );
   }
 
   return (

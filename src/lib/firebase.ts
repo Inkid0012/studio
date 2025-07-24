@@ -1,9 +1,9 @@
 
-import { initializeApp, getApp, getApps } from "firebase/app";
+import { initializeApp, getApp, getApps, FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
-const firebaseConfig = {
+const firebaseConfig: FirebaseOptions = {
   apiKey: "AIzaSyDoa3EvVgm3krZ0Psj09H9IDIl0xYzZiCY",
   authDomain: "fizu-tw3mo.firebaseapp.com",
   projectId: "fizu-tw3mo",
@@ -16,17 +16,15 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Enable offline persistence
+// Enable offline persistence only in the browser
 if (typeof window !== 'undefined') {
     enableIndexedDbPersistence(db)
       .catch((err) => {
         if (err.code == 'failed-precondition') {
-          // Multiple tabs open, persistence can only be enabled
-          // in one tab at a time.
-          console.warn('Firestore persistence failed: multiple tabs open.');
+          // This can happen if multiple tabs are open and persistence is enabled in one already.
+          console.warn('Firestore persistence failed: Failed to obtain exclusive lock on database. This is expected if you have multiple tabs open.');
         } else if (err.code == 'unimplemented') {
-          // The current browser does not support all of the
-          // features required to enable persistence
+          // The current browser does not support all of the features required to enable persistence
           console.warn('Firestore persistence not available in this browser.');
         }
       });
