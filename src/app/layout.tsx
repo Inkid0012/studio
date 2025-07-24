@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
-import { I18nProvider } from '@/contexts/i18n';
 
 export const metadata: Metadata = {
   title: 'FIZU',
@@ -29,10 +28,8 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-            <I18nProvider>
-                {children}
-                <Toaster />
-            </I18nProvider>
+            {children}
+            <Toaster />
         </ThemeProvider>
       </body>
     </html>
