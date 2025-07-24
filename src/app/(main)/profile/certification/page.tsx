@@ -86,17 +86,6 @@ export default function CertificationPage() {
             <div className="p-4 space-y-6 pb-24">
                 <Card>
                     <CardContent className="p-6">
-                        <h3 className="font-bold text-lg mb-2">Certification Rewards</h3>
-                        <ul className="space-y-1 text-muted-foreground list-decimal list-inside">
-                            <li>Certification mark</li>
-                            <li>Double the revenue</li>
-                            <li>More exposure</li>
-                        </ul>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-6">
                         <h3 className="font-bold text-lg mb-2">Certification Requirements</h3>
                         <ul className="space-y-2">
                             <li className="flex items-center gap-2">
