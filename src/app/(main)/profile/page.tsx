@@ -23,19 +23,6 @@ const Stat = ({ value, label }: { value: number, label: string }) => (
   </div>
 );
 
-const IconLink = ({ href, icon: Icon, label, hasNotification = false }: { href: string, icon: React.ElementType, label: string, hasNotification?: boolean }) => (
-  <Link href={href} className="flex flex-col items-center space-y-2">
-    <div className="relative">
-      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-primary/10">
-        <Icon className="w-6 h-6 text-primary" />
-      </div>
-      {hasNotification && <div className="absolute top-0 right-0 w-3 h-3 rounded-full bg-red-500 border-2 border-background" />}
-    </div>
-    <span className="text-xs text-foreground">{label}</span>
-  </Link>
-);
-
-
 const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false }: { href: string, icon: React.ElementType, label: string, onClick?: () => void, disabled?: boolean }) => (
   <Link href={href} onClick={onClick} className={cn("flex flex-col items-center space-y-2 group", disabled && "opacity-50 pointer-events-none")}>
     <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
@@ -202,20 +189,10 @@ export default function ProfilePage() {
             </Button>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 py-4">
-            <IconLink href="#" icon={Users} label="Family" hasNotification />
-            <IconLink href="#" icon={Store} label="Store" />
-            <IconLink href="#" icon={Crown} label="Aristocracy" />
-            <IconLink href="/profile/edit" icon={Heart} label="Interests" />
-        </div>
-
         <Card>
             <CardContent className="p-4">
                 <h3 className="font-bold mb-4">Other</h3>
                  <div className="grid grid-cols-4 gap-y-6">
-                    <OtherLink href="#" icon={Briefcase} label="Bag" />
-                    <OtherLink href="#" icon={Star} label="Level" />
-                    <OtherLink href="#" icon={Gift} label="Badge" />
                     <OtherLink 
                         href={user.isCertified ? '#' : '/profile/certification'} 
                         icon={user.isCertified ? ShieldCheck : ShieldAlert} 
