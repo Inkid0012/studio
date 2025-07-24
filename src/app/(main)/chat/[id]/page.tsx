@@ -1,3 +1,4 @@
+
 'use client';
 import { notFound, useParams } from 'next/navigation';
 import { getConversationById, getUserById, getCurrentUser } from '@/lib/data';
@@ -9,16 +10,28 @@ import { Phone, Mic, Paperclip, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState } from 'react';
+import { Conversation, User } from '@/types';
 
 export default function ChatPage() {
   const params = useParams();
   const { toast } = useToast();
   const convoId = params.id as string;
-  const conversation = getConversationById(convoId);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
   const currentUser = getCurrentUser();
 
+  useEffect(() => {
+    const fetchConvo = async () => {
+      const convoData = await getConversationById(convoId);
+      if (convoData) {
+        setConversation(convoData);
+      }
+    };
+    fetchConvo();
+  }, [convoId]);
+  
   if (!conversation) {
-    notFound();
+    return <div>Loading chat...</div>;
   }
   
   const otherUser = conversation.participants.find(p => p.id !== currentUser.id);

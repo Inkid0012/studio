@@ -1,6 +1,6 @@
 
 'use client';
-import { getCurrentUser } from "@/lib/data";
+import { getCurrentUser, getUserById } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,10 @@ import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
 import type { User } from "@/types";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { onAuthStateChanged } from "firebase/auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Stat = ({ value, label }: { value: number, label: string }) => (
   <div className="text-center">
@@ -39,13 +43,61 @@ const OtherLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elem
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    setUser(getCurrentUser());
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userProfile = await getUserById(firebaseUser.uid);
+        setUser(userProfile);
+      } else {
+        // Fallback to local user if not logged in via firebase
+        setUser(getCurrentUser());
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
+  const handleCopyId = () => {
+    if (user?.id) {
+      navigator.clipboard.writeText(user.id);
+      toast({
+        title: "Copied!",
+        description: "Your user ID has been copied to the clipboard.",
+      });
+    }
+  };
+
+
   if (!user) {
-    return <div>Loading...</div>; // Or a proper skeleton loader
+    return (
+        <div className="bg-background">
+            <div className="relative h-64">
+                <Skeleton className="h-full w-full" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+                <div className="absolute -bottom-16 left-4 right-4">
+                    <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+                        <CardContent className="p-4 flex items-center space-x-4">
+                            <Skeleton className="w-16 h-16 rounded-full" />
+                            <div className="flex-grow space-y-2">
+                                <Skeleton className="h-6 w-3/4" />
+                                <Skeleton className="h-4 w-1/2" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+            <div className="pt-20 px-4 pb-4 space-y-6">
+                 <div className="grid grid-cols-4 gap-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                 </div>
+            </div>
+        </div>
+    )
   }
 
 
@@ -76,8 +128,8 @@ export default function ProfilePage() {
                     </svg>
                   </h2>
                   <div className="text-xs text-muted-foreground flex items-center">
-                    <span>ID: 870555909</span>
-                    <Copy className="w-3 h-3 ml-2 cursor-pointer" />
+                    <span>ID: {user.id}</span>
+                    <Copy className="w-3 h-3 ml-2 cursor-pointer" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyId(); }} />
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />

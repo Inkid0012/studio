@@ -1,9 +1,50 @@
+
+'use client';
+
 import Link from "next/link";
-import { Facebook, Mail, User } from "lucide-react";
+import { Facebook, Mail, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FizuLogo } from "@/components/icons/fizu-logo";
+import { auth } from "@/lib/firebase";
+import { signInAnonymously } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { getUserById } from "@/lib/data";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleAnonymousLogin = async () => {
+    setIsLoading(true);
+    try {
+      const userCredential = await signInAnonymously(auth);
+      const firebaseUser = userCredential.user;
+
+      // Check if user exists in Firestore
+      const userProfile = await getUserById(firebaseUser.uid);
+
+      if (userProfile) {
+        // User exists, redirect to discover
+        router.push('/discover');
+      } else {
+        // New user, redirect to gender selection
+        router.push('/gender');
+      }
+    } catch (error) {
+      console.error("Anonymous login failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Could not log in anonymously. Please try again.",
+      });
+      setIsLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8">
       <div className="w-full max-w-md space-y-8">
@@ -26,11 +67,13 @@ export default function LoginPage() {
               Continue with Facebook
             </Link>
           </Button>
-          <Button variant="ghost" asChild className="w-full text-muted-foreground hover:text-primary">
-            <Link href="/gender">
-              <User className="mr-2 h-5 w-5" />
-              Continue Anonymously
-            </Link>
+          <Button variant="ghost" onClick={handleAnonymousLogin} disabled={isLoading} className="w-full text-muted-foreground hover:text-primary">
+            {isLoading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+                <User className="mr-2 h-5 w-5" />
+            )}
+            Continue Anonymously
           </Button>
         </div>
         <p className="px-8 text-center text-sm text-muted-foreground font-body">

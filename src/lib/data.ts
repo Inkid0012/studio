@@ -1,5 +1,7 @@
 import type { User, Conversation, Message, PersonalInfoOption } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 const defaultCurrentUser: User = {
   id: 'user-1',
@@ -33,6 +35,10 @@ export function getCurrentUser(): User {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
+      // Make sure we have the correct ID from the default user object if it's the default user.
+      if (user.name === 'NightWhisper') {
+          user.id = defaultCurrentUser.id;
+      }
       return {...defaultCurrentUser, ...user};
     }
   }
@@ -45,9 +51,6 @@ export function setCurrentUser(user: User) {
         localStorage.setItem('currentUser', JSON.stringify(user));
     }
 }
-
-export const currentUser: User = getCurrentUser();
-
 
 export const users: User[] = [
   defaultCurrentUser,
@@ -154,12 +157,21 @@ export const conversations: Conversation[] = [
     },
 ];
 
-export function getUserById(id: string): User | undefined {
-    if (id === 'user-1') return getCurrentUser();
-    return users.find(user => user.id === id);
+export async function getUserById(id: string): Promise<User | null> {
+    const userRef = doc(db, 'users', id);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        return userSnap.data() as User;
+    } else {
+        const localUser = users.find(user => user.id === id);
+        if (localUser) return localUser;
+    }
+    return null;
 }
 
 export function getDiscoverProfiles(): User[] {
+    // For now, this returns local data. This could be changed to fetch from Firestore.
     return users.filter(user => user.id !== getCurrentUser().id);
 }
 
@@ -167,14 +179,20 @@ export function getConversationsForUser(userId: string): Conversation[] {
     return conversations.filter(convo => convo.participantIds.includes(userId));
 }
 
-export function getConversationById(id: string): Conversation | undefined {
+export async function getConversationById(id: string): Promise<Conversation | undefined> {
     const convo = conversations.find(convo => convo.id === id);
     if(convo) {
-        convo.participants = convo.participantIds.map(id => getUserById(id)!);
+        const participants = await Promise.all(convo.participantIds.map(id => getUserById(id)));
+        convo.participants = participants.filter(p => p !== null) as User[];
     }
     return convo;
 }
 
+
+export async function createUserInFirestore(userData: User) {
+    const userRef = doc(db, 'users', userData.id);
+    await setDoc(userRef, userData, { merge: true });
+}
 
 export const personalInfoOptions: PersonalInfoOption[] = [
     {

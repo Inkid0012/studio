@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getCurrentUser, setCurrentUser } from '@/lib/data';
+import { getCurrentUser, setCurrentUser, createUserInFirestore } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,7 +85,7 @@ export default function EditProfilePage() {
     }
 
 
-    function onSubmit(values: ProfileFormValues) {
+    async function onSubmit(values: ProfileFormValues) {
         const today = new Date();
         const birthDate = new Date(values.dob);
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -95,7 +95,9 @@ export default function EditProfilePage() {
         }
 
         const updatedUser = { ...currentUser!, name: values.name, bio: values.bio, dob: values.dob.toISOString(), age: age, profilePicture: profilePic || currentUser!.profilePicture };
-        setCurrentUser(updatedUser);
+        
+        setCurrentUser(updatedUser); // Update local storage for immediate reflection
+        await createUserInFirestore(updatedUser); // Update firestore
         
         toast({
             title: "Profile Updated",
