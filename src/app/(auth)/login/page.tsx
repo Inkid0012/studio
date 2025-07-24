@@ -24,37 +24,34 @@ export default function LoginPage() {
       const userCredential = await signInAnonymously(auth);
       const firebaseUser = userCredential.user;
 
-      // Check if user exists in Firestore
-      let userProfile = await getUserById(firebaseUser.uid);
+      // For anonymous login, we assume a new user is created or we can fetch it later.
+      // To speed up the process, we create a local profile first and proceed.
+      const newUser: AppUser = {
+        id: firebaseUser.uid,
+        name: `User-${firebaseUser.uid.substring(0, 5)}`,
+        email: '', // Anonymous users don't have an email
+        isAnonymous: true,
+        // Set other default fields
+        age: 0,
+        dob: new Date().toISOString(),
+        gender: 'other',
+        bio: '',
+        profilePicture: 'https://placehold.co/400x400.png',
+        interests: [],
+        isCertified: false,
+        coins: 0,
+        friends: 0,
+        following: 0,
+        followers: 0,
+        visitors: 0,
+      };
 
-      if (userProfile) {
-        setCurrentUser(userProfile);
-        router.push('/discover');
-      } else {
-        // Create a new user profile in Firestore
-        const newUser: AppUser = {
-          id: firebaseUser.uid,
-          name: `User-${firebaseUser.uid.substring(0, 5)}`,
-          email: '', // Anonymous users don't have an email
-          isAnonymous: true,
-          // Set other default fields
-          age: 0,
-          dob: new Date().toISOString(),
-          gender: 'other',
-          bio: '',
-          profilePicture: 'https://placehold.co/400x400.png',
-          interests: [],
-          isCertified: false,
-          coins: 0,
-          friends: 0,
-          following: 0,
-          followers: 0,
-          visitors: 0,
-        };
-        await createUserInFirestore(newUser);
-        setCurrentUser(newUser);
-        router.push('/gender');
-      }
+      setCurrentUser(newUser);
+      
+      // We will create the full user record in Firestore on the gender selection page.
+      // This makes the initial login much faster.
+      router.push('/gender');
+      
     } catch (error) {
       console.error("Anonymous login failed:", error);
       toast({
