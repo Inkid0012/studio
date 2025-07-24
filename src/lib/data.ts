@@ -259,26 +259,26 @@ let mockTransactions: Transaction[] = [
 ];
 
 
-async function seedInitialUsers() {
-    const usersCollection = collection(db, 'users');
-    const q = query(usersCollection, limit(1));
-    const snapshot = await getDocs(q);
+export async function seedInitialUsers() {
+    try {
+        const usersCollection = collection(db, 'users');
+        const q = query(usersCollection, limit(1));
+        const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-        console.log('No users found in Firestore. Seeding initial mock users...');
-        const batch = writeBatch(db);
-        mockUsers.forEach(user => {
-            const userRef = doc(db, 'users', user.id);
-            batch.set(userRef, user);
-        });
-        await batch.commit();
-        console.log('Initial users have been seeded.');
+        if (snapshot.empty) {
+            console.log('No users found in Firestore. Seeding initial mock users...');
+            const batch = writeBatch(db);
+            mockUsers.forEach(user => {
+                const userRef = doc(db, 'users', user.id);
+                batch.set(userRef, user);
+            });
+            await batch.commit();
+            console.log('Initial users have been seeded.');
+        }
+    } catch (error) {
+        console.error("Error seeding users:", error);
     }
 }
-
-// Call this function once when the app loads, perhaps in a top-level component or layout.
-// For simplicity, we can call it before getting discover profiles.
-seedInitialUsers();
 
 
 export async function getUserById(id: string): Promise<User | null> {

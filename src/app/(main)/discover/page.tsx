@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS } from "@/lib/data";
+import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS, seedInitialUsers } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
@@ -35,6 +35,7 @@ export default function DiscoverPage() {
   useEffect(() => {
     const fetchProfiles = async () => {
       setIsLoading(true);
+      await seedInitialUsers(); // Ensure users are seeded
       const currentUser = getCurrentUser();
       const fetchedProfiles = await getDiscoverProfiles(currentUser?.id);
       setAllProfiles(fetchedProfiles);
