@@ -1,7 +1,7 @@
 
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const CHARGE_COSTS = {
@@ -259,6 +259,28 @@ let mockTransactions: Transaction[] = [
 ];
 
 
+async function seedInitialUsers() {
+    const usersCollection = collection(db, 'users');
+    const q = query(usersCollection, limit(1));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+        console.log('No users found in Firestore. Seeding initial mock users...');
+        const batch = writeBatch(db);
+        mockUsers.forEach(user => {
+            const userRef = doc(db, 'users', user.id);
+            batch.set(userRef, user);
+        });
+        await batch.commit();
+        console.log('Initial users have been seeded.');
+    }
+}
+
+// Call this function once when the app loads, perhaps in a top-level component or layout.
+// For simplicity, we can call it before getting discover profiles.
+seedInitialUsers();
+
+
 export async function getUserById(id: string): Promise<User | null> {
     try {
         const userRef = doc(db, 'users', id);
@@ -268,15 +290,10 @@ export async function getUserById(id: string): Promise<User | null> {
             return userSnap.data() as User;
         } else {
             console.log(`User ${id} not found in Firestore.`);
-            // Fallback to local data if not in Firestore, useful for dev/demo
-            const localUser = mockUsers.find(user => user.id === id);
-            if (localUser) return localUser;
+            return null;
         }
     } catch (error) {
         console.error("Error fetching user from Firestore:", error);
-        // If firestore fails (e.g., offline), fallback to local data
-        const localUser = mockUsers.find(user => user.id === id);
-        if (localUser) return localUser;
     }
     return null;
 }
@@ -289,10 +306,6 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
     querySnapshot.forEach((doc) => {
         allUsers.push(doc.data() as User);
     });
-
-    if (allUsers.length === 0) {
-        allUsers.push(...mockUsers);
-    }
 
     if (!currentUserId) {
         return allUsers.filter(u => u.gender === 'female'); // Default to showing female profiles if no user
