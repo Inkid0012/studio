@@ -44,44 +44,32 @@ const OtherLink = ({ href, icon: Icon, label, onClick }: { href: string, icon: R
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // If there's a firebase user, always fetch the latest profile from firestore
         const userProfile = await getUserById(firebaseUser.uid);
         if(userProfile){
             setUser(userProfile);
-            setCurrentUser(userProfile); // also update local storage
+            setCurrentUser(userProfile); 
         } else {
-            // This can happen if the user signed up but didn't finish profile creation
-            // Or if there's a lag in firestore replication.
-            // We rely on locally stored user for a moment.
             const localUser = getCurrentUser();
             if (localUser && localUser.id === firebaseUser.uid) {
               setUser(localUser);
             } else {
-              // If no local user, or mismatch, redirect to login
               router.push('/login');
             }
         }
       } else {
-        // No firebase user, clear local storage and go to login
         localStorage.removeItem('currentUser');
         setUser(null);
         router.push('/login');
       }
+      setIsLoading(false);
     });
-
-    // Also check for local user on initial mount in case auth state takes time
-    if(!user) {
-        const localUser = getCurrentUser();
-        if(localUser) {
-            setUser(localUser);
-        }
-    }
 
     return () => unsubscribe();
   }, [router]);
@@ -97,18 +85,26 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    localStorage.removeItem('currentUser');
-    setUser(null);
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    router.push('/login');
+    try {
+      await signOut(auth);
+      localStorage.removeItem('currentUser');
+      setUser(null);
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      router.push('/login');
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "Could not log you out. Please try again.",
+      });
+    }
   };
 
 
-  if (!user) {
+  if (isLoading) {
     return (
         <div className="bg-background">
             <div className="relative h-64">
@@ -133,9 +129,14 @@ export default function ProfilePage() {
                     <Skeleton className="h-12 w-full" />
                     <Skeleton className="h-12 w-full" />
                  </div>
+                 <Skeleton className="h-48 w-full" />
             </div>
         </div>
     )
+  }
+  
+  if (!user) {
+    return null; 
   }
 
 
@@ -215,7 +216,7 @@ export default function ProfilePage() {
                     <OtherLink href="#" icon={ShieldQuestion} label="Customer service" />
                     <OtherLink href="#" icon={MessageSquare} label="User Feedback" />
                     <OtherLink href="/settings" icon={Settings} label="Settings" />
-                    <OtherLink href="#" icon={LogOut} label="Logout" onClick={handleLogout}/>
+                    <OtherLink href="#" icon={LogOut} label="Logout" onClick={(e) => {e.preventDefault(); handleLogout(); }}/>
                 </div>
             </CardContent>
         </Card>
