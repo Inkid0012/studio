@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -10,12 +11,12 @@ interface MainHeaderProps {
   children?: React.ReactNode;
 }
 
-export function MainHeader({ title, showBackButton = true, children }: MainHeaderProps) {
+export function MainHeader({ title, showBackButton = false, children }: MainHeaderProps) {
   const router = useRouter();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+      <div className="container flex h-14 max-w-lg mx-auto items-center">
         <div className="flex items-center">
           {showBackButton && (
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">

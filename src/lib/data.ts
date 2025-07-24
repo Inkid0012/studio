@@ -17,11 +17,12 @@ let mockUsers: User[] = [
     interests: ['Hiking', 'Photography', 'Craft Beer', 'Traveling', 'Sci-Fi Movies'],
     isCertified: true,
     coins: 250,
-    followers: ['user-2', 'user-4'],
+    followers: ['user-2', 'user-4', 'user-7'],
     following: ['user-2', 'user-3', 'user-4', 'user-5'],
     visitors: [
       { userId: 'user-2', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
       { userId: 'user-4', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() },
+      { userId: 'user-8', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
     ],
     country: 'Kenya',
     exercise: 'Sometimes',
@@ -46,8 +47,8 @@ let mockUsers: User[] = [
     interests: ['Painting', 'Dogs', 'Yoga', 'Indie Music', 'Thrift Shopping'],
     isCertified: true,
     coins: 1000,
-    followers: ['user-1', 'user-3'],
-    following: ['user-1'],
+    followers: ['user-1', 'user-3', 'user-8'],
+    following: ['user-1', 'user-8'],
     visitors: [
       { userId: 'user-1', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
       { userId: 'user-3', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
@@ -66,7 +67,7 @@ let mockUsers: User[] = [
     interests: ['Cooking', 'Wine Tasting', 'Jazz Music', 'Cycling', 'History'],
     isCertified: false,
     coins: 150,
-    followers: [],
+    followers: ['user-2'],
     following: ['user-2'],
     visitors: [],
   },
@@ -121,6 +122,40 @@ let mockUsers: User[] = [
     following: [],
     visitors: [],
   },
+  {
+    id: 'user-7',
+    name: 'George',
+    email: 'george@example.com',
+    isAnonymous: false,
+    age: 35,
+    dob: new Date('1989-09-05').toISOString(),
+    gender: 'male',
+    bio: 'Travel blogger who has been to 30 countries and counting. My goal is to see the world. Join me?',
+    profilePicture: 'https://placehold.co/400x400.png',
+    interests: ['Traveling', 'Blogging', 'Photography', 'Culture', 'Food'],
+    isCertified: true,
+    coins: 1200,
+    followers: ['user-1'],
+    following: [],
+    visitors: [],
+  },
+  {
+    id: 'user-8',
+    name: 'Hannah',
+    email: 'hannah@example.com',
+    isAnonymous: false,
+    age: 22,
+    dob: new Date('2002-01-30').toISOString(),
+    gender: 'female',
+    bio: 'University student studying graphic design. I\'m passionate about all things creative. Let\'s make something beautiful together.',
+    profilePicture: 'https://placehold.co/400x400.png',
+    interests: ['Graphic Design', 'Art', 'Video Games', 'Anime', 'K-Pop'],
+    isCertified: false,
+    coins: 80,
+    followers: ['user-2'],
+    following: ['user-2'],
+    visitors: [],
+  },
 ];
 
 
@@ -152,6 +187,10 @@ const messages: Message[] = [
     { id: 'msg-1', senderId: 'user-2', text: 'Hey! I saw you like hiking. Me too!', timestamp: new Date(Date.now() - 1000 * 60 * 5), type: 'text', content: 'Hey! I saw you like hiking. Me too!' },
     { id: 'msg-2', senderId: 'user-1', text: 'Awesome! We should totally go sometime. Any favorite trails?', timestamp: new Date(Date.now() - 1000 * 60 * 4), type: 'text', content: 'Awesome! We should totally go sometime. Any favorite trails?' },
     { id: 'msg-3', senderId: 'user-3', text: 'Hi there! Your bio is intriguing.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), type: 'text', content: 'Hi there! Your bio is intriguing.' },
+    { id: 'msg-4', senderId: 'user-4', text: 'That gym picture on your profile is impressive!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), type: 'text', content: 'That gym picture on your profile is impressive!' },
+    { id: 'msg-5', senderId: 'user-1', text: 'Thanks! I try to stay consistent.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000*60*5), type: 'text', content: 'Thanks! I try to stay consistent.' },
+    { id: 'msg-6', senderId: 'user-8', text: 'I love your art style, Bella!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), type: 'text', content: 'I love your art style, Bella!' },
+    { id: 'msg-7', senderId: 'user-2', text: 'Thank you so much, Hannah! :)', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 7), type: 'text', content: 'Thank you so much, Hannah! :)' },
 ];
 
 export const conversations: Conversation[] = [
@@ -166,6 +205,18 @@ export const conversations: Conversation[] = [
         participantIds: ['user-1', 'user-3'],
         participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-3')!],
         messages: [messages[2]],
+    },
+     {
+        id: 'convo-3',
+        participantIds: ['user-1', 'user-4'],
+        participants: [users.find(u => u.id === 'user-1')!, users.find(u => u.id === 'user-4')!],
+        messages: [messages[3], messages[4]],
+    },
+     {
+        id: 'convo-4',
+        participantIds: ['user-2', 'user-8'],
+        participants: [users.find(u => u.id === 'user-2')!, users.find(u => u.id === 'user-8')!],
+        messages: [messages[5], messages[6]],
     },
 ];
 
@@ -202,14 +253,11 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function getDiscoverProfiles(): Promise<User[]> {
     const currentUser = getCurrentUser();
-    if (!currentUser) {
-        return [];
-    }
     
     // In a real app, you'd have more complex discovery logic.
     // Here we just get all users and filter them.
     const usersCollection = collection(db, 'users');
-    const q = query(usersCollection, where("id", "!=", currentUser.id));
+    const q = query(usersCollection); // Get all users
     const querySnapshot = await getDocs(q);
     const allUsers: User[] = [];
     querySnapshot.forEach((doc) => {
@@ -219,6 +267,10 @@ export async function getDiscoverProfiles(): Promise<User[]> {
     // Fallback to mock data if firestore is empty
     if (allUsers.length === 0) {
         allUsers.push(...mockUsers);
+    }
+    
+    if (!currentUser) {
+        return allUsers; // Return all if no user is logged in
     }
 
     // Filter out the current user first
