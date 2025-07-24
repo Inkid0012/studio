@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Check, WalletCards, History, ArrowUp } from 'lucide-react';
-import { getCurrentUser } from '@/lib/data';
+import { Check, WalletCards, History, ArrowUp, Loader2 } from 'lucide-react';
+import { getCurrentUser, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import type { User } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const coinPackages = [
   { amount: 500, price: 0.64 },
@@ -30,9 +32,11 @@ const CoinIcon = () => (
 
 export default function WalletPage() {
   const router = useRouter();
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
   const [selectedPackage, setSelectedPackage] = useState(coinPackages[0]);
   const [isFolded, setIsFolded] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
 
   const displayedPackages = isFolded ? coinPackages.slice(0, 6) : coinPackages;
 
@@ -40,6 +44,45 @@ export default function WalletPage() {
     // Handle case where user is not logged in
     return <div>Loading...</div>;
   }
+  
+  const handlePurchase = async () => {
+    if (!currentUser) return;
+    setIsProcessing(true);
+
+    try {
+        const updatedUser: User = {
+            ...currentUser,
+            coins: currentUser.coins + selectedPackage.amount,
+        };
+
+        await createUserInFirestore(updatedUser);
+        setCurrentUser(updatedUser);
+        setCurrentUserFromState(updatedUser);
+
+        await addTransaction({
+            userId: currentUser.id,
+            type: 'purchase',
+            amount: selectedPackage.amount,
+            description: `Purchased ${selectedPackage.amount.toLocaleString()} coins`,
+        });
+
+        toast({
+            title: 'Purchase Successful',
+            description: `You have successfully purchased ${selectedPackage.amount.toLocaleString()} coins.`,
+        });
+
+    } catch (error) {
+         toast({
+            variant: 'destructive',
+            title: 'Purchase Failed',
+            description: 'There was an error processing your purchase. Please try again.',
+        });
+        console.error("Purchase failed", error);
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
 
   return (
     <div className="bg-muted/30 min-h-screen">
@@ -100,13 +143,19 @@ export default function WalletPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
-          <Button className="w-full h-14 bg-green-500 hover:bg-green-600 text-white text-lg">
+          <Button onClick={handlePurchase} disabled={isProcessing} className="w-full h-14 bg-green-500 hover:bg-green-600 text-white text-lg">
                 <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                         <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Google_Pay_logo.svg/1280px-Google_Pay_logo.svg.png" alt="GPay" width={48} height={20} className="filter invert brightness-0" />
-                    </div>
-                    <span className="font-semibold">USD {selectedPackage.price.toFixed(2)}</span>
-                    <ChevronRight className="h-5 w-5 opacity-70" />
+                    {isProcessing ? (
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto"/>
+                    ) : (
+                        <>
+                            <div className="flex items-center gap-2">
+                                <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Google_Pay_logo.svg/1280px-Google_Pay_logo.svg.png" alt="GPay" width={48} height={20} className="filter invert brightness-0" />
+                            </div>
+                            <span className="font-semibold">USD {selectedPackage.price.toFixed(2)}</span>
+                            <ChevronRight className="h-5 w-5 opacity-70" />
+                        </>
+                    )}
                 </div>
             </Button>
       </div>
