@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CalendarIcon, Camera, Save, Upload } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -38,17 +38,24 @@ export default function EditProfilePage() {
     const { toast } = useToast();
     const router = useRouter();
     const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
-    const [dialogOpen, setDialogOpen] = useState(false);
+    const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+    const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
 
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
+        defaultValues: {
+            name: '',
+            bio: '',
+        }
     });
 
     useEffect(() => {
+        setIsMounted(true);
         const user = getCurrentUser();
         setCurrentUserFromState(user);
         setProfilePic(user.profilePicture);
@@ -59,7 +66,7 @@ export default function EditProfilePage() {
         });
     }, [form]);
 
-    if (!currentUser) {
+    if (!isMounted || !currentUser) {
         return (
             <div>
                 <MainHeader title="Edit Profile" />
@@ -102,7 +109,7 @@ export default function EditProfilePage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImageToCrop(reader.result as string);
-                setDialogOpen(false); 
+                setUploadDialogOpen(false); 
             };
             reader.readAsDataURL(file);
         }
@@ -125,26 +132,23 @@ export default function EditProfilePage() {
                                     <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person"/>
                                     <AvatarFallback className="text-5xl">{currentUser?.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                                <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button type="button" size="icon" className="absolute bottom-2 right-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
                                             <Camera className="h-5 w-5"/>
                                             <span className="sr-only">Change photo</span>
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent>
+                                     <DialogContent>
                                         <DialogHeader>
                                             <DialogTitle>Change Profile Photo</DialogTitle>
-                                            <DialogDescription>
-                                                Take a new photo or upload one from your gallery.
-                                            </DialogDescription>
                                         </DialogHeader>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                                                 <Camera className="mr-2 h-5 w-5"/>
                                                 Take Photo
                                             </Button>
-                                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                                                 <Upload className="mr-2 h-5 w-5"/>
                                                 Upload
                                             </Button>
@@ -154,7 +158,6 @@ export default function EditProfilePage() {
                                                 ref={fileInputRef} 
                                                 onChange={handleFileChange} 
                                                 accept="image/*"
-                                                capture="user"
                                             />
                                         </div>
                                     </DialogContent>
@@ -179,10 +182,17 @@ export default function EditProfilePage() {
                          <FormField
                             control={form.control}
                             name="dob"
-                            render={({ field }) => (
+                            render={({ field }) => {
+                                const [tempDate, setTempDate] = useState<Date | undefined>(field.value);
+                                
+                                useEffect(() => {
+                                    setTempDate(field.value);
+                                }, [field.value]);
+
+                                return (
                                 <FormItem className="flex flex-col">
                                     <FormLabel className="font-headline">Date of birth</FormLabel>
-                                    <Popover>
+                                    <Popover open={dobPopoverOpen} onOpenChange={setDobPopoverOpen}>
                                         <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
@@ -204,13 +214,24 @@ export default function EditProfilePage() {
                                         <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar
                                             mode="single"
-                                            selected={field.value}
-                                            onSelect={field.onChange}
+                                            selected={tempDate}
+                                            onSelect={setTempDate}
                                             disabled={(date) =>
                                             date > new Date() || date < new Date("1900-01-01")
                                             }
                                             initialFocus
                                         />
+                                        <div className="p-2 border-t border-border">
+                                            <Button
+                                                className="w-full"
+                                                onClick={() => {
+                                                    field.onChange(tempDate);
+                                                    setDobPopoverOpen(false);
+                                                }}
+                                            >
+                                                Confirm
+                                            </Button>
+                                        </div>
                                         </PopoverContent>
                                     </Popover>
                                     <FormDescription>
@@ -218,7 +239,8 @@ export default function EditProfilePage() {
                                     </FormDescription>
                                     <FormMessage />
                                 </FormItem>
-                            )}
+                                )
+                            }}
                         />
 
                         <FormField
