@@ -10,7 +10,7 @@ export default function LoginPage() {
         <div className="text-center">
             <FizuLogo className="mx-auto mb-4 text-5xl" />
           <p className="mt-2 text-center text-muted-foreground font-body">
-            Find your premium match.
+            Find your spark.
           </p>
         </div>
         <div className="space-y-4">
