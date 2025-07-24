@@ -314,39 +314,41 @@ export async function getUserById(id: string): Promise<User | null> {
     return null;
 }
 
-export async function getDiscoverProfiles(): Promise<User[]> {
-    const currentUser = getCurrentUser();
-    
-    // In a real app, you'd have more complex discovery logic.
-    // Here we just get all users and filter them.
+export async function getDiscoverProfiles(currentUserId?: string, forSearch = false): Promise<User[]> {
     const usersCollection = collection(db, 'users');
-    const q = query(usersCollection); // Get all users
+    const q = query(usersCollection);
     const querySnapshot = await getDocs(q);
-    const allUsers: User[] = [];
+    let allUsers: User[] = [];
     querySnapshot.forEach((doc) => {
         allUsers.push(doc.data() as User);
     });
 
-    // Fallback to mock data if firestore is empty
     if (allUsers.length === 0) {
         allUsers.push(...mockUsers);
     }
-    
-    if (!currentUser) {
-        return allUsers; // Return all if no user is logged in
+
+    if (!currentUserId) {
+        return allUsers.filter(u => u.gender === 'female'); // Default to showing female profiles if no user
     }
 
-    // Filter out the current user first
-    const otherUsers = allUsers.filter(user => user.id !== currentUser.id);
+    const currentUser = await getUserById(currentUserId);
+    if (!currentUser) {
+         return allUsers.filter(u => u.gender === 'female');
+    }
 
-    // Then, filter by opposite gender
+    let otherUsers = allUsers.filter(user => user.id !== currentUserId);
+
+    if (forSearch) {
+        return otherUsers;
+    }
+    
     if (currentUser.gender === 'male') {
         return otherUsers.filter(user => user.gender === 'female');
     } else if (currentUser.gender === 'female') {
         return otherUsers.filter(user => user.gender === 'male');
     }
     
-    return [];
+    return []; // Return empty for 'other' gender for now
 }
 
 export function getConversationsForUser(userId: string): Conversation[] {

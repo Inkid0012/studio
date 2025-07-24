@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles } from "@/lib/data";
+import { getDiscoverProfiles, getCurrentUser } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
@@ -31,7 +31,8 @@ export default function DiscoverPage() {
   useEffect(() => {
     const fetchProfiles = async () => {
       setIsLoading(true);
-      const fetchedProfiles = await getDiscoverProfiles();
+      const currentUser = getCurrentUser();
+      const fetchedProfiles = await getDiscoverProfiles(currentUser?.id);
       setAllProfiles(fetchedProfiles);
       setDisplayedProfiles(fetchedProfiles);
       setIsLoading(false);
@@ -54,8 +55,8 @@ export default function DiscoverPage() {
     
     // In a real app, this would be an API call to a search endpoint.
     // For this mock, we will filter the existing list of all users.
-    // We get *all* users here for the search, not just recommended ones.
-    const allUsers = await getDiscoverProfiles(); // This function should return all users except current for search purposes
+    const currentUser = getCurrentUser();
+    const allUsers = await getDiscoverProfiles(currentUser?.id, true); // Get all users for search
     const results = allUsers.filter(user => 
         user.name.toLowerCase().includes(lowerCaseQuery) ||
         user.id.toLowerCase().includes(lowerCaseQuery)
@@ -103,7 +104,7 @@ export default function DiscoverPage() {
       </MainHeader>
       <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <Card className="bg-orange-400 text-white shadow-lg overflow-hidden">
+          <Card className="bg-[#800000] text-white shadow-lg overflow-hidden">
             <CardContent className="p-4 flex flex-col justify-between h-full">
               <h3 className="font-bold text-lg">Voice Chat</h3>
               <div className="flex justify-end">
@@ -112,7 +113,7 @@ export default function DiscoverPage() {
             </CardContent>
           </Card>
           <Link href="/wallet">
-            <Card className="bg-yellow-400 text-white shadow-lg overflow-hidden">
+            <Card className="bg-green-600 text-white shadow-lg overflow-hidden">
               <CardContent className="p-4 flex flex-col justify-between h-full">
                 <h3 className="font-bold text-lg">Recharge</h3>
                  <div className="flex justify-end">

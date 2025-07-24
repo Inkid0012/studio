@@ -36,9 +36,11 @@ export default function UserProfilePage() {
     fetchUser();
   }, [userId, currentUser]);
 
-  if (!user) {
+  if (!user || !currentUser) {
     return <div>Loading profile...</div>; // Or a skeleton loader
   }
+
+  const canChat = currentUser.id !== user.id && currentUser.gender !== user.gender;
 
   return (
     <div>
@@ -77,12 +79,14 @@ export default function UserProfilePage() {
           </CardContent>
         </Card>
 
-        <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
-            <Link href={`/chat/convo-placeholder`}>
-                <MessageSquare className="mr-2 h-5 w-5"/>
-                Send Message
-            </Link>
-        </Button>
+        {canChat && (
+          <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
+              <Link href={`/chat/convo-placeholder`}>
+                  <MessageSquare className="mr-2 h-5 w-5"/>
+                  Send Message
+              </Link>
+          </Button>
+        )}
 
         <Card>
             <CardHeader>
