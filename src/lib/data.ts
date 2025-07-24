@@ -1,4 +1,4 @@
-import type { User, Conversation, Message, PersonalInfoOption } from '@/types';
+import type { User, Conversation, Message, PersonalInfoOption, Transaction } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -164,6 +164,14 @@ export const conversations: Conversation[] = [
     },
 ];
 
+export const transactions: Transaction[] = [
+    { id: 'txn-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+    { id: 'txn-2', type: 'spent', amount: 10, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
+    { id: 'txn-3', type: 'spent', amount: 50, description: 'Voice call with @Diana', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+    { id: 'txn-4', type: 'purchase', amount: 1000, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+];
+
+
 export async function getUserById(id: string): Promise<User | null> {
     try {
         const userRef = doc(db, 'users', id);
@@ -304,3 +312,9 @@ export const personalInfoOptions: PersonalInfoOption[] = [
     "Yemen",
     "Zambia", "Zimbabwe"
   ];
+
+  export function getTransactionsForUser(userId: string): Transaction[] {
+    // In a real app, this would filter transactions based on the userId.
+    // For this demo, we'll return all mock transactions.
+    return transactions;
+  }

@@ -48,3 +48,11 @@ export type PersonalInfoOption = {
     icon: React.ElementType;
     options: string[];
 };
+
+export type Transaction = {
+  id: string;
+  type: 'purchase' | 'spent';
+  amount: number;
+  description: string;
+  timestamp: string; // ISO 8601 date string
+};

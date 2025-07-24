@@ -189,13 +189,13 @@ export default function ProfilePage() {
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-base rounded-lg">
-            Recharge
-          </Button>
-          <Button variant="outline" className="w-full font-bold py-6 text-base rounded-lg border-none bg-gradient-to-r from-yellow-400 to-amber-500 text-white flex items-center justify-between">
-            <span>VIP/SVIP</span>
-            <Image src="https://placehold.co/32x32.png" alt="VIP" width={24} height={24} data-ai-hint="diamond gem" />
-          </Button>
+            <Button asChild className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-base rounded-lg">
+                <Link href="/wallet">Recharge</Link>
+            </Button>
+            <Button variant="outline" className="w-full font-bold py-6 text-base rounded-lg border-none bg-gradient-to-r from-yellow-400 to-amber-500 text-white flex items-center justify-between">
+                <span>VIP/SVIP</span>
+                <Image src="https://placehold.co/32x32.png" alt="VIP" width={24} height={24} data-ai-hint="diamond gem" />
+            </Button>
         </div>
 
         <div className="grid grid-cols-4 gap-4 py-4">
