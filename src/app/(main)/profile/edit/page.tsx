@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getCurrentUser, setCurrentUser, createUserInFirestore } from '@/lib/data';
+import { getCurrentUser, setCurrentUser, createUserInFirestore, personalInfoOptions, countries } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,10 +19,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import type { User } from '@/types';
+import type { User, PersonalInfoOption } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageCropper } from '@/components/image-cropper';
-import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { OptionSelector } from '@/components/option-selector';
 
 
 const profileSchema = z.object({
@@ -45,6 +47,7 @@ export default function EditProfilePage() {
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [isMounted, setIsMounted] = useState(false);
     const [dobPopoverOpen, setDobPopoverOpen] = useState(false);
+    const [selectedOption, setSelectedOption] = useState<PersonalInfoOption | null>(null);
 
 
     const form = useForm<ProfileFormValues>({
@@ -58,14 +61,25 @@ export default function EditProfilePage() {
     useEffect(() => {
         setIsMounted(true);
         const user = getCurrentUser();
-        setCurrentUserFromState(user);
-        setProfilePic(user.profilePicture);
-        form.reset({
-            name: user.name,
-            dob: user.dob ? new Date(user.dob) : undefined,
-            bio: user.bio,
-        });
+        if (user) {
+            setCurrentUserFromState(user);
+            setProfilePic(user.profilePicture);
+            form.reset({
+                name: user.name,
+                dob: user.dob ? new Date(user.dob) : undefined,
+                bio: user.bio,
+            });
+        }
     }, [form]);
+
+    const handleUpdate = (key: keyof User, value: any) => {
+        if (currentUser) {
+            const updatedUser = { ...currentUser, [key]: value };
+            setCurrentUserFromState(updatedUser);
+            setCurrentUser(updatedUser); // Update local storage
+            // No toast here to avoid spamming. We save all at once.
+        }
+    };
 
     if (!isMounted || !currentUser) {
         return (
@@ -84,6 +98,20 @@ export default function EditProfilePage() {
         )
     }
 
+    if (selectedOption) {
+        return (
+            <OptionSelector 
+                option={selectedOption}
+                currentValue={currentUser[selectedOption.key] as string}
+                onSelect={(value) => {
+                    handleUpdate(selectedOption.key, value);
+                    setSelectedOption(null);
+                }}
+                onBack={() => setSelectedOption(null)}
+            />
+        )
+    }
+
 
     async function onSubmit(values: ProfileFormValues) {
         const today = new Date();
@@ -94,7 +122,14 @@ export default function EditProfilePage() {
             age--;
         }
 
-        const updatedUser = { ...currentUser!, name: values.name, bio: values.bio, dob: values.dob.toISOString(), age: age, profilePicture: profilePic || currentUser!.profilePicture };
+        const updatedUser: User = { 
+            ...currentUser!, 
+            name: values.name, 
+            bio: values.bio, 
+            dob: values.dob.toISOString(), 
+            age: age, 
+            profilePicture: profilePic || currentUser!.profilePicture 
+        };
         
         setCurrentUser(updatedUser); // Update local storage for immediate reflection
         await createUserInFirestore(updatedUser); // Update firestore
@@ -260,15 +295,27 @@ export default function EditProfilePage() {
                             )}
                         />
 
-                        <Link href="/profile/edit/personal" className="block w-full">
-                            <Button type="button" variant="outline" className="w-full justify-between py-6 text-base">
-                                <div className='flex items-center'>
-                                <UserIcon className="mr-2 h-5 w-5 text-accent"/>
-                                Personal Information
-                                </div>
-                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                            </Button>
-                        </Link>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="font-headline text-lg">Personal Information</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <CountryRow 
+                                    label="Country" 
+                                    value={currentUser.country} 
+                                    onCountryChange={(value) => handleUpdate('country', value)}
+                                />
+                                {personalInfoOptions.map((option) => (
+                                    <InfoRow 
+                                        key={option.key}
+                                        label={option.label}
+                                        value={currentUser[option.key] as string | undefined}
+                                        icon={option.icon}
+                                        onClick={() => setSelectedOption(option)}
+                                    />
+                                ))}
+                            </CardContent>
+                        </Card>
 
 
                         <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold py-6 text-base">
@@ -288,3 +335,34 @@ export default function EditProfilePage() {
         </div>
     );
 }
+
+const InfoRow = ({ label, value, icon: Icon, onClick }: { label: string; value?: string; icon?: React.ElementType; onClick: () => void; }) => (
+    <button type="button" onClick={onClick} className="w-full flex items-center justify-between py-3 text-sm border-b border-border last:border-b-0">
+        <div className="flex items-center gap-3">
+            {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
+            <span className="font-medium">{label}</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+            <span>{value || 'Add'}</span>
+            <ChevronRight className="h-4 w-4" />
+        </div>
+    </button>
+);
+
+const CountryRow = ({ label, value, onCountryChange }: { label: string; value?: string; onCountryChange: (value: string) => void }) => (
+    <div className="w-full flex items-center justify-between py-3 text-sm border-b border-border">
+        <span className="font-medium">{label}</span>
+        <Select value={value} onValueChange={onCountryChange}>
+            <SelectTrigger className="w-[180px] border-none text-right justify-end gap-2 pr-0">
+                <SelectValue placeholder="Select Country" />
+            </SelectTrigger>
+            <SelectContent>
+                {countries.map(country => (
+                    <SelectItem key={country} value={country}>
+                        {country}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    </div>
+);
