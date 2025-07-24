@@ -13,11 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff, PhoneOff } from 'lucide-react';
 import { MainHeader } from '@/components/layout/main-header';
 import { useToast } from '@/hooks/use-toast';
-import { getUserById, getCurrentUser } from '@/lib/data';
+import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
 import type { User } from '@/types';
 import { cn } from '@/lib/utils';
 
-const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
+const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
 const token = process.env.NEXT_PUBLIC_AGORA_TEMP_TOKEN || null;
 
 export default function CallPage() {
@@ -29,13 +29,15 @@ export default function CallPage() {
   const channelName = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
 
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [callStatus, setCallStatus] = useState('Connecting...');
+  const [callDuration, setCallDuration] = useState(0);
   
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -44,7 +46,7 @@ export default function CallPage() {
       router.push('/discover');
       return;
     }
-    setCurrentUser(user);
+    setCurrentUserFromState(user);
 
     const fetchOtherUser = async () => {
         const userProfile = await getUserById(otherUserId);
@@ -70,17 +72,18 @@ export default function CallPage() {
         if (mediaType === 'audio') {
           user.audioTrack?.play();
           setCallStatus('Connected');
+          startTimer();
         }
       });
 
       clientRef.current.on('user-unpublished', () => {
         setCallStatus('User left');
+        handleLeave('The other user left the call.');
       });
       
        clientRef.current.on('user-left', () => {
         setCallStatus('User has left the call');
-        toast({ title: 'Call Ended', description: 'The other user has left the call.' });
-        setTimeout(() => handleLeave(), 2000);
+        handleLeave('The other user has left the call.');
       });
 
       try {
@@ -103,15 +106,66 @@ export default function CallPage() {
     initAgora();
 
     return () => {
+      stopTimer();
       localAudioTrackRef.current?.close();
       clientRef.current?.leave();
     };
   }, [currentUser, otherUser, channelName, toast]);
 
-  const handleLeave = async () => {
+  const startTimer = () => {
+    if(timerIntervalRef.current) return;
+    
+    // Initial deduction
+    handleCoinDeduction();
+
+    timerIntervalRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+        if ((callDuration + 1) % 60 === 0) {
+            handleCoinDeduction();
+        }
+    }, 1000);
+  };
+
+  const stopTimer = () => {
+    if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+    }
+  };
+
+  const handleCoinDeduction = async () => {
+    if(!currentUser) return;
+    
+    const updatedCoins = (currentUser.coins || 0) - CHARGE_COSTS.call;
+    
+    if (updatedCoins < 0) {
+        handleLeave('You have insufficient coins.', true);
+        return;
+    }
+
+    const updatedUser = { ...currentUser, coins: updatedCoins };
+    
+    // These would ideally be batched and handled by a backend transaction
+    await createUserInFirestore(updatedUser);
+    await addTransaction({
+        userId: currentUser.id,
+        type: 'spent',
+        amount: CHARGE_COSTS.call,
+        description: `Call with ${otherUser?.name || 'user'}`
+    });
+    
+    setCurrentUser(updatedUser);
+    setCurrentUserFromState(updatedUser);
+  };
+
+  const handleLeave = async (reason?: string, isError = false) => {
+    stopTimer();
     setCallStatus('Leaving...');
     localAudioTrackRef.current?.close();
     await clientRef.current?.leave();
+    if(reason) {
+        toast({ title: 'Call Ended', description: reason, variant: isError ? 'destructive' : 'default' });
+    }
     router.back();
   };
 
@@ -121,6 +175,12 @@ export default function CallPage() {
       setIsMuted(!isMuted);
     }
   };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  }
 
   if (!otherUser) {
     return <div>Loading call...</div>;
@@ -137,6 +197,9 @@ export default function CallPage() {
           </Avatar>
           <h2 className="text-3xl font-bold">{otherUser.name}</h2>
           <p className="text-muted-foreground text-lg">{callStatus}</p>
+          {callStatus === 'Connected' && (
+             <p className="text-muted-foreground text-xl font-mono">{formatDuration(callDuration)}</p>
+          )}
         </div>
       </div>
       <div className="fixed bottom-0 left-0 right-0 p-8 bg-background/80 backdrop-blur-sm border-t">
@@ -154,7 +217,7 @@ export default function CallPage() {
           </Button>
           <Button
             size="lg"
-            onClick={handleLeave}
+            onClick={() => handleLeave()}
             className="rounded-full w-20 h-20 bg-destructive hover:bg-destructive/90"
           >
             <PhoneOff className="w-8 h-8" />

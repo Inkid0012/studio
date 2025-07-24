@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles, getCurrentUser } from "@/lib/data";
+import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
@@ -19,6 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -27,6 +29,8 @@ export default function DiscoverPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -73,6 +77,25 @@ export default function DiscoverPage() {
     setIsSearching(false);
   };
   
+  const handleVoiceChat = () => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        return;
+    }
+    if (currentUser.coins < CHARGE_COSTS.call) {
+        toast({ variant: 'destructive', title: 'Insufficient Coins', description: `You need at least ${CHARGE_COSTS.call} coins to make a call.`});
+        return;
+    }
+    const randomUser = displayedProfiles[0];
+    if (!randomUser) {
+        toast({ variant: 'destructive', title: 'No users available', description: 'Could not find a user to call right now.' });
+        return;
+    }
+    const conversationId = [currentUser.id, randomUser.id].sort().join('-');
+    router.push(`/call/${conversationId}?otherUserId=${randomUser.id}`);
+  };
+
   const showPlaceholder = !isLoading && displayedProfiles.length === 0;
 
   return (
@@ -104,7 +127,7 @@ export default function DiscoverPage() {
       </MainHeader>
       <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <Card className="bg-[#800000] text-white shadow-lg overflow-hidden">
+          <Card className="bg-[#800000] text-white shadow-lg overflow-hidden cursor-pointer" onClick={handleVoiceChat}>
             <CardContent className="p-4 flex flex-col justify-between h-full">
               <h3 className="font-bold text-lg">Voice Chat</h3>
               <div className="flex justify-end">
