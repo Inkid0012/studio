@@ -1,12 +1,29 @@
+
+'use client'
+
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
-import { currentUser, getConversationsForUser } from "@/lib/data";
+import { getCurrentUser, getConversationsForUser } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from "react";
+import type { Conversation, User } from "@/types";
+
 
 export default function ChatListPage() {
-  const conversations = getConversationsForUser(currentUser.id);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    setConversations(getConversationsForUser(user.id));
+  }, []);
+
+  if (!currentUser) {
+    return <div>Loading...</div>
+  }
 
   return (
     <div>
@@ -28,7 +45,7 @@ export default function ChatListPage() {
                   <div className="flex justify-between items-center">
                     <h3 className="font-bold font-headline">{otherUser.name}</h3>
                     <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(lastMessage.timestamp, { addSuffix: true })}
+                        {formatDistanceToNow(new Date(lastMessage.timestamp), { addSuffix: true })}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{lastMessage.text}</p>

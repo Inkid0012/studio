@@ -1,6 +1,6 @@
 import type { User, Conversation, Message } from '@/types';
 
-export const currentUser: User = {
+const defaultCurrentUser: User = {
   id: 'user-1',
   name: 'NightWhisper',
   age: 28,
@@ -16,8 +16,29 @@ export const currentUser: User = {
   visitors: 0,
 };
 
+// Use a function to get the current user, prioritizing localStorage
+export function getCurrentUser(): User {
+  if (typeof window !== 'undefined') {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      return JSON.parse(storedUser);
+    }
+  }
+  return defaultCurrentUser;
+}
+
+// Use a function to set the current user in localStorage
+export function setCurrentUser(user: User) {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+    }
+}
+
+export const currentUser: User = getCurrentUser();
+
+
 export const users: User[] = [
-  currentUser,
+  defaultCurrentUser,
   {
     id: 'user-2',
     name: 'Bella',
@@ -93,7 +114,7 @@ export const users: User[] = [
     followers: 120,
     visitors: 250,
   },
-];
+].map(u => u.id === 'user-1' ? getCurrentUser() : u);
 
 const messages: Message[] = [
     { id: 'msg-1', senderId: 'user-2', text: 'Hey! I saw you like hiking. Me too!', timestamp: new Date(Date.now() - 1000 * 60 * 5), type: 'text', content: 'Hey! I saw you like hiking. Me too!' },
@@ -105,23 +126,24 @@ export const conversations: Conversation[] = [
     {
         id: 'convo-1',
         participantIds: ['user-1', 'user-2'],
-        participants: [currentUser, users.find(u => u.id === 'user-2')!],
+        participants: [getCurrentUser(), users.find(u => u.id === 'user-2')!],
         messages: [messages[0], messages[1]],
     },
     {
         id: 'convo-2',
         participantIds: ['user-1', 'user-3'],
-        participants: [currentUser, users.find(u => u.id === 'user-3')!],
+        participants: [getCurrentUser(), users.find(u => u.id === 'user-3')!],
         messages: [messages[2]],
     },
 ];
 
 export function getUserById(id: string): User | undefined {
+    if (id === 'user-1') return getCurrentUser();
     return users.find(user => user.id === id);
 }
 
 export function getDiscoverProfiles(): User[] {
-    return users.filter(user => user.id !== currentUser.id);
+    return users.filter(user => user.id !== getCurrentUser().id);
 }
 
 export function getConversationsForUser(userId: string): Conversation[] {
@@ -129,5 +151,9 @@ export function getConversationsForUser(userId: string): Conversation[] {
 }
 
 export function getConversationById(id: string): Conversation | undefined {
-    return conversations.find(convo => convo.id === id);
+    const convo = conversations.find(convo => convo.id === id);
+    if(convo) {
+        convo.participants = convo.participantIds.map(id => getUserById(id)!);
+    }
+    return convo;
 }

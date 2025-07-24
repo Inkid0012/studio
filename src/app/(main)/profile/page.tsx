@@ -1,10 +1,13 @@
-import { currentUser } from "@/lib/data";
+'use client';
+import { getCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
+import { useEffect, useState } from "react";
+import type { User } from "@/types";
 
 const Stat = ({ value, label }: { value: number, label: string }) => (
   <div className="text-center">
@@ -34,7 +37,16 @@ const OtherLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elem
 );
 
 export default function ProfilePage() {
-  const user = currentUser;
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
+
+  if (!user) {
+    return <div>Loading...</div>; // Or a proper skeleton loader
+  }
+
 
   return (
     <div className="bg-background">
@@ -42,7 +54,7 @@ export default function ProfilePage() {
         <Image 
           src={user.profilePicture}
           alt="Profile background"
-          layout="fill"
+          fill
           objectFit="cover"
           className="blur-sm"
           data-ai-hint="portrait person"

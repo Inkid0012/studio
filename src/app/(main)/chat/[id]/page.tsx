@@ -1,6 +1,6 @@
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { getConversationById, getUserById, currentUser } from '@/lib/data';
+import { getConversationById, getUserById, getCurrentUser } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ export default function ChatPage() {
   const { toast } = useToast();
   const convoId = params.id as string;
   const conversation = getConversationById(convoId);
+  const currentUser = getCurrentUser();
 
   if (!conversation) {
     notFound();

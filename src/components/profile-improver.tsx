@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { currentUser } from "@/lib/data";
+import { getCurrentUser } from "@/lib/data";
 
 const formSchema = z.object({
     profileDescription: z.string().min(20, { message: "Profile description must be at least 20 characters." }),
@@ -25,6 +25,7 @@ export function ProfileImprover() {
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<ProfileImprovementOutput | null>(null);
     const { toast } = useToast();
+    const currentUser = getCurrentUser();
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),

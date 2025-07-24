@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { currentUser } from '@/lib/data';
+import { getCurrentUser, setCurrentUser } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ const profileSchema = z.object({
 export default function EditProfilePage() {
     const { toast } = useToast();
     const router = useRouter();
+    const currentUser = getCurrentUser();
 
     const form = useForm<z.infer<typeof profileSchema>>({
         resolver: zodResolver(profileSchema),
@@ -36,7 +37,9 @@ export default function EditProfilePage() {
     });
 
     function onSubmit(values: z.infer<typeof profileSchema>) {
-        console.log("Profile updated:", values);
+        const updatedUser = { ...currentUser, ...values };
+        setCurrentUser(updatedUser);
+        
         toast({
             title: "Profile Updated",
             description: "Your changes have been saved successfully.",
