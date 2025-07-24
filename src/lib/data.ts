@@ -188,8 +188,24 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export function getDiscoverProfiles(): User[] {
     const currentUser = getCurrentUser();
-    // For now, this returns local data. This could be changed to fetch from Firestore.
-    return users.filter(user => user.id !== currentUser?.id);
+    if (!currentUser) {
+        return [];
+    }
+
+    // Filter out the current user first
+    const otherUsers = users.filter(user => user.id !== currentUser.id);
+
+    // Then, filter by opposite gender
+    if (currentUser.gender === 'male') {
+        return otherUsers.filter(user => user.gender === 'female');
+    } else if (currentUser.gender === 'female') {
+        return otherUsers.filter(user => user.gender === 'male');
+    }
+    
+    // For 'other' or unset gender, we will not show anyone based on the rule.
+    // Or we could return all users except the current one. 
+    // For now, let's stick to the strict opposite-gender rule.
+    return [];
 }
 
 export function getConversationsForUser(userId: string): Conversation[] {
@@ -278,7 +294,7 @@ export const personalInfoOptions: PersonalInfoOption[] = [
     "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
     "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia",
     "Oman",
-    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+    "Pakistan", "Palau", "Palestine", "Panama", "Papua new Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
     "Qatar",
     "Romania", "Russia", "Rwanda",
     "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
