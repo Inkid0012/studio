@@ -134,7 +134,7 @@ export default function ProfilePage() {
   }
 
   const friendsCount = user.following.filter(id => user.followers.includes(id)).length;
-
+  const visitorsCount = user.visitors?.length || 0;
 
   return (
     <div className="bg-background">
@@ -181,7 +181,7 @@ export default function ProfilePage() {
           <Stat value={friendsCount} label="Friends" href="/profile/friends" />
           <Stat value={user.following.length} label="Following" href="/profile/following" />
           <Stat value={user.followers.length} label="Followers" href="/profile/followers" />
-          <Stat value={user.visitors.length} label="Visitors" href="/profile/visitors" />
+          <Stat value={visitorsCount} label="Visitors" href="/profile/visitors" />
         </div>
         
         <div className="grid grid-cols-1 gap-4">

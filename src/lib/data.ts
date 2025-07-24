@@ -53,6 +53,15 @@ let mockUsers: User[] = [
       { userId: 'user-1', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
       { userId: 'user-3', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
     ],
+    country: 'United States of America',
+    exercise: 'Frequently',
+    education: 'Master\'s Degree',
+    smoking: 'Non-smoker',
+    liquor: 'Rarely',
+    superpower: 'Flying',
+    pets: 'Dog Person',
+    personalityType: 'ENFP',
+    horoscope: 'Aries',
   },
   {
     id: 'user-3',
@@ -70,6 +79,15 @@ let mockUsers: User[] = [
     followers: ['user-2'],
     following: ['user-2'],
     visitors: [],
+    country: 'Italy',
+    exercise: 'Rarely',
+    education: 'Some College',
+    smoking: 'Smoker',
+    liquor: 'Frequently',
+    superpower: 'Super strength',
+    pets: 'Neither',
+    personalityType: 'ESTP',
+    horoscope: 'Leo',
   },
   {
     id: 'user-4',
@@ -87,6 +105,15 @@ let mockUsers: User[] = [
     followers: ['user-1'],
     following: ['user-1'],
     visitors: [],
+    country: 'Australia',
+    exercise: 'Frequently',
+    education: 'Associate Degree',
+    smoking: 'Non-smoker',
+    liquor: 'Sober',
+    superpower: 'Teleportation',
+    pets: 'Both',
+    personalityType: 'ESTJ',
+    horoscope: 'Sagittarius',
   },
   {
     id: 'user-5',
@@ -104,6 +131,15 @@ let mockUsers: User[] = [
     followers: [],
     following: ['user-1'],
     visitors: [],
+    country: 'Canada',
+    exercise: 'Sometimes',
+    education: 'High School',
+    smoking: 'Social smoker',
+    liquor: 'Socially',
+    superpower: 'Time travel',
+    pets: 'Cat Person',
+    personalityType: 'INFP',
+    horoscope: 'Aquarius',
   },
   {
     id: 'user-6',
@@ -121,6 +157,15 @@ let mockUsers: User[] = [
     followers: [],
     following: [],
     visitors: [],
+    country: 'United Kingdom',
+    exercise: 'Rarely',
+    education: 'Master\'s Degree',
+    smoking: 'Non-smoker',
+    liquor: 'Rarely',
+    superpower: 'Invisibility',
+    pets: 'Cat Person',
+    personalityType: 'INFJ',
+    horoscope: 'Cancer',
   },
   {
     id: 'user-7',
@@ -138,6 +183,15 @@ let mockUsers: User[] = [
     followers: ['user-1'],
     following: [],
     visitors: [],
+    country: 'Germany',
+    exercise: 'Sometimes',
+    education: 'PhD',
+    smoking: 'Non-smoker',
+    liquor: 'Socially',
+    superpower: 'Flying',
+    pets: 'Neither',
+    personalityType: 'ENTJ',
+    horoscope: 'Virgo',
   },
   {
     id: 'user-8',
@@ -155,6 +209,15 @@ let mockUsers: User[] = [
     followers: ['user-2'],
     following: ['user-2'],
     visitors: [],
+    country: 'South Korea',
+    exercise: 'Sometimes',
+    education: 'Some College',
+    smoking: 'Non-smoker',
+    liquor: 'Socially',
+    superpower: 'Teleportation',
+    pets: 'Have other pets',
+    personalityType: 'ISFP',
+    horoscope: 'Aquarius',
   },
 ];
 
@@ -304,7 +367,7 @@ export async function createUserInFirestore(userData: User) {
     const userRef = doc(db, 'users', userData.id);
     const { ...dataToSave } = userData;
 
-    // Convert follower and following arrays if they are not already
+    // Ensure arrays are initialized
     if (!Array.isArray(dataToSave.followers)) {
         dataToSave.followers = [];
     }
@@ -466,26 +529,36 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
 
     const profileOwnerRef = doc(db, 'users', profileOwnerId);
     
+    // First, get the current user data to manipulate the array
+    const userSnap = await getDoc(profileOwnerRef);
+    if (!userSnap.exists()) {
+        console.error("Profile owner not found for adding a visitor");
+        return;
+    }
+
+    const userData = userSnap.data() as User;
+    const visitors = userData.visitors || [];
+
+    // Remove previous visit from the same user to keep the list unique
+    const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
+
     const newVisitor: Visitor = {
         userId: visitorId,
         timestamp: new Date().toISOString(),
     };
 
-    // To prevent duplicates for the same visitor, we would typically fetch, filter, and then update.
-    // For simplicity in this mock, we'll just add. A real implementation should handle this carefully
-    // to avoid bloating the visitors array with repeat views from the same person.
+    // Add the new visit to the front of the array
+    const updatedVisitors = [newVisitor, ...filteredVisitors];
+    
     await updateDoc(profileOwnerRef, {
-        visitors: arrayUnion(newVisitor) // Note: arrayUnion checks for exact object equality.
-                                          // A more robust solution might need a transaction to read-modify-write.
+        visitors: updatedVisitors
     });
     
     // Also update mock data
     const profileOwnerIndex = mockUsers.findIndex(u => u.id === profileOwnerId);
     if (profileOwnerIndex !== -1) {
-        // Simple logic to avoid adding the same visitor repeatedly in a short time
-        const existingVisit = mockUsers[profileOwnerIndex].visitors.find(v => v.userId === visitorId);
-        if (!existingVisit) {
-             mockUsers[profileOwnerIndex].visitors.push(newVisitor);
-        }
+        const mockVisitors = mockUsers[profileOwnerIndex].visitors || [];
+        const filteredMockVisitors = mockVisitors.filter(v => v.userId !== visitorId);
+        mockUsers[profileOwnerIndex].visitors = [newVisitor, ...filteredMockVisitors];
     }
 }

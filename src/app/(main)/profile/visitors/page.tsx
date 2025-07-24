@@ -36,7 +36,8 @@ export default function VisitorsPage() {
       if (!currentUser) return;
       setIsLoading(true);
 
-      const sortedVisitors = [...currentUser.visitors].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const visitorList = currentUser.visitors || [];
+      const sortedVisitors = [...visitorList].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       const visitorProfiles = await Promise.all(
         sortedVisitors.map(async (visitor: Visitor) => {
