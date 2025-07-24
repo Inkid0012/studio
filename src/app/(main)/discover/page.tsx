@@ -30,7 +30,6 @@ export default function DiscoverPage() {
 
   return (
     <div>
-      <MainHeader title="" showBackButton={false} />
       <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <Card className="bg-orange-400 text-white shadow-lg overflow-hidden">
