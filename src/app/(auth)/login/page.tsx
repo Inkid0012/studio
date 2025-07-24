@@ -15,19 +15,19 @@ export default function LoginPage() {
         </div>
         <div className="space-y-4">
           <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 text-base" >
-            <Link href="/discover">
+            <Link href="/gender">
               <Mail className="mr-2 h-5 w-5" />
               Continue with Email
             </Link>
           </Button>
           <Button variant="outline" asChild className="w-full font-bold py-6 text-base border-primary/30 hover:bg-primary/5">
-            <Link href="/discover">
+            <Link href="/gender">
               <Facebook className="mr-2 h-5 w-5 text-blue-600" />
               Continue with Facebook
             </Link>
           </Button>
           <Button variant="ghost" asChild className="w-full text-muted-foreground hover:text-primary">
-            <Link href="/discover">
+            <Link href="/gender">
               <User className="mr-2 h-5 w-5" />
               Continue Anonymously
             </Link>
