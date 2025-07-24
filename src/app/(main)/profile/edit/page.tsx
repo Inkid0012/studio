@@ -15,7 +15,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CalendarIcon, Camera, Save, Upload, Video } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { CameraView } from '@/components/camera-view';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -38,9 +37,9 @@ export default function EditProfilePage() {
     const router = useRouter();
     const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [showCamera, setShowCamera] = useState(false);
     const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
@@ -106,11 +105,6 @@ export default function EditProfilePage() {
         }
     };
     
-    const handleCapture = (imageDataUrl: string) => {
-        setProfilePic(imageDataUrl);
-        setShowCamera(false);
-        setDialogOpen(false);
-    }
 
     return (
         <div>
@@ -124,45 +118,45 @@ export default function EditProfilePage() {
                                     <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person"/>
                                     <AvatarFallback className="text-5xl">{currentUser?.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if(!open) setShowCamera(false); }}>
+                                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button type="button" size="icon" className="absolute bottom-2 right-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
                                             <Camera className="h-5 w-5"/>
                                             <span className="sr-only">Change photo</span>
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className={cn(showCamera && "max-w-3xl")}>
+                                    <DialogContent>
                                         <DialogHeader>
                                             <DialogTitle>Change Profile Photo</DialogTitle>
-                                             {!showCamera && (
-                                                <DialogDescription>
-                                                    Take a new photo or upload one from your gallery.
-                                                </DialogDescription>
-                                             )}
+                                            <DialogDescription>
+                                                Take a new photo or upload one from your gallery.
+                                            </DialogDescription>
                                         </DialogHeader>
-                                        {showCamera ? (
-                                            <CameraView onCapture={handleCapture} onCancel={() => setShowCamera(false)} />
-                                        ) : (
-                                            <>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <Button variant="outline" onClick={() => setShowCamera(true)}>
-                                                        <Video className="mr-2 h-5 w-5"/>
-                                                        Take Photo
-                                                    </Button>
-                                                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                                        <Upload className="mr-2 h-5 w-5"/>
-                                                        Upload
-                                                    </Button>
-                                                    <Input 
-                                                        type="file" 
-                                                        className="hidden" 
-                                                        ref={fileInputRef} 
-                                                        onChange={handleFileChange} 
-                                                        accept="image/*"
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Button variant="outline" onClick={() => cameraInputRef.current?.click()}>
+                                                <Video className="mr-2 h-5 w-5"/>
+                                                Take Photo
+                                            </Button>
+                                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                                <Upload className="mr-2 h-5 w-5"/>
+                                                Upload
+                                            </Button>
+                                            <Input 
+                                                type="file" 
+                                                className="hidden" 
+                                                ref={fileInputRef} 
+                                                onChange={handleFileChange} 
+                                                accept="image/*"
+                                            />
+                                             <Input 
+                                                type="file" 
+                                                className="hidden" 
+                                                ref={cameraInputRef} 
+                                                onChange={handleFileChange} 
+                                                accept="image/*"
+                                                capture="user"
+                                            />
+                                        </div>
                                     </DialogContent>
                                 </Dialog>
                             </div>
@@ -250,5 +244,4 @@ export default function EditProfilePage() {
             </div>
         </div>
     );
-
-    
+}
