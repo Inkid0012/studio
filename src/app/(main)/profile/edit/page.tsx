@@ -122,7 +122,7 @@ export default function EditProfilePage() {
                             <div className="relative">
                                 <Avatar className="w-40 h-40 border-4 border-accent">
                                     <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person"/>
-                                    <AvatarFallback className="text-5xl">{currentUser.name.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback className="text-5xl">{currentUser?.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                                     <DialogTrigger asChild>
@@ -131,7 +131,7 @@ export default function EditProfilePage() {
                                             <span className="sr-only">Change photo</span>
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent>
+                                    <DialogContent className={cn(showCamera && "max-w-3xl")}>
                                         {showCamera ? (
                                             <CameraView onCapture={handleCapture} onCancel={() => setShowCamera(false)} />
                                         ) : (
