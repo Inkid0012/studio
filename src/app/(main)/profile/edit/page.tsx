@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarIcon, Camera, Save, Upload, Video } from 'lucide-react';
+import { CalendarIcon, Camera, Save, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -21,6 +21,8 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import type { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImageCropper } from '@/components/image-cropper';
+
 
 const profileSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters."),
@@ -39,7 +41,8 @@ export default function EditProfilePage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
@@ -98,13 +101,17 @@ export default function EditProfilePage() {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onloadend = () => {
-                setProfilePic(reader.result as string);
-                setDialogOpen(false);
+                setImageToCrop(reader.result as string);
+                setDialogOpen(false); 
             };
             reader.readAsDataURL(file);
         }
     };
     
+    const handleCroppedImage = (croppedImage: string) => {
+        setProfilePic(croppedImage);
+        setImageToCrop(null);
+    }
 
     return (
         <div>
@@ -133,8 +140,8 @@ export default function EditProfilePage() {
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <Button variant="outline" onClick={() => cameraInputRef.current?.click()}>
-                                                <Video className="mr-2 h-5 w-5"/>
+                                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                                <Camera className="mr-2 h-5 w-5"/>
                                                 Take Photo
                                             </Button>
                                             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
@@ -145,13 +152,6 @@ export default function EditProfilePage() {
                                                 type="file" 
                                                 className="hidden" 
                                                 ref={fileInputRef} 
-                                                onChange={handleFileChange} 
-                                                accept="image/*"
-                                            />
-                                             <Input 
-                                                type="file" 
-                                                className="hidden" 
-                                                ref={cameraInputRef} 
                                                 onChange={handleFileChange} 
                                                 accept="image/*"
                                                 capture="user"
@@ -242,6 +242,13 @@ export default function EditProfilePage() {
                     </form>
                 </Form>
             </div>
+             {imageToCrop && (
+                <ImageCropper 
+                    imageSrc={imageToCrop} 
+                    onCropComplete={handleCroppedImage}
+                    onClose={() => setImageToCrop(null)}
+                />
+            )}
         </div>
     );
 }
