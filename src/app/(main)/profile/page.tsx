@@ -196,7 +196,6 @@ export default function ProfilePage() {
                         disabled={user.isCertified}
                     />
                     <OtherLink href="#" icon={ShieldQuestion} label="Customer service" />
-                    <OtherLink href="#" icon={MessageSquare} label="User Feedback" />
                     <OtherLink href="/settings" icon={Settings} label="Settings" />
                     <OtherLink href="#" icon={LogOut} label="Logout" onClick={(e) => {e.preventDefault(); handleLogout(); }}/>
                 </div>
