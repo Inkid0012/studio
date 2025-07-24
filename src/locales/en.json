@@ -1,0 +1,14 @@
+{
+    "charge_settings": {
+        "title": "Charge Settings",
+        "coin_charges": "Coin Charges",
+        "message_charges": "Message Charges",
+        "call_charges": "Call Charges",
+        "coins": "coins"
+    },
+    "language_settings": {
+        "title": "Language",
+        "toast_title": "Language Changed",
+        "toast_description": "The application language has been set to"
+    }
+}

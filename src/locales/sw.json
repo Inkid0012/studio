@@ -1,0 +1,14 @@
+{
+    "charge_settings": {
+        "title": "Mipangilio ya Malipo",
+        "coin_charges": "Gharama za Sarafu",
+        "message_charges": "Gharama za Ujumbe",
+        "call_charges": "Gharama za Simu",
+        "coins": "sarafu"
+    },
+    "language_settings": {
+        "title": "Lugha",
+        "toast_title": "Lugha Imebadilishwa",
+        "toast_description": "Lugha ya programu imewekwa kuwa"
+    }
+}

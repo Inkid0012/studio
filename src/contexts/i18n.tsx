@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import en from '../../locales/en.json';
-import sw from '../../locales/sw.json';
+import en from '@/locales/en.json';
+import sw from '@/locales/sw.json';
 
 type Language = 'en' | 'sw';
 
