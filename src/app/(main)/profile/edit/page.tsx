@@ -11,8 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Camera, Save } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Camera, Save, Upload, Video } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ChangeEvent, useRef, useState } from 'react';
+import { CameraView } from '@/components/camera-view';
 
 const profileSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters."),
@@ -26,6 +28,10 @@ export default function EditProfilePage() {
     const { toast } = useToast();
     const router = useRouter();
     const currentUser = getCurrentUser();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
+    const [profilePic, setProfilePic] = useState(currentUser.profilePicture);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
@@ -37,7 +43,7 @@ export default function EditProfilePage() {
     });
 
     function onSubmit(values: ProfileFormValues) {
-        const updatedUser = { ...currentUser, ...values };
+        const updatedUser = { ...currentUser, ...values, profilePicture: profilePic };
         setCurrentUser(updatedUser);
         
         toast({
@@ -45,6 +51,24 @@ export default function EditProfilePage() {
             description: "Your changes have been saved successfully.",
         });
         router.push('/profile');
+    }
+
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfilePic(reader.result as string);
+                setDialogOpen(false);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    const handleCapture = (imageDataUrl: string) => {
+        setProfilePic(imageDataUrl);
+        setShowCamera(false);
+        setDialogOpen(false);
     }
 
     return (
@@ -56,13 +80,48 @@ export default function EditProfilePage() {
                         <div className="flex justify-center">
                             <div className="relative">
                                 <Avatar className="w-40 h-40 border-4 border-accent">
-                                    <AvatarImage src={currentUser.profilePicture} alt={currentUser.name} data-ai-hint="portrait person"/>
+                                    <AvatarImage src={profilePic} alt={currentUser.name} data-ai-hint="portrait person"/>
                                     <AvatarFallback className="text-5xl">{currentUser.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <Button type="button" size="icon" className="absolute bottom-2 right-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                                    <Camera className="h-5 w-5"/>
-                                    <span className="sr-only">Change photo</span>
-                                </Button>
+                                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button type="button" size="icon" className="absolute bottom-2 right-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+                                            <Camera className="h-5 w-5"/>
+                                            <span className="sr-only">Change photo</span>
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        {showCamera ? (
+                                            <CameraView onCapture={handleCapture} onCancel={() => setShowCamera(false)} />
+                                        ) : (
+                                            <>
+                                                <DialogHeader>
+                                                    <DialogTitle>Change Profile Photo</DialogTitle>
+                                                    <DialogDescription>
+                                                        Take a new photo or upload one from your gallery.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <Button variant="outline" onClick={() => setShowCamera(true)}>
+                                                        <Video className="mr-2 h-5 w-5"/>
+                                                        Take Photo
+                                                    </Button>
+                                                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                                        <Upload className="mr-2 h-5 w-5"/>
+                                                        Upload
+                                                    </Button>
+                                                    <Input 
+                                                        type="file" 
+                                                        className="hidden" 
+                                                        ref={fileInputRef} 
+                                                        onChange={handleFileChange} 
+                                                        accept="image/*"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+                                    </DialogContent>
+                                </Dialog>
                             </div>
                         </div>
 
