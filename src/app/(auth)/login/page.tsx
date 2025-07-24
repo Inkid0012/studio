@@ -40,9 +40,8 @@ export default function LoginPage() {
         interests: [],
         isCertified: false,
         coins: 0,
-        friends: 0,
-        following: 0,
-        followers: 0,
+        followers: [],
+        following: [],
         visitors: 0,
       };
 

@@ -11,9 +11,8 @@ export type User = {
   interests: string[];
   isCertified: boolean;
   coins: number;
-  friends: number;
-  following: number;
-  followers: number;
+  followers: string[]; // Array of user IDs
+  following: string[]; // Array of user IDs
   visitors: number;
   country?: string;
   exercise?: string;

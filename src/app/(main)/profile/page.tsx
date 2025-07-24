@@ -16,11 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const Stat = ({ value, label }: { value: number, label: string }) => (
-  <div className="text-center">
-    <p className="text-xl font-bold">{value}</p>
-    <p className="text-xs text-muted-foreground">{label}</p>
-  </div>
+const Stat = ({ value, label, href }: { value: number, label: string, href: string }) => (
+  <Link href={href} className="text-center group">
+    <p className="text-xl font-bold group-hover:text-primary">{value}</p>
+    <p className="text-xs text-muted-foreground group-hover:text-primary">{label}</p>
+  </Link>
 );
 
 const OtherLink = ({ href, icon: Icon, label, onClick, disabled = false }: { href: string, icon: React.ElementType, label: string, onClick?: () => void, disabled?: boolean }) => (
@@ -40,7 +40,8 @@ export default function ProfilePage() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Always fetch the latest profile from local storage first for speed
-        const localUser = getCurrentUser();
+        let localUser = getCurrentUser();
+        
         if (localUser && localUser.id === firebaseUser.uid) {
             setUser(localUser);
         }
@@ -49,13 +50,15 @@ export default function ProfilePage() {
         const userProfile = await getUserById(firebaseUser.uid);
         if(userProfile){
             setUser(userProfile);
-            setCurrentUser(userProfile); 
-        } else if (!localUser) {
-            // If not in local storage or firestore, they need to login
+            setCurrentUser(userProfile);
+            localUser = userProfile;
+        } 
+        
+        if (!localUser) {
              router.push('/login');
         }
       } else {
-        localStorage.removeItem('currentUser');
+        setCurrentUser(null);
         setUser(null);
         router.push('/login');
       }
@@ -78,7 +81,7 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem('currentUser');
+      setCurrentUser(null);
       setUser(null);
       toast({
         title: "Logged Out",
@@ -130,6 +133,8 @@ export default function ProfilePage() {
     return null; 
   }
 
+  const friendsCount = user.following.filter(id => user.followers.includes(id)).length;
+
 
   return (
     <div className="bg-background">
@@ -173,10 +178,10 @@ export default function ProfilePage() {
 
       <div className="pt-20 px-4 pb-4 space-y-6">
         <div className="grid grid-cols-4 gap-4">
-          <Stat value={user.friends} label="Friends" />
-          <Stat value={user.following} label="Following" />
-          <Stat value={user.followers} label="Followers" />
-          <Stat value={user.visitors} label="Visitors" />
+          <Stat value={friendsCount} label="Friends" href="/profile/friends" />
+          <Stat value={user.following.length} label="Following" href="/profile/following" />
+          <Stat value={user.followers.length} label="Followers" href="/profile/followers" />
+          <Stat value={user.visitors} label="Visitors" href="#" />
         </div>
         
         <div className="grid grid-cols-1 gap-4">

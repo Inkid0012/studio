@@ -1,56 +1,35 @@
 import type { User, Conversation, Message, PersonalInfoOption, Transaction } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from './firebase';
 
-const defaultCurrentUser: User = {
-  id: 'user-1',
-  name: 'NightWhisper',
-  email: 'nightwhisper@example.com',
-  isAnonymous: false,
-  age: 28,
-  dob: new Date('1996-05-15').toISOString(),
-  gender: 'male',
-  bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey. I enjoy hiking, photography, and trying new craft beers.',
-  profilePicture: 'https://placehold.co/400x400.png',
-  interests: ['Hiking', 'Photography', 'Craft Beer', 'Traveling', 'Sci-Fi Movies'],
-  isCertified: true,
-  coins: 250,
-  friends: 0,
-  following: 0,
-  followers: 0,
-  visitors: 0,
-  country: 'Kenya',
-  exercise: 'Sometimes',
-  education: 'Bachelor\'s Degree',
-  smoking: 'Non-smoker',
-  liquor: 'Socially',
-  superpower: 'Invisibility',
-  pets: 'Dog Person',
-  personalityType: 'INTJ',
-  horoscope: 'Taurus',
-};
-
-// Use a function to get the current user, prioritizing localStorage
-export function getCurrentUser(): User | null {
-  if (typeof window !== 'undefined') {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      return JSON.parse(storedUser);
-    }
-  }
-  return null;
-}
-
-// Use a function to set the current user in localStorage
-export function setCurrentUser(user: User) {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('currentUser', JSON.stringify(user));
-    }
-}
-
-export const users: User[] = [
-  // defaultCurrentUser is no longer needed here as users are fetched from Firestore
+let mockUsers: User[] = [
+  {
+    id: 'user-1',
+    name: 'NightWhisper',
+    email: 'nightwhisper@example.com',
+    isAnonymous: false,
+    age: 28,
+    dob: new Date('1996-05-15').toISOString(),
+    gender: 'male',
+    bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey. I enjoy hiking, photography, and trying new craft beers.',
+    profilePicture: 'https://placehold.co/400x400.png',
+    interests: ['Hiking', 'Photography', 'Craft Beer', 'Traveling', 'Sci-Fi Movies'],
+    isCertified: true,
+    coins: 250,
+    followers: ['user-2', 'user-4'],
+    following: ['user-2', 'user-3', 'user-4', 'user-5'],
+    visitors: 0,
+    country: 'Kenya',
+    exercise: 'Sometimes',
+    education: 'Bachelor\'s Degree',
+    smoking: 'Non-smoker',
+    liquor: 'Socially',
+    superpower: 'Invisibility',
+    pets: 'Dog Person',
+    personalityType: 'INTJ',
+    horoscope: 'Taurus',
+  },
   {
     id: 'user-2',
     name: 'Bella',
@@ -64,9 +43,8 @@ export const users: User[] = [
     interests: ['Painting', 'Dogs', 'Yoga', 'Indie Music', 'Thrift Shopping'],
     isCertified: true,
     coins: 1000,
-    friends: 120,
-    following: 50,
-    followers: 80,
+    followers: ['user-1', 'user-3'],
+    following: ['user-1'],
     visitors: 300,
   },
   {
@@ -82,9 +60,8 @@ export const users: User[] = [
     interests: ['Cooking', 'Wine Tasting', 'Jazz Music', 'Cycling', 'History'],
     isCertified: false,
     coins: 150,
-    friends: 40,
-    following: 100,
-    followers: 25,
+    followers: [],
+    following: ['user-2'],
     visitors: 150,
   },
   {
@@ -100,12 +77,11 @@ export const users: User[] = [
     interests: ['Weightlifting', 'Running', 'Meal Prep', 'Podcasts', 'Beach Days'],
     isCertified: true,
     coins: 200,
-    friends: 200,
-    following: 75,
-    followers: 150,
+    followers: ['user-1'],
+    following: ['user-1'],
     visitors: 400,
   },
-    {
+  {
     id: 'user-5',
     name: 'Ethan',
     email: 'ethan@example.com',
@@ -118,9 +94,8 @@ export const users: User[] = [
     interests: ['Guitar', 'Songwriting', 'Coffee', 'Live Music', 'Philosophy'],
     isCertified: false,
     coins: 500,
-    friends: 80,
-    following: 30,
-    followers: 50,
+    followers: [],
+    following: ['user-1'],
     visitors: 200,
   },
   {
@@ -136,12 +111,36 @@ export const users: User[] = [
     interests: ['Reading', 'Creative Writing', 'Cats', 'Tea', 'Museums'],
     isCertified: false,
     coins: 50,
-    friends: 150,
-    following: 90,
-    followers: 120,
+    followers: [],
+    following: [],
     visitors: 250,
   },
 ];
+
+
+// Use a function to get the current user, prioritizing localStorage
+export function getCurrentUser(): User | null {
+  if (typeof window !== 'undefined') {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      return JSON.parse(storedUser);
+    }
+  }
+  return null;
+}
+
+// Use a function to set the current user in localStorage
+export function setCurrentUser(user: User | null) {
+    if (typeof window !== 'undefined') {
+        if (user) {
+            localStorage.setItem('currentUser', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('currentUser');
+        }
+    }
+}
+
+export const users: User[] = mockUsers;
 
 const messages: Message[] = [
     { id: 'msg-1', senderId: 'user-2', text: 'Hey! I saw you like hiking. Me too!', timestamp: new Date(Date.now() - 1000 * 60 * 5), type: 'text', content: 'Hey! I saw you like hiking. Me too!' },
@@ -183,13 +182,13 @@ export async function getUserById(id: string): Promise<User | null> {
         } else {
             console.log(`User ${id} not found in Firestore.`);
             // Fallback to local data if not in Firestore, useful for dev/demo
-            const localUser = users.find(user => user.id === id);
+            const localUser = mockUsers.find(user => user.id === id);
             if (localUser) return localUser;
         }
     } catch (error) {
         console.error("Error fetching user from Firestore:", error);
         // If firestore fails (e.g., offline), fallback to local data
-        const localUser = users.find(user => user.id === id);
+        const localUser = mockUsers.find(user => user.id === id);
         if (localUser) return localUser;
     }
     return null;
@@ -213,7 +212,7 @@ export async function getDiscoverProfiles(): Promise<User[]> {
 
     // Fallback to mock data if firestore is empty
     if (allUsers.length === 0) {
-        allUsers.push(...users);
+        allUsers.push(...mockUsers);
     }
 
     // Filter out the current user first
@@ -245,7 +244,17 @@ export async function getConversationById(id: string): Promise<Conversation | un
 
 export async function createUserInFirestore(userData: User) {
     const userRef = doc(db, 'users', userData.id);
-    await setDoc(userRef, userData, { merge: true });
+    const { ...dataToSave } = userData;
+
+    // Convert follower and following arrays if they are not already
+    if (!Array.isArray(dataToSave.followers)) {
+        dataToSave.followers = [];
+    }
+     if (!Array.isArray(dataToSave.following)) {
+        dataToSave.following = [];
+    }
+
+    await setDoc(userRef, dataToSave, { merge: true });
 }
 
 export const personalInfoOptions: PersonalInfoOption[] = [
@@ -342,3 +351,51 @@ export const personalInfoOptions: PersonalInfoOption[] = [
       console.log('Transaction added:', newTransaction);
       return newTransaction;
   }
+
+export async function followUser(currentUserId: string, targetUserId: string) {
+    const currentUserRef = doc(db, 'users', currentUserId);
+    const targetUserRef = doc(db, 'users', targetUserId);
+
+    // Add target to current user's following list
+    await updateDoc(currentUserRef, {
+        following: arrayUnion(targetUserId)
+    });
+    // Add current user to target's followers list
+    await updateDoc(targetUserRef, {
+        followers: arrayUnion(currentUserId)
+    });
+
+    // Mock data update
+    const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
+    const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
+    if (currentUserIndex !== -1 && !mockUsers[currentUserIndex].following.includes(targetUserId)) {
+        mockUsers[currentUserIndex].following.push(targetUserId);
+    }
+    if (targetUserIndex !== -1 && !mockUsers[targetUserIndex].followers.includes(currentUserId)) {
+        mockUsers[targetUserIndex].followers.push(currentUserId);
+    }
+}
+
+export async function unfollowUser(currentUserId: string, targetUserId: string) {
+    const currentUserRef = doc(db, 'users', currentUserId);
+    const targetUserRef = doc(db, 'users', targetUserId);
+
+    // Remove target from current user's following list
+    await updateDoc(currentUserRef, {
+        following: arrayRemove(targetUserId)
+    });
+    // Remove current user from target's followers list
+    await updateDoc(targetUserRef, {
+        followers: arrayRemove(currentUserId)
+    });
+
+    // Mock data update
+     const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
+    const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
+    if (currentUserIndex !== -1) {
+        mockUsers[currentUserIndex].following = mockUsers[currentUserIndex].following.filter(id => id !== targetUserId);
+    }
+    if (targetUserIndex !== -1) {
+        mockUsers[targetUserIndex].followers = mockUsers[targetUserIndex].followers.filter(id => id !== currentUserId);
+    }
+}

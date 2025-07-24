@@ -69,8 +69,10 @@ export default function EditProfilePage() {
                 dob: user.dob ? new Date(user.dob) : undefined,
                 bio: user.bio,
             });
+        } else {
+            router.push('/login');
         }
-    }, [form]);
+    }, [form, router]);
 
     const handleUpdate = (key: keyof User, value: any) => {
         if (currentUser) {
@@ -130,7 +132,7 @@ export default function EditProfilePage() {
             bio: values.bio, 
             dob: values.dob.toISOString(), 
             age: age, 
-            profilePicture: profilePic || currentUser.profilePicture 
+            profilePicture: profilePic || currentUser.profilePicture,
         };
         
         setCurrentUser(updatedUser); // Update local storage for immediate reflection
