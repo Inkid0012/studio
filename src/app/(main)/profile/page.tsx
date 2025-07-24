@@ -1,3 +1,4 @@
+
 'use client';
 import { getCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,7 +57,6 @@ export default function ProfilePage() {
           alt="Profile background"
           fill
           objectFit="cover"
-          className="blur-sm"
           data-ai-hint="portrait person"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />

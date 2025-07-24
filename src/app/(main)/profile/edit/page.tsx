@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -143,14 +144,10 @@ export default function EditProfilePage() {
                                         <DialogHeader>
                                             <DialogTitle>Change Profile Photo</DialogTitle>
                                         </DialogHeader>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                                <Camera className="mr-2 h-5 w-5"/>
-                                                Take Photo
-                                            </Button>
+                                        <div className="grid grid-cols-1 gap-4">
                                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                                                 <Upload className="mr-2 h-5 w-5"/>
-                                                Upload
+                                                Upload from Gallery
                                             </Button>
                                             <Input 
                                                 type="file" 
@@ -220,6 +217,9 @@ export default function EditProfilePage() {
                                             date > new Date() || date < new Date("1900-01-01")
                                             }
                                             initialFocus
+                                            captionLayout="dropdown-buttons"
+                                            fromYear={1900}
+                                            toYear={new Date().getFullYear()}
                                         />
                                         <div className="p-2 border-t border-border">
                                             <Button
