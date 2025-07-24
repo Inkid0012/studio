@@ -112,7 +112,7 @@ export default function EmailAuthPage() {
         coins: 0,
         followers: [],
         following: [],
-        visitors: 0,
+        visitors: [],
       };
 
       await createUserInFirestore(newUser);

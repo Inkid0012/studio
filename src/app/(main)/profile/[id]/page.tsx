@@ -1,7 +1,7 @@
 'use client';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { getUserById } from '@/lib/data';
+import { getUserById, addVisitor, getCurrentUser } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,14 +10,34 @@ import { CheckCircle, MoreVertical, MessageSquare, ShieldAlert, XCircle } from '
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import type { User } from '@/types';
 
 export default function UserProfilePage() {
   const params = useParams();
   const userId = params.id as string;
-  const user = getUserById(userId);
+  const [user, setUser] = useState<User | null>(null);
+  const currentUser = getCurrentUser();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userProfile = await getUserById(userId);
+      if (userProfile) {
+        setUser(userProfile);
+        // Track the visit if it's not the user's own profile
+        if (currentUser && currentUser.id !== userId) {
+          await addVisitor(userId, currentUser.id);
+        }
+      } else {
+        notFound();
+      }
+    };
+
+    fetchUser();
+  }, [userId, currentUser]);
 
   if (!user) {
-    notFound();
+    return <div>Loading profile...</div>; // Or a skeleton loader
   }
 
   return (

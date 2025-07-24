@@ -42,7 +42,7 @@ export default function LoginPage() {
         coins: 0,
         followers: [],
         following: [],
-        visitors: 0,
+        visitors: [],
       };
 
       setCurrentUser(newUser);

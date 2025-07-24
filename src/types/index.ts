@@ -1,3 +1,9 @@
+
+export type Visitor = {
+  userId: string;
+  timestamp: string; // ISO 8601 date string
+};
+
 export type User = {
   id: string;
   name: string;
@@ -13,7 +19,7 @@ export type User = {
   coins: number;
   followers: string[]; // Array of user IDs
   following: string[]; // Array of user IDs
-  visitors: number;
+  visitors: Visitor[];
   country?: string;
   exercise?: string;
   education?: string;

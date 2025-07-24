@@ -4,7 +4,7 @@ import { getCurrentUser, getUserById, setCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart, LogOut, ShieldAlert } from 'lucide-react';
+import { Briefcase, ChevronRight, Copy, ShieldCheck, Star, Users, Crown, Gift, Store, ShieldQuestion, MessageSquare, Settings, Heart, LogOut, ShieldAlert, Eye } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
@@ -181,7 +181,7 @@ export default function ProfilePage() {
           <Stat value={friendsCount} label="Friends" href="/profile/friends" />
           <Stat value={user.following.length} label="Following" href="/profile/following" />
           <Stat value={user.followers.length} label="Followers" href="/profile/followers" />
-          <Stat value={user.visitors} label="Visitors" href="#" />
+          <Stat value={user.visitors.length} label="Visitors" href="/profile/visitors" />
         </div>
         
         <div className="grid grid-cols-1 gap-4">

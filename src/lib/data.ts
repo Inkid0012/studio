@@ -1,4 +1,4 @@
-import type { User, Conversation, Message, PersonalInfoOption, Transaction } from '@/types';
+import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from './firebase';
@@ -19,7 +19,10 @@ let mockUsers: User[] = [
     coins: 250,
     followers: ['user-2', 'user-4'],
     following: ['user-2', 'user-3', 'user-4', 'user-5'],
-    visitors: 0,
+    visitors: [
+      { userId: 'user-2', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+      { userId: 'user-4', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() },
+    ],
     country: 'Kenya',
     exercise: 'Sometimes',
     education: 'Bachelor\'s Degree',
@@ -45,7 +48,10 @@ let mockUsers: User[] = [
     coins: 1000,
     followers: ['user-1', 'user-3'],
     following: ['user-1'],
-    visitors: 300,
+    visitors: [
+      { userId: 'user-1', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+      { userId: 'user-3', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+    ],
   },
   {
     id: 'user-3',
@@ -62,7 +68,7 @@ let mockUsers: User[] = [
     coins: 150,
     followers: [],
     following: ['user-2'],
-    visitors: 150,
+    visitors: [],
   },
   {
     id: 'user-4',
@@ -79,7 +85,7 @@ let mockUsers: User[] = [
     coins: 200,
     followers: ['user-1'],
     following: ['user-1'],
-    visitors: 400,
+    visitors: [],
   },
   {
     id: 'user-5',
@@ -96,7 +102,7 @@ let mockUsers: User[] = [
     coins: 500,
     followers: [],
     following: ['user-1'],
-    visitors: 200,
+    visitors: [],
   },
   {
     id: 'user-6',
@@ -113,7 +119,7 @@ let mockUsers: User[] = [
     coins: 50,
     followers: [],
     following: [],
-    visitors: 250,
+    visitors: [],
   },
 ];
 
@@ -252,6 +258,9 @@ export async function createUserInFirestore(userData: User) {
     }
      if (!Array.isArray(dataToSave.following)) {
         dataToSave.following = [];
+    }
+     if (!Array.isArray(dataToSave.visitors)) {
+        dataToSave.visitors = [];
     }
 
     await setDoc(userRef, dataToSave, { merge: true });
@@ -397,5 +406,34 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     }
     if (targetUserIndex !== -1) {
         mockUsers[targetUserIndex].followers = mockUsers[targetUserIndex].followers.filter(id => id !== currentUserId);
+    }
+}
+
+export async function addVisitor(profileOwnerId: string, visitorId: string) {
+    if (profileOwnerId === visitorId) return; // Don't track self-visits
+
+    const profileOwnerRef = doc(db, 'users', profileOwnerId);
+    
+    const newVisitor: Visitor = {
+        userId: visitorId,
+        timestamp: new Date().toISOString(),
+    };
+
+    // To prevent duplicates for the same visitor, we would typically fetch, filter, and then update.
+    // For simplicity in this mock, we'll just add. A real implementation should handle this carefully
+    // to avoid bloating the visitors array with repeat views from the same person.
+    await updateDoc(profileOwnerRef, {
+        visitors: arrayUnion(newVisitor) // Note: arrayUnion checks for exact object equality.
+                                          // A more robust solution might need a transaction to read-modify-write.
+    });
+    
+    // Also update mock data
+    const profileOwnerIndex = mockUsers.findIndex(u => u.id === profileOwnerId);
+    if (profileOwnerIndex !== -1) {
+        // Simple logic to avoid adding the same visitor repeatedly in a short time
+        const existingVisit = mockUsers[profileOwnerIndex].visitors.find(v => v.userId === visitorId);
+        if (!existingVisit) {
+             mockUsers[profileOwnerIndex].visitors.push(newVisitor);
+        }
     }
 }
