@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button';
 import { FizuLogo } from '@/components/icons/fizu-logo';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function GenderSelectionPage() {
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
@@ -47,13 +58,30 @@ export default function GenderSelectionPage() {
           </Button>
         </div>
 
-        <Button
-          onClick={handleContinue}
-          disabled={!selectedGender}
-          className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold py-6 text-base"
-        >
-          Continue
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              disabled={!selectedGender}
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold py-6 text-base"
+            >
+              Continue
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Your Gender</AlertDialogTitle>
+              <AlertDialogDescription>
+                Please note that you will not be able to change your gender after this step. Are you sure you want to proceed?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleContinue} className="bg-primary hover:bg-primary/90">
+                Confirm
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

@@ -17,26 +17,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const profileSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters."),
     age: z.coerce.number().min(18, "You must be at least 18 years old."),
-    gender: z.enum(['male', 'female', 'other']),
     bio: z.string().max(500, "Bio can't be more than 500 characters.").min(10, "Bio must be at least 10 characters."),
 });
+
+type ProfileFormValues = Omit<z.infer<typeof profileSchema>, 'gender'>;
 
 export default function EditProfilePage() {
     const { toast } = useToast();
     const router = useRouter();
     const currentUser = getCurrentUser();
 
-    const form = useForm<z.infer<typeof profileSchema>>({
+    const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
             name: currentUser.name,
             age: currentUser.age,
-            gender: currentUser.gender,
             bio: currentUser.bio,
         },
     });
 
-    function onSubmit(values: z.infer<typeof profileSchema>) {
+    function onSubmit(values: ProfileFormValues) {
         const updatedUser = { ...currentUser, ...values };
         setCurrentUser(updatedUser);
         
@@ -80,43 +80,19 @@ export default function EditProfilePage() {
                             )}
                         />
 
-                         <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="age"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="font-headline">Age</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="Your age" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="gender"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="font-headline">Gender</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select your gender" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="male">Male</SelectItem>
-                                                <SelectItem value="female">Female</SelectItem>
-                                                <SelectItem value="other">Other</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                         <FormField
+                            control={form.control}
+                            name="age"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-headline">Age</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Your age" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         <FormField
                             control={form.control}
