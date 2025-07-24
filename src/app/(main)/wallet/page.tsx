@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
@@ -32,11 +32,20 @@ const CoinIcon = () => (
 
 export default function WalletPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
+  const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
   const [selectedPackage, setSelectedPackage] = useState(coinPackages[0]);
   const [isFolded, setIsFolded] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+        setCurrentUserFromState(user);
+    } else {
+        router.push('/login');
+    }
+  }, [router]);
 
   const displayedPackages = isFolded ? coinPackages.slice(0, 6) : coinPackages;
 
