@@ -67,6 +67,11 @@ export function CameraView({ onCapture, onCancel }: CameraViewProps) {
             if (context) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
+                
+                // Flip the context horizontally
+                context.translate(video.videoWidth, 0);
+                context.scale(-1, 1);
+
                 context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
                 const dataUrl = canvas.toDataURL('image/png');
                 onCapture(dataUrl);
@@ -78,7 +83,7 @@ export function CameraView({ onCapture, onCancel }: CameraViewProps) {
         <div className="space-y-4">
             <h3 className="font-headline text-lg">Take Photo</h3>
             <div className="relative">
-                <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted playsInline />
+                <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted transform -scale-x-100" autoPlay muted playsInline />
                 <canvas ref={canvasRef} className="hidden" />
                  {hasCameraPermission === false && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md">
