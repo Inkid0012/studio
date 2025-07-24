@@ -14,12 +14,14 @@ import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CalendarIcon, Camera, Save, Upload, Video } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ChangeEvent, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { CameraView } from '@/components/camera-view';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
+import type { User } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const profileSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters."),
@@ -34,20 +36,44 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function EditProfilePage() {
     const { toast } = useToast();
     const router = useRouter();
-    const currentUser = getCurrentUser();
+    const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
-    const [profilePic, setProfilePic] = useState(currentUser.profilePicture);
+    const [profilePic, setProfilePic] = useState<string | undefined>(undefined);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
-        defaultValues: {
-            name: currentUser.name,
-            dob: currentUser.dob ? new Date(currentUser.dob) : new Date(),
-            bio: currentUser.bio,
-        },
     });
+
+    useEffect(() => {
+        const user = getCurrentUser();
+        setCurrentUserFromState(user);
+        setProfilePic(user.profilePicture);
+        form.reset({
+            name: user.name,
+            dob: user.dob ? new Date(user.dob) : undefined,
+            bio: user.bio,
+        });
+    }, [form]);
+
+    if (!currentUser) {
+        return (
+            <div>
+                <MainHeader title="Edit Profile" />
+                <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-8">
+                     <div className="flex justify-center">
+                         <Skeleton className="w-40 h-40 rounded-full" />
+                     </div>
+                     <Skeleton className="h-10 w-full" />
+                     <Skeleton className="h-10 w-full" />
+                     <Skeleton className="h-24 w-full" />
+                     <Skeleton className="h-12 w-full" />
+                </div>
+            </div>
+        )
+    }
+
 
     function onSubmit(values: ProfileFormValues) {
         const today = new Date();
@@ -58,7 +84,7 @@ export default function EditProfilePage() {
             age--;
         }
 
-        const updatedUser = { ...currentUser, name: values.name, bio: values.bio, dob: values.dob.toISOString(), age: age, profilePicture: profilePic };
+        const updatedUser = { ...currentUser!, name: values.name, bio: values.bio, dob: values.dob.toISOString(), age: age, profilePicture: profilePic || currentUser!.profilePicture };
         setCurrentUser(updatedUser);
         
         toast({
