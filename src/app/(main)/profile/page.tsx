@@ -51,24 +51,26 @@ export default function ProfilePage() {
 
         <div className="absolute -bottom-16 left-4 right-4">
           <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardContent className="p-4 flex items-center space-x-4">
-              <Avatar className="w-16 h-16 border-4 border-white">
-                <AvatarImage src={user.profilePicture} alt={user.name} data-ai-hint="portrait person" />
-                <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-grow">
-                <h2 className="text-xl font-bold flex items-center">{user.name} 
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M17.293 5.293a1 1 0 011.414 1.414l-11 11a1 1 0 01-1.414 0l-5-5a1 1 0 011.414-1.414L6 14.586l10.293-10.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </h2>
-                <div className="text-xs text-muted-foreground flex items-center">
-                  <span>ID: 870555909</span>
-                  <Copy className="w-3 h-3 ml-2 cursor-pointer" />
+            <Link href="/profile/edit">
+              <CardContent className="p-4 flex items-center space-x-4">
+                <Avatar className="w-16 h-16 border-4 border-white">
+                  <AvatarImage src={user.profilePicture} alt={user.name} data-ai-hint="portrait person" />
+                  <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-grow">
+                  <h2 className="text-xl font-bold flex items-center">{user.name} 
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M17.293 5.293a1 1 0 011.414 1.414l-11 11a1 1 0 01-1.414 0l-5-5a1 1 0 011.414-1.414L6 14.586l10.293-10.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </h2>
+                  <div className="text-xs text-muted-foreground flex items-center">
+                    <span>ID: 870555909</span>
+                    <Copy className="w-3 h-3 ml-2 cursor-pointer" />
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </CardContent>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </CardContent>
+            </Link>
           </Card>
         </div>
       </div>
