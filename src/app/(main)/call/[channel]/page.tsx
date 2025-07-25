@@ -50,10 +50,59 @@ export default function CallPage() {
   const callId = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
 
+  const endCall = async (showToast = true, reason?: string) => {
+    if (isEnding) return;
+    setIsEnding(true);
+
+    stopRingtone();
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timerIntervalRef.current = null;
+    timeoutRef.current = null;
+
+    localAudioTrack?.stop();
+    localAudioTrack?.close();
+    localAudioTrack = null;
+    
+    if (client && client.connectionState !== 'DISCONNECTED') {
+        try {
+            await client.leave();
+        } catch (e) {
+            console.error("Error leaving agora channel", e);
+        }
+    }
+    client = null;
+    
+    setIsJoined(false);
+
+    if (call && call.status !== 'ended' && call.status !== 'rejected' && call.status !== 'timeout') {
+       await updateCallStatus(callId, 'ended');
+    }
+    
+    setTimer('00:00');
+    
+    if (showToast && reason) {
+        toast({
+            title: reason,
+            description: coinsUsedRef.current > 0 ? `You used ${coinsUsedRef.current} coins.` : '',
+        });
+    }
+    coinsUsedRef.current = 0;
+    
+    // Redirect after a short delay
+    setTimeout(() => {
+        if (router && window.location.pathname.includes('/call/')) {
+            router.push('/discover');
+        }
+    }, 1500);
+  };
+  
   // Effect to end call on component unmount
   useEffect(() => {
     return () => {
-      endCall(false, 'Call ended unexpectedly.');
+        if (window.location.pathname.includes('/call/')) {
+            endCall(false, 'Call ended unexpectedly.');
+        }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -95,6 +144,41 @@ export default function CallPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callId, otherUserId, router, toast]);
 
+  const joinAgoraCall = async () => {
+    if (!currentUser || isJoined) return;
+
+    try {
+        const appId = '03afb548b89d4435b0d0a5b28a964a32'; // Verified Agora App ID
+        const token = null; // Use null token for testing/dev environments
+
+        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        setIsJoined(true);
+
+        client.on('user-published', async (user, mediaType) => {
+            await client?.subscribe(user, mediaType);
+            if (mediaType === 'audio') {
+                user.audioTrack?.play();
+            }
+        });
+
+        client.on('user-left', () => {
+            updateCallStatus(callId, 'ended');
+        });
+        
+        await client.join(appId, callId, token, currentUser.id);
+
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await client.publish([localAudioTrack]);
+        
+        startTimerAndCoins();
+
+    } catch (error) {
+        console.error("Agora join failed", error);
+        toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not connect to the call.' });
+        updateCallStatus(callId, 'ended');
+    }
+  };
+
   useEffect(() => {
     if (!call || !currentUser || isEnding) return;
     
@@ -118,7 +202,9 @@ export default function CallPage() {
         case 'accepted':
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             stopRingtone();
-            if (!isJoined) joinAgoraCall();
+            if (!isJoined) {
+                joinAgoraCall();
+            }
             break;
         case 'rejected':
         case 'ended':
@@ -201,88 +287,6 @@ export default function CallPage() {
     setCurrentUserFromState(updatedUser); // Update component state
   };
 
-
-  const joinAgoraCall = async () => {
-    if (!currentUser || isJoined) return;
-
-    try {
-        const appId = 'f2e343b679b34360bb77f48577317ad7'; // Use a verified App ID
-        const token = null; // Use null token for testing/dev environments
-
-        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        setIsJoined(true);
-
-        client.on('user-published', async (user, mediaType) => {
-            await client?.subscribe(user, mediaType);
-            if (mediaType === 'audio') {
-                user.audioTrack?.play();
-            }
-        });
-
-        client.on('user-left', () => {
-            updateCallStatus(callId, 'ended');
-        });
-        
-        await client.join(appId, callId, token, currentUser.id);
-
-        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        await client.publish([localAudioTrack]);
-        
-        startTimerAndCoins();
-
-    } catch (error) {
-        console.error("Agora join failed", error);
-        toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not connect to the call.' });
-        updateCallStatus(callId, 'ended');
-    }
-  };
-
-  const endCall = async (showToast = true, reason?: string) => {
-    if (isEnding) return;
-    setIsEnding(true);
-
-    stopRingtone();
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timerIntervalRef.current = null;
-    timeoutRef.current = null;
-
-    localAudioTrack?.stop();
-    localAudioTrack?.close();
-    localAudioTrack = null;
-    
-    if (client) {
-        try {
-            await client.leave();
-        } catch (e) {
-            console.error("Error leaving agora channel", e);
-        }
-        client = null;
-    }
-    
-    setIsJoined(false);
-
-    if (call && call.status !== 'ended' && call.status !== 'rejected' && call.status !== 'timeout') {
-       await updateCallStatus(callId, 'ended');
-    }
-    
-    setTimer('00:00');
-    
-    if (showToast && reason) {
-        toast({
-            title: reason,
-            description: coinsUsedRef.current > 0 ? `You used ${coinsUsedRef.current} coins.` : '',
-        });
-    }
-    coinsUsedRef.current = 0;
-    
-    setTimeout(() => {
-        if (router && window.location.pathname.includes('/call/')) {
-            router.push('/discover');
-        }
-    }, 1500);
-  };
-  
   const handleAccept = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (isEnding) return;
@@ -336,8 +340,11 @@ export default function CallPage() {
           ref={ringtoneRef}
           src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
           loop
-          muted
-          onCanPlay={() => ringtoneRef.current?.play().catch(() => { /* Autoplay was blocked */ })}
+          onCanPlayThrough={() => {
+              if(ringtoneRef.current && call?.status === 'ringing') {
+                  ringtoneRef.current.play().catch(e => console.warn("Autoplay blocked", e));
+              }
+          }}
         />
       <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">

@@ -22,14 +22,12 @@ export default function MainLayout({
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  useEffect(() => {
     const user = getCurrentUser();
     if (user) {
         setCurrentUser(user);
     } else {
-      if (isClient) {
+      // Only redirect if we are on the client and not on a public path.
+      if (isClient && !window.location.pathname.startsWith('/login')) {
         router.push('/login');
       }
     }
