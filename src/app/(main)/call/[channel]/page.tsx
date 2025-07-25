@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
 import type { User } from '@/types';
 import { MainHeader } from '@/components/layout/main-header';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Phone, PhoneOff, PhoneOutgoing } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 let client: IAgoraRTCClient | null = null;
 let localAudioTrack: IMicrophoneAudioTrack | null = null;
@@ -23,26 +24,34 @@ export default function CallPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [callState, setCallState] = useState<'idle' | 'incoming' | 'active' | 'declined'>('incoming');
+  const [callState, setCallState] = useState<'idle' | 'outgoing' | 'incoming' | 'active' | 'declined'>('idle');
   const [timer, setTimer] = useState('00:00');
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
-
+  
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const coinsUsedRef = useRef(0);
   const callStartTimeRef = useRef<number | null>(null);
 
   const channelName = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
+  const callType = searchParams.get('callType') as 'outgoing' | 'incoming' | null;
 
   useEffect(() => {
     const user = getCurrentUser();
-     if (!user || !otherUserId) {
+    if (!user || !otherUserId) {
       toast({ variant: 'destructive', title: 'Error', description: 'Invalid call session.' });
       router.push('/discover');
       return;
     }
     setCurrentUserFromState(user);
+
+    if(callType === 'outgoing') {
+        setCallState('outgoing');
+        joinAgoraCall(); // Automatically join call if initiator
+    } else {
+        setCallState('incoming');
+    }
 
     const fetchOtherUser = async () => {
         const userProfile = await getUserById(otherUserId);
@@ -58,7 +67,7 @@ export default function CallPage() {
     // Ensure we leave the call if the component is unmounted
     return () => {
         if (client) {
-            endAgoraCall();
+            endAgoraCall(false); // Don't show toast on unmount
         }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,7 +151,7 @@ export default function CallPage() {
     }
   };
 
-  const endAgoraCall = async () => {
+  const endAgoraCall = async (showToast = true) => {
     if (localAudioTrack) {
         localAudioTrack.stop();
         localAudioTrack.close();
@@ -160,14 +169,16 @@ export default function CallPage() {
     setCallState('idle');
     setTimer('00:00');
     
-    toast({
-        title: "Call Ended",
-        description: `You used ${coinsUsedRef.current} coins.`,
-    });
+    if (showToast) {
+        toast({
+            title: "Call Ended",
+            description: coinsUsedRef.current > 0 ? `You used ${coinsUsedRef.current} coins.` : '',
+        });
+    }
     coinsUsedRef.current = 0;
     
     // Redirect after a delay
-    setTimeout(() => router.push('/discover'), 2000);
+    setTimeout(() => router.push('/discover'), 1500);
   };
   
   const handleAccept = () => {
@@ -179,6 +190,10 @@ export default function CallPage() {
     setCallState('declined');
     router.push('/discover');
   };
+  
+  const handleEndCall = () => {
+    endAgoraCall();
+  }
 
   if (!otherUser || !currentUser) {
      return (
@@ -188,26 +203,76 @@ export default function CallPage() {
     );
   }
 
+  const CallInterface = ({ children }: {children: React.ReactNode}) => (
+     <div className="bg-background min-h-screen text-center flex flex-col items-center justify-between p-8">
+      <MainHeader title="Voice Call" />
+      <div className="flex flex-col items-center gap-4">
+        <Avatar className="w-32 h-32 border-4 border-primary">
+            <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} />
+            <AvatarFallback className="text-4xl">{otherUser.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <h2 className="text-3xl font-bold font-headline">{otherUser.name}</h2>
+      </div>
+      
+      {children}
+    </div>
+  );
+
+
+  if (callState === 'incoming') {
+    return (
+        <CallInterface>
+            <div className="w-full max-w-xs">
+                <p className="text-muted-foreground mb-8">Incoming Call...</p>
+                <div className="flex justify-around items-center">
+                    <Button onClick={handleDecline} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
+                        <PhoneOff className="w-8 h-8" />
+                    </Button>
+                    <Button onClick={handleAccept} className="bg-green-500 hover:bg-green-600 w-20 h-20 rounded-full" size="icon">
+                        <Phone className="w-8 h-8" />
+                    </Button>
+                </div>
+            </div>
+        </CallInterface>
+    )
+  }
+  
+  if (callState === 'outgoing') {
+      return (
+        <CallInterface>
+            <div className="w-full max-w-xs">
+                <p className="text-muted-foreground mb-8 animate-pulse">Ringing...</p>
+                <div className="flex justify-around items-center">
+                    <Button onClick={handleEndCall} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
+                        <PhoneOff className="w-8 h-8" />
+                    </Button>
+                </div>
+            </div>
+        </CallInterface>
+      )
+  }
+
+  if (callState === 'active') {
+      return (
+         <CallInterface>
+            <div className="w-full max-w-xs">
+                <p id="timer" className="font-mono text-2xl font-bold mb-8 text-green-500">{timer}</p>
+                 <div className="flex justify-around items-center">
+                    <Button onClick={handleEndCall} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
+                        <PhoneOff className="w-8 h-8" />
+                    </Button>
+                </div>
+            </div>
+        </CallInterface>
+      )
+  }
 
   return (
-    <div className="bg-background min-h-screen text-center flex flex-col items-center justify-center p-8">
-      <MainHeader title="Voice Call" />
-      {callState === 'incoming' && (
-        <div className="space-y-4">
-            <h2 className="text-2xl font-bold">Incoming Voice Call from {otherUser.name}</h2>
-            <div className="flex justify-center gap-4">
-                <Button onClick={handleAccept} className="bg-green-500 hover:bg-green-600">✅ Accept Call</Button>
-                <Button onClick={handleDecline} variant="destructive">❌ Decline</Button>
-            </div>
-        </div>
-      )}
-
-      {callState === 'active' && (
-         <div id="call-ui" className="space-y-4">
-            <p className="text-xl">🟢 Call in Progress with {otherUser.name}...</p>
-            <p id="timer" className="font-mono text-4xl font-bold">⏱️ {timer}</p>
-            <Button onClick={endAgoraCall} variant="destructive">🔴 End Call</Button>
-        </div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+      {callState === 'declined' ? (
+        <p>Call was declined.</p>
+      ) : (
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       )}
     </div>
   );

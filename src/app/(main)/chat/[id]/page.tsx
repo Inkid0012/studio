@@ -119,7 +119,7 @@ export default function ChatPage() {
         description: `Starting a voice call with ${otherUser.name}.`
     });
 
-    router.push(`/call/${convoId}?otherUserId=${otherUser.id}`);
+    router.push(`/call/${convoId}?otherUserId=${otherUser.id}&callType=outgoing`);
   }
 
   return (

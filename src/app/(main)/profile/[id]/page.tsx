@@ -115,7 +115,7 @@ export default function UserProfilePage() {
       if (!currentUser || !user) return;
       setIsProcessing(true);
       const conversationId = await findOrCreateConversation(currentUser.id, user.id);
-      router.push(`/call/${conversationId}?otherUserId=${user.id}`);
+      router.push(`/call/${conversationId}?otherUserId=${user.id}&callType=outgoing`);
       setIsProcessing(false);
   };
   
