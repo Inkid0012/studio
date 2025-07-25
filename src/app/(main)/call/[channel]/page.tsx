@@ -53,6 +53,21 @@ async function joinAgoraCall(client: IAgoraRTCClient, channelName: string, userI
   return micTrack;
 }
 
+/**
+ * Stops the local tracks and leaves the Agora call.
+ * @param localTrack The local audio track to stop.
+ * @param client The Agora RTC client instance.
+ */
+async function endAgoraCall(localTrack: IMicrophoneAudioTrack | null, client: IAgoraRTCClient | null) {
+  if (localTrack) {
+    localTrack.stop();
+    localTrack.close();
+  }
+  if (client) {
+    await client.leave();
+  }
+  console.log("❌ Left voice call.");
+}
 
 export default function CallPage() {
   const router = useRouter();
@@ -96,6 +111,17 @@ export default function CallPage() {
 
   }, [router, toast, otherUserId]);
 
+  const handleLeave = async (reason?: string, isError = false) => {
+    stopTimer();
+    setCallStatus('Leaving...');
+    await endAgoraCall(localAudioTrackRef.current, clientRef.current);
+    callConnectedRef.current = false;
+    if(reason) {
+        toast({ title: 'Call Ended', description: reason, variant: isError ? 'destructive' : 'default' });
+    }
+    router.back();
+  };
+  
   useEffect(() => {
     if (!currentUser || !otherUser) return;
     
@@ -143,10 +169,13 @@ export default function CallPage() {
 
     return () => {
       stopTimer();
-      localAudioTrackRef.current?.close();
-      clientRef.current?.leave();
-      clientRef.current = null;
-      callConnectedRef.current = false;
+      // Use a separate function for cleanup to avoid async issues in useEffect cleanup
+      const cleanup = async () => {
+         await endAgoraCall(localAudioTrackRef.current, clientRef.current);
+         clientRef.current = null;
+         callConnectedRef.current = false;
+      }
+      cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, otherUser, channelName, toast]);
@@ -207,18 +236,6 @@ export default function CallPage() {
         setCurrentUser(updatedUser);
         setCurrentUserFromState(updatedUser);
     }
-  };
-
-  const handleLeave = async (reason?: string, isError = false) => {
-    stopTimer();
-    setCallStatus('Leaving...');
-    localAudioTrackRef.current?.close();
-    await clientRef.current?.leave();
-    callConnectedRef.current = false;
-    if(reason) {
-        toast({ title: 'Call Ended', description: reason, variant: isError ? 'destructive' : 'default' });
-    }
-    router.back();
   };
 
   const toggleMute = async () => {
