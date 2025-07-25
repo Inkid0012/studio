@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
 import { I18nProvider } from '@/contexts/i18n';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'FIZU',
@@ -22,6 +23,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link href="https://fonts.googleapis.com/css2?family=Lora&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap" rel="stylesheet" />
+        <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
       </head>
       <body className="font-body antialiased">
         <I18nProvider>
