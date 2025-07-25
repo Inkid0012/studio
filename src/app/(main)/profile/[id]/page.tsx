@@ -27,7 +27,8 @@ import {
     ShieldCheck, 
     Ban,
     Upload,
-    Plus
+    Plus,
+    Copy
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -214,6 +215,16 @@ export default function UserProfilePage() {
       }
   };
 
+  const handleCopyId = () => {
+    if (user?.id) {
+      navigator.clipboard.writeText(user.id);
+      toast({
+        title: "Copied!",
+        description: "User ID has been copied to the clipboard.",
+      });
+    }
+  };
+
 
   if (!user || !currentUser) {
     return (
@@ -280,7 +291,10 @@ export default function UserProfilePage() {
                             {user.name}, {userAge}
                              {user.isCertified && <ShieldCheck className="ml-2 h-6 w-6 text-green-500 fill-green-200" />}
                         </h1>
-                        <span className="text-sm text-muted-foreground">ID: {user.id}</span>
+                        <button className="text-sm text-muted-foreground flex items-center gap-1 hover:text-foreground" onClick={handleCopyId}>
+                            <span>ID: {user.id}</span>
+                            <Copy className="h-3 w-3"/>
+                        </button>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1.5">
@@ -416,5 +430,7 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
+    
 
     
