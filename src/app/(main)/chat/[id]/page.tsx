@@ -171,13 +171,6 @@ export default function ChatPage() {
       </ScrollArea>
       
       <div className="p-4 bg-background border-t">
-        <div className="flex items-center gap-2 mb-3">
-            {['Good to meet you here', 'I want to talk to you', 'Nice to meet you'].map(text => (
-                <Button key={text} variant="outline" size="sm" className="rounded-full text-accent-foreground border-accent/50" onClick={() => handleSendMessage(text)}>
-                    {text}
-                </Button>
-            ))}
-        </div>
         <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
                 <Mic className="h-6 w-6" />
