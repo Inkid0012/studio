@@ -27,6 +27,9 @@ import {
 let client: IAgoraRTCClient | null = null;
 let localAudioTrack: IMicrophoneAudioTrack | null = null;
 
+type CallComponentState = 'idle' | 'initializing' | 'ringing' | 'in_call' | 'ending' | 'ended' | 'error';
+
+
 export default function CallPage() {
   const router = useRouter();
   const params = useParams();
@@ -34,86 +37,77 @@ export default function CallPage() {
   const { toast } = useToast();
 
   const [call, setCall] = useState<Call | null>(null);
+  const [componentState, setComponentState] = useState<CallComponentState>('initializing');
   const [timer, setTimer] = useState('00:00');
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const [isEnding, setIsEnding] = useState(false);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [endReason, setEndReason] = useState('Call Ended');
   
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const coinsUsedRef = useRef(0);
   const callStartTimeRef = useRef<number | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
-  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
-
+  
   const callId = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
+  
+  const isMounted = useRef(true);
 
-  const endCall = async (showToast = true, reason?: string) => {
-    if (isEnding) return;
-    setIsEnding(true);
+  // --- Core Cleanup Function ---
+  const endCall = async (reason: string, showToast = true) => {
+    if (componentState === 'ending' || componentState === 'ended') return;
+    setComponentState('ending');
+    setEndReason(reason);
 
     stopRingtone();
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timerIntervalRef.current = null;
-    timeoutRef.current = null;
-
-    localAudioTrack?.stop();
-    localAudioTrack?.close();
-    localAudioTrack = null;
+    
+    if (localAudioTrack) {
+        localAudioTrack.stop();
+        localAudioTrack.close();
+        localAudioTrack = null;
+    }
     
     if (client && client.connectionState !== 'DISCONNECTED') {
         try {
             await client.leave();
         } catch (e) {
-            console.error("Error leaving agora channel", e);
+            console.error("Error leaving Agora channel", e);
         }
     }
     client = null;
     
-    setIsJoined(false);
-
     if (call && call.status !== 'ended' && call.status !== 'rejected' && call.status !== 'timeout') {
        await updateCallStatus(callId, 'ended');
     }
     
-    setTimer('00:00');
-    
-    if (showToast && reason) {
+    if (showToast) {
         toast({
             title: reason,
             description: coinsUsedRef.current > 0 ? `You used ${coinsUsedRef.current} coins.` : '',
         });
     }
-    coinsUsedRef.current = 0;
     
-    // Redirect after a short delay
     setTimeout(() => {
-        if (router && window.location.pathname.includes('/call/')) {
-            router.push('/discover');
+        if (isMounted.current) {
+            setComponentState('ended');
+            if (router && window.location.pathname.includes('/call/')) {
+                router.push('/discover');
+            }
         }
     }, 1500);
   };
   
-  // Effect to end call on component unmount
+  // --- Component Mount and Unmount ---
   useEffect(() => {
-    return () => {
-        if (window.location.pathname.includes('/call/')) {
-            endCall(false, 'Call ended unexpectedly.');
-        }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-
-  useEffect(() => {
+    isMounted.current = true;
     const user = getCurrentUser();
     if (!user || !otherUserId) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Invalid call session.' });
-      router.push('/discover');
-      return;
+        toast({ variant: 'destructive', title: 'Error', description: 'Invalid call session.' });
+        router.push('/discover');
+        return;
     }
     setCurrentUserFromState(user);
 
@@ -127,32 +121,34 @@ export default function CallPage() {
         }
     }
     fetchOtherUser();
-
-    // Listen for call status updates
+    
+    // Call updates listener
     const unsubscribe = onCallUpdate(callId, (updatedCall) => {
         if (updatedCall) {
             setCall(updatedCall);
         } else {
-            // Call document deleted or not found
-            endCall(false, 'Call ended unexpectedly.');
+            if (isMounted.current) {
+                endCall('Call ended unexpectedly.', false);
+            }
         }
     });
 
     return () => {
+        isMounted.current = false;
         unsubscribe();
+        if (componentState !== 'ended') {
+            endCall('Call disconnected', false);
+        }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callId, otherUserId, router, toast]);
 
   const joinAgoraCall = async () => {
-    if (!currentUser || isJoined) return;
+    if (componentState !== 'ringing' || !currentUser) return;
 
     try {
         const appId = '03afb548b89d4435b0d0a5b28a964a32'; // Verified Agora App ID
-        const token = null; // Use null token for testing/dev environments
-
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        setIsJoined(true);
 
         client.on('user-published', async (user, mediaType) => {
             await client?.subscribe(user, mediaType);
@@ -162,14 +158,15 @@ export default function CallPage() {
         });
 
         client.on('user-left', () => {
-            updateCallStatus(callId, 'ended');
+            endCall('The other user left the call.');
         });
         
-        await client.join(appId, callId, token, currentUser.id);
+        await client.join(appId, callId, null, currentUser.id);
 
         localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         await client.publish([localAudioTrack]);
         
+        setComponentState('in_call');
         startTimerAndCoins();
 
     } catch (error) {
@@ -178,45 +175,36 @@ export default function CallPage() {
         updateCallStatus(callId, 'ended');
     }
   };
-
+  
+  // --- Call State Machine ---
   useEffect(() => {
-    if (!call || !currentUser || isEnding) return;
+    if (!call || !currentUser || componentState === 'ending' || componentState === 'ended') return;
     
-    const isOutgoing = call.from === currentUser?.id;
-
-    // Handle state transitions based on call status
     switch (call.status) {
         case 'ringing':
-            if (!isJoined) {
+            if (componentState === 'initializing') {
+                setComponentState('ringing');
                 playRingtone();
-                if (!isOutgoing) {
-                    // Timeout for incoming call
-                     if (!timeoutRef.current) {
-                        timeoutRef.current = setTimeout(() => {
-                           updateCallStatus(callId, 'timeout');
-                        }, 30000); // 30 second timeout
-                    }
-                }
             }
             break;
         case 'accepted':
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
             stopRingtone();
-            if (!isJoined) {
+            if (componentState === 'ringing') {
                 joinAgoraCall();
             }
             break;
         case 'rejected':
+            endCall('Call Rejected');
+            break;
         case 'ended':
+            endCall('Call Ended');
+            break;
         case 'timeout':
-            let reason = 'Call ended';
-            if (call.status === 'rejected') reason = 'Call rejected';
-            if (call.status === 'timeout') reason = 'Call timed out';
-            endCall(true, reason);
+            endCall('Call Timed Out');
             break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [call, currentUser, isEnding]);
+  }, [call, currentUser]);
 
 
   const playRingtone = () => {
@@ -224,7 +212,6 @@ export default function CallPage() {
           ringtoneRef.current.loop = true;
           ringtoneRef.current.play().catch(error => {
               console.warn("Ringtone autoplay was blocked by the browser.", error);
-              // It's fine, the user will see the UI and interact.
           });
       }
   }
@@ -236,9 +223,8 @@ export default function CallPage() {
       }
   }
 
-  
   const startTimerAndCoins = () => {
-    if (timerIntervalRef.current) return; // Prevent timer from restarting
+    if (timerIntervalRef.current) return;
 
     callStartTimeRef.current = Date.now();
     coinsUsedRef.current = 0;
@@ -252,7 +238,9 @@ export default function CallPage() {
         const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
         const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
         const seconds = String(elapsed % 60)).padStart(2, '0');
-        setTimer(`${minutes}:${seconds}`);
+        if (isMounted.current) {
+            setTimer(`${minutes}:${seconds}`);
+        }
 
         if (currentUser?.gender === 'male' && elapsed > 0 && elapsed % 60 === 0) {
             handleCoinDeduction();
@@ -263,11 +251,10 @@ export default function CallPage() {
   const handleCoinDeduction = async () => {
     if(!currentUser || !otherUser) return;
     
-    // We get a fresh copy of user data to ensure coin count is accurate
     const latestUser = await getUserById(currentUser.id);
     if (!latestUser || latestUser.coins < CHARGE_COSTS.call) {
-        toast({ variant: 'destructive', title: 'Call Ended', description: 'You have run out of coins.' });
         updateCallStatus(callId, 'ended');
+        toast({ variant: 'destructive', title: 'Call Ended', description: 'You have run out of coins.' });
         return;
     }
 
@@ -283,21 +270,25 @@ export default function CallPage() {
     });
     
     coinsUsedRef.current += CHARGE_COSTS.call;
-    setCurrentUser(updatedUser); // Update local storage
-    setCurrentUserFromState(updatedUser); // Update component state
+    setCurrentUser(updatedUser);
+    if (isMounted.current) {
+        setCurrentUserFromState(updatedUser);
+    }
   };
 
   const handleAccept = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (isEnding) return;
+    if (componentState !== 'ringing') return;
     updateCallStatus(callId, 'accepted');
   };
 
   const handleDecline = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (isEnding) return;
+    if (componentState !== 'ringing' && componentState !== 'in_call') return;
     updateCallStatus(callId, 'rejected');
   };
+
+  const handleEndCallButton = () => {
+    updateCallStatus(callId, 'ended');
+  }
   
   if (showRechargeDialog) {
     return (
@@ -318,8 +309,7 @@ export default function CallPage() {
     );
   }
 
-
-  if (!otherUser || !currentUser || !call) {
+  if (componentState === 'initializing' || !otherUser || !currentUser || !call) {
      return (
        <div className="flex items-center justify-center h-screen bg-background">
             <Loader2 className="w-8 h-8 animate-spin text-primary"/>
@@ -327,21 +317,14 @@ export default function CallPage() {
     );
   }
 
-  const CallInterface = ({ children, showCloseButton = false, title }: {children: React.ReactNode, showCloseButton?: boolean, title?: string}) => (
+  const CallInterface = ({ children, title }: {children: React.ReactNode, title?: string}) => (
      <div className="bg-background min-h-screen text-center flex flex-col items-center justify-between p-8 relative">
-       {showCloseButton && (
-            <div className="absolute top-6 right-6">
-                <Button onClick={handleDecline} variant="ghost" size="icon" className="w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 text-white">
-                    <X className="w-8 h-8" />
-                </Button>
-            </div>
-       )}
         <audio
           ref={ringtoneRef}
           src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
           loop
           onCanPlayThrough={() => {
-              if(ringtoneRef.current && call?.status === 'ringing') {
+              if(ringtoneRef.current && componentState === 'ringing') {
                   ringtoneRef.current.play().catch(e => console.warn("Autoplay blocked", e));
               }
           }}
@@ -359,10 +342,9 @@ export default function CallPage() {
     </div>
   );
 
-
-  if (call.status === 'ringing' && call.to === currentUser.id) {
+  if (componentState === 'ringing' && call.to === currentUser.id) {
     return (
-        <CallInterface showCloseButton={true} title="Incoming Call...">
+        <CallInterface title="Incoming Call...">
             <div className="w-full max-w-xs">
                 <div className="flex justify-around items-center">
                     <Button onClick={handleDecline} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
@@ -377,7 +359,7 @@ export default function CallPage() {
     )
   }
   
-  if (call.status === 'ringing' && call.from === currentUser.id) {
+  if (componentState === 'ringing' && call.from === currentUser.id) {
       return (
         <CallInterface title="Ringing...">
             <div className="w-full max-w-xs">
@@ -391,13 +373,13 @@ export default function CallPage() {
       )
   }
 
-  if (call.status === 'accepted') {
+  if (componentState === 'in_call') {
       return (
          <CallInterface>
             <div className="w-full max-w-xs">
                 <p id="timer" className="font-mono text-2xl font-bold mb-8 text-green-500">{timer}</p>
                  <div className="flex justify-around items-center">
-                    <Button onClick={() => updateCallStatus(callId, 'ended')} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
+                    <Button onClick={handleEndCallButton} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
                         <PhoneOff className="w-8 h-8" />
                     </Button>
                 </div>
@@ -406,17 +388,9 @@ export default function CallPage() {
       )
   }
   
-  const EndCallMessage = () => {
-      let message = "Call Ended";
-      if (call.status === 'rejected') message = "Call Declined";
-      if (call.status === 'timeout') message = "Call Timed Out";
-      if (call.status === 'ended') message = "Call Ended";
-      return <p>{message}</p>;
-  }
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-lg font-semibold">
-      <EndCallMessage />
+      <p>{endReason}</p>
     </div>
   );
 }
