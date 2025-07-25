@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
 
 /**
- * Fetches a token from an Agora token server and joins a voice call.
+ * Fetches a token from the Agora token server and joins a voice call.
  * @param client The Agora RTC client instance.
  * @param channelName The name of the channel to join.
  * @param userId The ID of the user joining the call.
