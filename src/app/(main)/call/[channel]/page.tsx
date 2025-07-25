@@ -181,7 +181,7 @@ export default function CallPage() {
     }
 
     try {
-        const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
+        const appId = '5f5749cfcb054a82b4c779444f675284';
         const token = null; // Using null token for testing/development environments
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
