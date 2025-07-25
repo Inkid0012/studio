@@ -37,7 +37,7 @@ export default function DiscoverPage() {
   useEffect(() => {
     const fetchProfiles = async () => {
       setIsLoading(true);
-      // await seedInitialUsers(); // Ensure users are seeded
+      await seedInitialUsers(); // Ensure users are seeded
       const currentUser = getCurrentUser();
       const fetchedProfiles = await getDiscoverProfiles(currentUser?.id);
       setAllProfiles(fetchedProfiles);
