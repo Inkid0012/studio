@@ -18,7 +18,6 @@ export default function MainLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -32,10 +31,6 @@ export default function MainLayout({
     const unsubscribe = onIncomingCall(currentUser.id, (convo) => {
       const caller = convo.participants.find(p => p.id === convo.activeCall?.callerId);
       if (caller) {
-          toast({
-            title: "Incoming Call",
-            description: `${caller.name} is calling...`,
-          });
           // Navigate to the call screen
           router.push(`/call/${convo.id}?otherUserId=${caller.id}&callType=incoming`);
       }
@@ -46,7 +41,7 @@ export default function MainLayout({
         unsubscribe();
       }
     };
-  }, [currentUser, router, toast]);
+  }, [currentUser, router]);
 
   const showNavBar = mainNavPaths.includes(pathname);
 
@@ -57,5 +52,3 @@ export default function MainLayout({
     </div>
   );
 }
-
-    

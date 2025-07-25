@@ -11,8 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser, endCallInFirestore } from '@/lib/data';
 import type { User } from '@/types';
-import { MainHeader } from '@/components/layout/main-header';
-import { Loader2, Phone, PhoneOff } from 'lucide-react';
+import { Loader2, Phone, PhoneOff, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   AlertDialog,
@@ -34,12 +33,13 @@ export default function CallPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [callState, setCallState] = useState<'idle' | 'outgoing' | 'incoming' | 'active' | 'declined'>('idle');
+  const [callState, setCallState] = useState<'idle' | 'outgoing' | 'incoming' | 'active' | 'declined' | 'timeout'>('idle');
   const [timer, setTimer] = useState('00:00');
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
   
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const coinsUsedRef = useRef(0);
   const callStartTimeRef = useRef<number | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement>(null);
@@ -66,6 +66,11 @@ export default function CallPage() {
         setCallState('outgoing');
     } else {
         setCallState('incoming');
+        // Set a timeout for the incoming call
+        timeoutRef.current = setTimeout(() => {
+            setCallState('timeout');
+            endAgoraCall(false); 
+        }, 60000); // 1 minute
     }
 
     const fetchOtherUser = async () => {
@@ -85,6 +90,9 @@ export default function CallPage() {
         }
         if (ringtoneRef.current) {
             ringtoneRef.current.pause();
+        }
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
         }
     };
   }, [otherUserId, callType, router, toast]);
@@ -226,6 +234,9 @@ export default function CallPage() {
     if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
     }
+     if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
     
     setCallState('idle');
     setTimer('00:00');
@@ -242,10 +253,16 @@ export default function CallPage() {
   };
   
   const handleAccept = () => {
+    if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
     joinAgoraCall();
   };
 
   const handleDecline = () => {
+    if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
     toast({ title: 'Call Declined' });
     setCallState('declined');
     endAgoraCall(false);
@@ -283,11 +300,17 @@ export default function CallPage() {
     );
   }
 
-  const CallInterface = ({ children }: {children: React.ReactNode}) => (
-     <div className="bg-background min-h-screen text-center flex flex-col items-center justify-between p-8">
-      <MainHeader title="Voice Call" />
+  const CallInterface = ({ children, showCloseButton = false }: {children: React.ReactNode, showCloseButton?: boolean}) => (
+     <div className="bg-background min-h-screen text-center flex flex-col items-center justify-between p-8 relative">
+       {showCloseButton && (
+            <div className="absolute top-6 right-6">
+                <Button onClick={handleDecline} variant="ghost" size="icon" className="w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 text-white">
+                    <X className="w-8 h-8" />
+                </Button>
+            </div>
+       )}
        <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3" />
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">
             <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} />
             <AvatarFallback className="text-4xl">{otherUser.name.charAt(0)}</AvatarFallback>
@@ -302,7 +325,7 @@ export default function CallPage() {
 
   if (callState === 'incoming') {
     return (
-        <CallInterface>
+        <CallInterface showCloseButton={true}>
             <div className="w-full max-w-xs">
                 <p className="text-muted-foreground mb-8 animate-pulse">Incoming Call...</p>
                 <div className="flex justify-around items-center">
@@ -349,14 +372,9 @@ export default function CallPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-      {callState === 'declined' ? (
-        <p>Call was declined.</p>
-      ) : (
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      )}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-lg font-semibold">
+      {callState === 'declined' && <p>Call Declined</p>}
+      {callState === 'timeout' && <p>Call Timed Out</p>}
     </div>
   );
 }
-
-    
