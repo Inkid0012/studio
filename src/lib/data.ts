@@ -2,9 +2,10 @@
 
 
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const CHARGE_COSTS = {
@@ -391,28 +392,62 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     }
 }
 
-export async function sendMessage(conversationId: string, senderId: string, text: string) {
-    const messagesRef = collection(db, 'conversations', conversationId, 'messages');
-    const conversationRef = doc(db, 'conversations', conversationId);
+export async function sendMessage(conversationId: string, senderId: string, text: string): Promise<boolean> {
+    try {
+        await runTransaction(db, async (transaction) => {
+            const conversationRef = doc(db, 'conversations', conversationId);
+            const conversationSnap = await transaction.get(conversationRef);
 
-    const newMessage: Omit<Message, 'id'> = {
-        senderId,
-        text,
-        timestamp: Timestamp.now(),
-        type: 'text',
-        content: text
-    };
-    
-    await addDoc(messagesRef, newMessage);
-    
-    // Update the last message on the conversation for preview purposes
-    await updateDoc(conversationRef, {
-        lastMessage: {
-            text,
-            timestamp: Timestamp.now(),
-            senderId,
-        }
-    });
+            if (!conversationSnap.exists()) {
+                throw "Conversation does not exist!";
+            }
+
+            const participantIds = conversationSnap.data().participantIds;
+            const otherUserId = participantIds.find((id: string) => id !== senderId);
+
+            if (!otherUserId) {
+                throw "Other user not found in conversation";
+            }
+            
+            const otherUserRef = doc(db, 'users', otherUserId);
+            const otherUserSnap = await transaction.get(otherUserRef);
+
+            if (!otherUserSnap.exists()) {
+                throw "Other user's profile does not exist";
+            }
+
+            const otherUser = otherUserSnap.data() as User;
+            if (otherUser.blockedUsers?.includes(senderId)) {
+                throw "You have been blocked by this user.";
+            }
+
+            const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+            const newMessageRef = doc(messagesRef); // Create a new doc ref for the message
+
+            const newMessage: Omit<Message, 'id'> = {
+                senderId,
+                text,
+                timestamp: Timestamp.now(),
+                type: 'text',
+                content: text
+            };
+
+            transaction.set(newMessageRef, newMessage);
+
+            // Update the last message on the conversation for preview purposes
+            transaction.update(conversationRef, {
+                lastMessage: {
+                    text,
+                    timestamp: Timestamp.now(),
+                    senderId,
+                }
+            });
+        });
+        return true;
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+        return false;
+    }
 }
 
 export function getMessages(conversationId: string, callback: (messages: Message[]) => void) {
@@ -651,15 +686,29 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
  * @param to The ID of the user receiving the call.
  * @returns The ID of the newly created call document.
  */
-export async function startCall(from: string, to: string): Promise<string> {
-    const callsCollection = collection(db, 'calls');
-    const newCallRef = await addDoc(callsCollection, {
-        from,
-        to,
-        status: 'ringing',
-        timestamp: serverTimestamp(),
-    });
-    return newCallRef.id;
+export async function startCall(from: string, to: string): Promise<string | null> {
+    try {
+        const toUserDoc = await getDoc(doc(db, 'users', to));
+        if (toUserDoc.exists()) {
+            const toUserData = toUserDoc.data() as User;
+            if (toUserData.blockedUsers?.includes(from)) {
+                console.warn("Cannot start call: You are blocked by this user.");
+                return null;
+            }
+        }
+
+        const callsCollection = collection(db, 'calls');
+        const newCallRef = await addDoc(callsCollection, {
+            from,
+            to,
+            status: 'ringing',
+            timestamp: serverTimestamp(),
+        });
+        return newCallRef.id;
+    } catch(e) {
+        console.error("Error starting call:", e);
+        return null;
+    }
 }
 
 /**

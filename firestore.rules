@@ -3,30 +3,48 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read/write their own document
-    match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+  
+    // Function to check if a user is blocked
+    function isBlocked(userId, otherUserId) {
+      return get(/databases/$(database)/documents/users/$(otherUserId)).data.blockedUsers.hasAny([userId]);
     }
     
-    // Any authenticated user can read other user profiles (for discovery)
-    match /users/{userId} {
-      allow get: if request.auth != null;
+    // Function to check if current user is part of a conversation
+    function isParticipant(conversationId) {
+      return request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
     }
     
-    // Rules for conversations
-    match /conversations/{conversationId} {
-      allow read, write: if request.auth != null && request.auth.uid in resource.data.participantIds;
-      
-      // Rules for messages within a conversation
-      match /messages/{messageId} {
-        allow read, create: if request.auth != null && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
-      }
+    // Get the other participant's ID from a conversation
+    function getOtherParticipantId(conversationId) {
+       let participants = get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+       return participants[0] == request.auth.uid ? participants[1] : participants[0];
+    }
+    
+    // Users can read any profile but only write to their own
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
     }
 
-    // Rules for calls
+    // Conversations can only be read/written by participants
+    // And not if one has blocked the other
+    match /conversations/{conversationId} {
+      allow read, write: if request.auth != null && isParticipant(conversationId)
+                        && !isBlocked(request.auth.uid, getOtherParticipantId(conversationId));
+                        
+      // Messages can only be written by participants and if not blocked
+      match /messages/{messageId} {
+         allow create: if request.auth != null && isParticipant(conversationId)
+                        && !isBlocked(request.auth.uid, getOtherParticipantId(conversationId));
+         allow read: if request.auth != null && isParticipant(conversationId);
+      }
+    }
+    
+    // Calls can be read/written by authenticated users
     match /calls/{callId} {
-      allow read, write: if request.auth != null;
+       allow read, update: if request.auth != null && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+       allow create: if request.auth != null && request.auth.uid == request.resource.data.from 
+                      && !isBlocked(request.auth.uid, request.resource.data.to);
     }
   }
 }

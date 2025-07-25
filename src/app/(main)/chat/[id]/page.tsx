@@ -1,12 +1,12 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCall } from '@/lib/data';
+import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCall, getUserById } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle } from 'lucide-react';
+import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
   const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
@@ -42,7 +43,16 @@ export default function ChatPage() {
       if (convoData) {
         setConversation(convoData);
         const other = convoData.participants.find(p => p.id !== currentUser?.id);
-        setOtherUser(other || null);
+        if (other) {
+            // Check for block status in both directions
+            const otherUserProfile = await getUserById(other.id);
+            setOtherUser(otherUserProfile);
+            const youAreBlocked = otherUserProfile?.blockedUsers?.includes(currentUser.id);
+            const youBlockedThem = currentUser.blockedUsers?.includes(other.id);
+            setIsBlocked(youAreBlocked || youBlockedThem);
+        } else {
+            notFound();
+        }
       } else {
         notFound();
       }
@@ -105,8 +115,12 @@ export default function ChatPage() {
           });
       }
 
-      await sendMessage(convoId, currentUser.id, messageToSend);
-      setMessageText('');
+      const success = await sendMessage(convoId, currentUser.id, messageToSend);
+      if (success) {
+        setMessageText('');
+      } else {
+        toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
+      }
   };
 
   const handleCall = async () => {
@@ -117,7 +131,11 @@ export default function ChatPage() {
     }
       
     const callId = await startCall(currentUser.id, otherUser.id);
-    router.push(`/call/${callId}?otherUserId=${otherUser.id}&callType=outgoing`);
+    if (callId) {
+      router.push(`/call/${callId}?otherUserId=${otherUser.id}&callType=outgoing`);
+    } else {
+      toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not start the call. You may be blocked.' });
+    }
   }
 
   return (
@@ -167,6 +185,14 @@ export default function ChatPage() {
         </div>
       </ScrollArea>
       
+      {isBlocked ? (
+        <div className="p-4 bg-background border-t text-center">
+            <p className="text-sm text-destructive flex items-center justify-center gap-2">
+                <Ban className="h-4 w-4" />
+                Communication is blocked.
+            </p>
+        </div>
+      ) : (
       <div className="p-4 bg-background border-t">
         <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
@@ -206,6 +232,7 @@ export default function ChatPage() {
             </Button>
         </div>
       </div>
+      )}
        <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -226,5 +253,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

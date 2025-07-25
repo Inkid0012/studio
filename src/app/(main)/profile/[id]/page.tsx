@@ -75,7 +75,8 @@ export default function UserProfilePage() {
   const [currentUser, setCurrentUser] = useState<User | null>(getCurrentUser());
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockedByYou, setIsBlockedByYou] = useState(false);
+  const [areYouBlocked, setAreYouBlocked] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
@@ -90,7 +91,7 @@ export default function UserProfilePage() {
       setIsFollowing(currentUser.following.includes(userId));
     }
      if (currentUser?.blockedUsers) {
-      setIsBlocked(currentUser.blockedUsers.includes(userId));
+      setIsBlockedByYou(currentUser.blockedUsers.includes(userId));
     }
   }, [currentUser, userId]);
 
@@ -99,6 +100,7 @@ export default function UserProfilePage() {
       const userProfile = await getUserById(userId);
       if (userProfile) {
         setUser(userProfile);
+        setAreYouBlocked(userProfile.blockedUsers?.includes(currentUser?.id || '') || false);
         if (currentUser && currentUser.id !== userId) {
           await addVisitor(userId, currentUser.id);
         }
@@ -133,7 +135,11 @@ export default function UserProfilePage() {
       }
       setIsProcessing(true);
       const callId = await startCall(currentUser.id, user.id);
-      router.push(`/call/${callId}?otherUserId=${user.id}&callType=outgoing`);
+      if (callId) {
+        router.push(`/call/${callId}?otherUserId=${user.id}&callType=outgoing`);
+      } else {
+        toast({ variant: 'destructive', title: 'Call Failed', description: "Could not initiate the call. The user might have blocked you." });
+      }
       setIsProcessing(false);
   };
   
@@ -168,11 +174,11 @@ export default function UserProfilePage() {
 
   const handleBlockToggle = async () => {
     if (!currentUser || !user) return;
-    const action = isBlocked ? 'unblock' : 'block';
+    const action = isBlockedByYou ? 'unblock' : 'block';
     
     try {
         let updatedUser;
-        if (isBlocked) {
+        if (isBlockedByYou) {
             await unblockUser(currentUser.id, userId);
              updatedUser = {
                 ...currentUser,
@@ -187,7 +193,7 @@ export default function UserProfilePage() {
         }
         setCurrentUser(updatedUser);
         setLocalUser(updatedUser);
-        setIsBlocked(!isBlocked);
+        setIsBlockedByYou(!isBlockedByYou);
         toast({ title: `User ${action}ed`, description: `You have successfully ${action}ed ${user.name}.` });
     } catch(err) {
         toast({ variant: 'destructive', title: `Failed to ${action} user`, description: "Please try again." });
@@ -290,7 +296,7 @@ export default function UserProfilePage() {
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={handleBlockToggle}>
                             <Ban className="mr-2 h-4 w-4" />
-                            <span>{isBlocked ? 'Unblock' : 'Block'} User</span>
+                            <span>{isBlockedByYou ? 'Unblock' : 'Block'} User</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setReportDialogOpen(true)}>
                             <ShieldAlert className="mr-2 h-4 w-4" />
@@ -357,7 +363,7 @@ export default function UserProfilePage() {
             </div>
         </div>
 
-      {canInteract && !isBlocked && (
+      {canInteract && !isBlockedByYou && !areYouBlocked && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
             <div className="max-w-md mx-auto flex items-center gap-3">
                 <Button onClick={handleChat} disabled={isProcessing} className="flex-1 py-6 text-base rounded-full bg-orange-500 hover:bg-orange-600 text-white">
@@ -372,11 +378,18 @@ export default function UserProfilePage() {
             </div>
         </div>
       )}
-      {isBlocked && (
+      {isBlockedByYou && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
              <div className="max-w-md mx-auto text-center">
                 <p className="text-destructive font-semibold mb-2">You have blocked this user.</p>
                 <Button onClick={handleBlockToggle} variant="outline">Unblock</Button>
+             </div>
+         </div>
+      )}
+      {areYouBlocked && (
+         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
+             <div className="max-w-md mx-auto text-center">
+                <p className="text-destructive font-semibold">You have been blocked by this user.</p>
              </div>
          </div>
       )}
@@ -461,5 +474,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    
