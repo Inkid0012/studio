@@ -1,4 +1,5 @@
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch } from 'firebase/firestore';
@@ -315,7 +316,7 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
         allUsers.push(doc.data() as User);
     });
 
-    const currentUser = await getUserById(currentUserId || '');
+    const currentUser = currentUserId ? await getUserById(currentUserId) : null;
 
     // Filter out blocked users
     if (currentUser?.blockedUsers && currentUser.blockedUsers.length > 0) {
@@ -329,20 +330,18 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
       return allUsers.filter(user => user.id !== currentUserId);
     }
 
-    if (!currentUserId) {
-        return allUsers.filter(u => u.gender === 'female');
-    }
-
     let otherUsers = allUsers.filter(user => user.id !== currentUserId);
 
-    if (currentUser && currentUser.gender === 'male') {
-        return otherUsers.filter(user => user.gender === 'female');
-    } else if (currentUser && currentUser.gender === 'female') {
-        return otherUsers.filter(user => user.gender === 'male');
+    if (currentUser && currentUser.gender !== 'other') {
+        if (currentUser.gender === 'male') {
+            return otherUsers.filter(user => user.gender === 'female');
+        } else { // 'female'
+            return otherUsers.filter(user => user.gender === 'male');
+        }
     }
     
     // Default fallback for new users or 'other' gender
-    return otherUsers.filter(u => u.gender === 'female');
+    return otherUsers;
 }
 
 export async function getConversationById(id: string): Promise<Conversation | null> {

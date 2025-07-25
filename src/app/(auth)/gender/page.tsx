@@ -17,12 +17,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { createUserInFirestore, getCurrentUser, setCurrentUser } from '@/lib/data';
 import type { User } from '@/types';
+import { AlertDialogTrigger } from '@radix-ui/react-alert-dialog';
 
 export default function GenderSelectionPage() {
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
@@ -53,7 +52,7 @@ export default function GenderSelectionPage() {
         try {
             const updatedUser: User = {
                 ...currentUser,
-                gender: selectedGender as 'male' | 'female' | 'other',
+                gender: selectedGender as 'male' | 'female',
             };
 
             await createUserInFirestore(updatedUser);
@@ -90,20 +89,20 @@ export default function GenderSelectionPage() {
 
         <div className="space-y-4">
           <Button
-            variant={selectedGender === 'woman' ? 'default' : 'outline'}
-            className={cn('w-full font-bold py-6 text-base justify-between', selectedGender === 'woman' ? 'bg-primary text-primary-foreground' : 'border-primary/30 hover:bg-primary/5')}
-            onClick={() => setSelectedGender('woman')}
+            variant={selectedGender === 'female' ? 'default' : 'outline'}
+            className={cn('w-full font-bold py-6 text-base justify-between', selectedGender === 'female' ? 'bg-primary text-primary-foreground' : 'border-primary/30 hover:bg-primary/5')}
+            onClick={() => setSelectedGender('female')}
           >
             Woman
-            {selectedGender === 'woman' && <Check className="h-5 w-5" />}
+            {selectedGender === 'female' && <Check className="h-5 w-5" />}
           </Button>
           <Button
-            variant={selectedGender === 'man' ? 'default' : 'outline'}
-            className={cn('w-full font-bold py-6 text-base justify-between', selectedGender === 'man' ? 'bg-primary text-primary-foreground' : 'border-primary/30 hover:bg-primary/5')}
-            onClick={() => setSelectedGender('man')}
+            variant={selectedGender === 'male' ? 'default' : 'outline'}
+            className={cn('w-full font-bold py-6 text-base justify-between', selectedGender === 'male' ? 'bg-primary text-primary-foreground' : 'border-primary/30 hover:bg-primary/5')}
+            onClick={() => setSelectedGender('male')}
           >
             Man
-            {selectedGender === 'man' && <Check className="h-5 w-5" />}
+            {selectedGender === 'male' && <Check className="h-5 w-5" />}
           </Button>
         </div>
 
