@@ -97,7 +97,7 @@ export default function DiscoverPage() {
     if (!currentUser) return;
     
     // Fetch all users of the opposite gender for random matching
-    const allOppositeGenderUsers = await getDiscoverProfiles(currentUser.id, false);
+    const allOppositeGenderUsers = allProfiles.filter(p => p.gender !== currentUser.gender);
 
     if (allOppositeGenderUsers.length === 0) {
         toast({ variant: 'destructive', title: 'No users available', description: 'Could not find a user to call right now.' });

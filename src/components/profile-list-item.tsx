@@ -10,7 +10,7 @@ import { Card } from "./ui/card";
 import { findOrCreateConversation, getCurrentUser } from "@/lib/data";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 
 interface ProfileListItemProps {
   user: User;
@@ -55,8 +55,8 @@ export function ProfileListItem({ user }: ProfileListItemProps) {
                     </Badge>
                 </div>
             </div>
-             <Button onClick={handleChat} disabled={isCreatingChat} className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6">
-                {isCreatingChat ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Chat'}
+             <Button onClick={handleChat} disabled={isCreatingChat} variant="ghost" size="icon" className="text-orange-500 hover:text-orange-600">
+                {isCreatingChat ? <Loader2 className="h-6 w-6 animate-spin" /> : <MessageCircle className="h-7 w-7"/>}
             </Button>
         </div>
     </Card>
