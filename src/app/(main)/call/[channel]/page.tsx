@@ -27,33 +27,29 @@ const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444
  * @returns The local microphone audio track.
  */
 async function joinAgoraCall(client: IAgoraRTCClient, channelName: string, userId: string): Promise<IMicrophoneAudioTrack> {
-  // IMPORTANT: Replace this URL with your actual Agora token server endpoint.
-  const tokenServerUrl = `https://your-token-server.com/agora-token?channelName=${channelName}&userId=${userId}`;
+  const role = "publisher";
+
+  // Get token from your Render backend
+  const response = await fetch(`https://fizu-agora-token-server.onrender.com/rtc/${channelName}/${role}/${userId}`);
   
-  let token: string | null = null;
-  
-  try {
-    const response = await fetch(tokenServerUrl);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch token: ${response.statusText}`);
-    }
-    const data = await response.json();
-    token = data.token;
-  } catch (error) {
-    console.error('Could not fetch Agora token.', error);
-    // Fallback to a null token for development if the server is not available.
-    // In production, you should handle this error more gracefully.
-    token = process.env.NEXT_PUBLIC_AGORA_TEMP_TOKEN || null;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch token: ${response.statusText}`);
   }
+
+  const data = await response.json();
+  const token = data.token;
   
   if (!token) {
     throw new Error("Agora token is missing. Call cannot be initiated.");
   }
-  
+
   await client.join(appId, channelName, token, userId);
+  
+  // Voice only: create microphone audio track
   const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
   await client.publish([micTrack]);
-  
+
+  console.log("🎤 Joined Agora voice call successfully!");
   return micTrack;
 }
 
@@ -190,24 +186,27 @@ export default function CallPage() {
         return;
     }
     
-    if (latestUser.coins < CHARGE_COSTS.call) {
+    // Only male users are charged for calls
+    if (latestUser.gender === 'male' && latestUser.coins < CHARGE_COSTS.call) {
         handleLeave('You have insufficient coins.', true);
         return;
     }
 
-    const updatedCoins = (latestUser.coins || 0) - CHARGE_COSTS.call;
-    const updatedUser = { ...latestUser, coins: updatedCoins };
-    
-    await createUserInFirestore(updatedUser);
-    await addTransaction({
-        userId: currentUser.id,
-        type: 'spent',
-        amount: CHARGE_COSTS.call,
-        description: `Call with ${otherUser.name}`
-    });
-    
-    setCurrentUser(updatedUser);
-    setCurrentUserFromState(updatedUser);
+    if (latestUser.gender === 'male') {
+        const updatedCoins = (latestUser.coins || 0) - CHARGE_COSTS.call;
+        const updatedUser = { ...latestUser, coins: updatedCoins };
+        
+        await createUserInFirestore(updatedUser);
+        await addTransaction({
+            userId: currentUser.id,
+            type: 'spent',
+            amount: CHARGE_COSTS.call,
+            description: `Call with ${otherUser.name}`
+        });
+        
+        setCurrentUser(updatedUser);
+        setCurrentUserFromState(updatedUser);
+    }
   };
 
   const handleLeave = async (reason?: string, isError = false) => {
