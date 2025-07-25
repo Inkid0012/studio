@@ -354,11 +354,9 @@ export async function getConversationById(id: string): Promise<Conversation | nu
             const participants = await Promise.all(convoData.participantIds.map((id: string) => getUserById(id)));
             return {
                 id: convoSnap.id,
-                participantIds: convoData.participantIds,
+                ...convoData,
                 participants: participants.filter(p => p !== null) as User[],
-                messages: [], // Messages will be fetched via a separate real-time listener
-                lastMessage: convoData.lastMessage,
-            };
+            } as Conversation;
         } else {
             console.warn(`Conversation ${id} not found.`);
             return null;
@@ -374,7 +372,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     
     const participantIds = [userId1, userId2].sort();
     
-    const q = query(conversationsRef, where("participantIds", "==", participantIds));
+    const q = query(conversationsRef, where("participantIds", "==", participantIds), limit(1));
     
     const querySnapshot = await getDocs(q);
 
@@ -386,6 +384,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
         const newConversationRef = await addDoc(conversationsRef, {
             participantIds: participantIds,
             lastMessage: null,
+            activeCall: null,
         });
         return newConversationRef.id;
     }
@@ -642,3 +641,44 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
         visitors: updatedVisitors
     });
 }
+
+export async function startCallInFirestore(conversationId: string, callerId: string) {
+    const conversationRef = doc(db, 'conversations', conversationId);
+    await updateDoc(conversationRef, {
+        activeCall: {
+            callerId: callerId,
+            timestamp: Timestamp.now(),
+        }
+    });
+}
+
+export async function endCallInFirestore(conversationId: string) {
+    const conversationRef = doc(db, 'conversations', conversationId);
+    await updateDoc(conversationRef, {
+        activeCall: null
+    });
+}
+
+export function onIncomingCall(userId: string, callback: (conversation: Conversation) => void) {
+    const conversationsRef = collection(db, "conversations");
+    const q = query(conversationsRef, where("participantIds", "array-contains", userId));
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const changes = snapshot.docChanges();
+        for (const change of changes) {
+            if (change.type === "modified") {
+                const convoData = change.doc.data() as Conversation;
+                if (convoData.activeCall && convoData.activeCall.callerId !== userId) {
+                    const fullConvo = await getConversationById(change.doc.id);
+                    if (fullConvo) {
+                        callback(fullConvo);
+                    }
+                }
+            }
+        }
+    });
+
+    return unsubscribe;
+}
+
+    

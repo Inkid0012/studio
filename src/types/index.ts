@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type Visitor = {
@@ -52,7 +53,11 @@ export type Conversation = {
     text: string;
     senderId: string;
     timestamp: Timestamp;
-  }
+  };
+  activeCall?: {
+    callerId: string;
+    timestamp: Timestamp;
+  } | null;
 };
 
 export type PersonalInfoOption = {
@@ -70,3 +75,5 @@ export type Transaction = {
   description: string;
   timestamp: string; // ISO 8601 date string
 };
+
+    

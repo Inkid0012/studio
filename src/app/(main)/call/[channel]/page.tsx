@@ -9,10 +9,10 @@ import AgoraRTC, {
 } from 'agora-rtc-sdk-ng';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
+import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser, endCallInFirestore } from '@/lib/data';
 import type { User } from '@/types';
 import { MainHeader } from '@/components/layout/main-header';
-import { Loader2, Phone, PhoneOff, PhoneOutgoing } from 'lucide-react';
+import { Loader2, Phone, PhoneOff } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   AlertDialog,
@@ -64,7 +64,6 @@ export default function CallPage() {
             return;
         }
         setCallState('outgoing');
-        joinAgoraCall(); // Auto-join for outgoing calls
     } else {
         setCallState('incoming');
     }
@@ -176,6 +175,8 @@ export default function CallPage() {
         client.on('user-published', async (user, mediaType) => {
             await client?.subscribe(user, mediaType);
             if (mediaType === 'audio') {
+                setCallState('active');
+                startTimerAndCoins();
                 user.audioTrack?.play();
             }
         });
@@ -191,8 +192,12 @@ export default function CallPage() {
         localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         await client.publish([localAudioTrack]);
         
-        setCallState('active');
-        startTimerAndCoins();
+        if (callType === 'outgoing') {
+            // Already published, just waiting for the other user.
+        } else {
+             setCallState('active');
+             startTimerAndCoins();
+        }
 
     } catch (error) {
         console.error("Agora join failed", error);
@@ -202,6 +207,8 @@ export default function CallPage() {
   };
 
   const endAgoraCall = async (showToast = true, reason?: string) => {
+    await endCallInFirestore(channelName);
+    
     if (localAudioTrack) {
         localAudioTrack.stop();
         localAudioTrack.close();
@@ -351,3 +358,5 @@ export default function CallPage() {
     </div>
   );
 }
+
+    

@@ -2,8 +2,12 @@
 'use client';
 
 import { BottomNavBar } from "@/components/layout/bottom-nav-bar";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { getCurrentUser, onIncomingCall } from "@/lib/data";
+import type { Conversation, User } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 const mainNavPaths = ['/discover', '/chat', '/profile'];
 
@@ -13,7 +17,37 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  // The nav bar should appear on /discover, /chat, and /profile, but not on sub-pages like /chat/some-id or /profile/edit
+  const router = useRouter();
+  const { toast } = useToast();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = onIncomingCall(currentUser.id, (convo) => {
+      const caller = convo.participants.find(p => p.id === convo.activeCall?.callerId);
+      if (caller) {
+          toast({
+            title: "Incoming Call",
+            description: `${caller.name} is calling...`,
+          });
+          // Navigate to the call screen
+          router.push(`/call/${convo.id}?otherUserId=${caller.id}&callType=incoming`);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [currentUser, router, toast]);
+
   const showNavBar = mainNavPaths.includes(pathname);
 
   return (
@@ -23,3 +57,5 @@ export default function MainLayout({
     </div>
   );
 }
+
+    

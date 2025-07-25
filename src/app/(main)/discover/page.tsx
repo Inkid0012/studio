@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
-import { findOrCreateConversation } from "@/lib/data";
+import { findOrCreateConversation, startCallInFirestore } from "@/lib/data";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -88,7 +88,8 @@ export default function DiscoverPage() {
       randomUser.id
     );
 
-    router.push(`/call/${conversationId}?otherUserId=${randomUser.id}`);
+    await startCallInFirestore(conversationId, currentUser.id);
+    router.push(`/call/${conversationId}?otherUserId=${randomUser.id}&callType=outgoing`);
   };
 
   const showPlaceholder = !isLoading && displayedProfiles.length === 0;
@@ -143,3 +144,5 @@ export default function DiscoverPage() {
     </div>
   );
 }
+
+    

@@ -11,7 +11,8 @@ import {
     setCurrentUser as setLocalUser,
     blockUser,
     unblockUser,
-    CHARGE_COSTS
+    CHARGE_COSTS,
+    startCallInFirestore
 } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +40,7 @@ import type { User } from '@/types';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { 
     AlertDialog, 
     AlertDialogAction, 
@@ -132,6 +133,7 @@ export default function UserProfilePage() {
       }
       setIsProcessing(true);
       const conversationId = await findOrCreateConversation(currentUser.id, user.id);
+      await startCallInFirestore(conversationId, currentUser.id);
       router.push(`/call/${conversationId}?otherUserId=${user.id}&callType=outgoing`);
       setIsProcessing(false);
   };

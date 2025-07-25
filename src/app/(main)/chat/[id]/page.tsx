@@ -1,7 +1,7 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage } from '@/lib/data';
+import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCallInFirestore } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -115,10 +115,7 @@ export default function ChatPage() {
         return;
     }
       
-    toast({
-        title: "Calling...",
-        description: `Starting a voice call with ${otherUser.name}.`
-    });
+    await startCallInFirestore(convoId, currentUser.id);
 
     router.push(`/call/${convoId}?otherUserId=${otherUser.id}&callType=outgoing`);
   }
@@ -229,3 +226,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
