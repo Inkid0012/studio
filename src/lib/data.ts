@@ -168,7 +168,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
 
 export async function sendMessage(conversationId: string, senderId: string, text: string): Promise<boolean> {
     try {
-        const otherUserId = await runTransaction(db, async (transaction) => {
+        await runTransaction(db, async (transaction) => {
             const conversationRef = doc(db, 'conversations', conversationId);
             const conversationSnap = await transaction.get(conversationRef);
 
@@ -207,8 +207,6 @@ export async function sendMessage(conversationId: string, senderId: string, text
             transaction.update(conversationRef, {
                 lastMessage: { text, senderId, timestamp: Timestamp.now() }
             });
-
-            return otherId; // Return for potential further use, though not needed here
         });
         return true;
     } catch (e) {
@@ -358,21 +356,44 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
 
 export async function startCall(from: string, to: string): Promise<string | null> {
     try {
-        const toUserDoc = await getDoc(doc(db, 'users', to));
-        if (toUserDoc.exists()) {
-            const toUserData = toUserDoc.data() as User;
-            if (toUserData.blockedUsers?.includes(from)) {
-                console.warn("Cannot start call: You are blocked by this user.");
-                return null;
+        const callId = await runTransaction(db, async (transaction) => {
+            const fromUserRef = doc(db, 'users', from);
+            const toUserRef = doc(db, 'users', to);
+
+            const fromUserDoc = await transaction.get(fromUserRef);
+            const toUserDoc = await transaction.get(toUserRef);
+
+            if (!fromUserDoc.exists() || !toUserDoc.exists()) {
+                throw new Error("One or both users do not exist.");
             }
-        }
-        const callsCollection = collection(db, 'calls');
-        const newCallRef = await addDoc(callsCollection, {
-            from, to, status: 'ringing', timestamp: serverTimestamp(),
+
+            const fromUserData = fromUserDoc.data() as User;
+            const toUserData = toUserDoc.data() as User;
+
+            if (toUserData.blockedUsers?.includes(from)) {
+                throw new Error("Cannot start call: You are blocked by this user.");
+            }
+             if (fromUserData.blockedUsers?.includes(to)) {
+                throw new Error("Cannot start call: You have blocked this user.");
+            }
+
+            if (fromUserData.gender === 'male') {
+                if (fromUserData.coins < CHARGE_COSTS.call) {
+                    throw new Error("Insufficient coins.");
+                }
+            }
+            
+            const newCallRef = doc(collection(db, 'calls'));
+            transaction.set(newCallRef, {
+                from, to, status: 'ringing', timestamp: serverTimestamp(),
+            });
+            return newCallRef.id;
         });
-        return newCallRef.id;
-    } catch(e) {
+
+        return callId;
+    } catch (e) {
         console.error("Error starting call:", e);
+        // We can pass the error message to the UI if we want
         return null;
     }
 }
