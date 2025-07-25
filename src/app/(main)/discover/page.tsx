@@ -91,18 +91,19 @@ export default function DiscoverPage() {
     setShowConfirmCallDialog(true);
   };
 
-  const joinAgoraCall = () => {
+  const joinAgoraCall = async () => {
     setShowConfirmCallDialog(false);
     const currentUser = getCurrentUser();
+    if (!currentUser) return;
     
-    // In a real app, you might have a more sophisticated matchmaking system.
-    // Here, we just pick a random user from the available profiles.
-    const availableUsers = displayedProfiles.filter(p => p.id !== currentUser?.id);
-    if (availableUsers.length === 0) {
+    // Fetch all users of the opposite gender for random matching
+    const allOppositeGenderUsers = await getDiscoverProfiles(currentUser.id, false);
+
+    if (allOppositeGenderUsers.length === 0) {
         toast({ variant: 'destructive', title: 'No users available', description: 'Could not find a user to call right now.' });
         return;
     }
-    const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
+    const randomUser = allOppositeGenderUsers[Math.floor(Math.random() * allOppositeGenderUsers.length)];
 
     const conversationId = [currentUser!.id, randomUser.id].sort().join('-');
     router.push(`/call/${conversationId}?otherUserId=${randomUser.id}`);
