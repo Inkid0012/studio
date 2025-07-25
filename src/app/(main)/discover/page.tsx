@@ -34,10 +34,10 @@ export default function DiscoverPage() {
     const fetchProfiles = async () => {
       setIsLoading(true);
       await seedInitialUsers();
-      // Fetch all users without filtering
-      const fetchedProfiles = await getDiscoverProfiles(undefined, true); 
+      // Fetch all users without filtering by passing `forSearch = true`
+      const fetchedProfiles = await getDiscoverProfiles(currentUser?.id, true); 
       setAllProfiles(fetchedProfiles);
-      setDisplayedProfiles(fetchedProfiles.filter(p => p.id !== currentUser?.id));
+      setDisplayedProfiles(fetchedProfiles);
       setIsLoading(false);
     };
     fetchProfiles();
@@ -45,7 +45,7 @@ export default function DiscoverPage() {
   
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-        setDisplayedProfiles(allProfiles.filter(p => p.id !== currentUser?.id));
+        setDisplayedProfiles(allProfiles);
         setSearchOpen(false);
         return;
     }
@@ -61,7 +61,7 @@ export default function DiscoverPage() {
         user.id.toLowerCase().includes(lowerCaseQuery)
     );
     
-    setDisplayedProfiles(results.filter(p => p.id !== currentUser?.id));
+    setDisplayedProfiles(results);
     setIsLoading(false);
     setIsSearching(false);
   };
@@ -126,13 +126,29 @@ export default function DiscoverPage() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary"/>
             </div>
         ) : showPlaceholder ? (
-            <div className="flex items-center justify-center h-96">
-                <p className="text-muted-foreground">No users found.</p>
+            <div className="flex flex-col items-center justify-center h-96 text-center">
+                <p className="text-lg font-semibold">No Users Found</p>
+                <p className="text-muted-foreground mt-2">
+                    This screen is connected to the 'users' collection in Firestore, but no documents were returned.
+                </p>
+                <div className="text-left text-sm text-muted-foreground mt-4 bg-muted p-4 rounded-lg">
+                    <h3 className="font-bold mb-2">Possible Reasons:</h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li>The 'users' collection does not exist or is empty in your Firestore database.</li>
+                        <li>Your Firestore Security Rules are preventing read access to the 'users' collection.</li>
+                        <li>The Firebase project configuration in your application is incorrect.</li>
+                    </ul>
+                </div>
             </div>
         ) : (
             <div className="grid grid-cols-2 gap-4">
                 {displayedProfiles.map((user) => (
-                    <ProfileCard key={user.id} user={user} />
+                    <div key={user.id}>
+                        <ProfileCard user={user} />
+                        <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 text-xs rounded-md overflow-x-auto">
+                            {JSON.stringify(user, null, 2)}
+                        </pre>
+                    </div>
                 ))}
             </div>
         )}
