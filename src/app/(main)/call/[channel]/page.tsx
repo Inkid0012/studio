@@ -50,6 +50,15 @@ export default function CallPage() {
   const callId = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
 
+  // Effect to end call on component unmount or dependencies change
+  useEffect(() => {
+    return () => {
+      endCall(false); // Cleanup on unmount
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
   useEffect(() => {
     const user = getCurrentUser();
     if (!user || !otherUserId) {
@@ -82,13 +91,12 @@ export default function CallPage() {
 
     return () => {
         unsubscribe();
-        endCall(false); // Cleanup on unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callId, otherUserId, router, toast]);
 
   useEffect(() => {
-    if (!call || !currentUser) return;
+    if (!call || !currentUser || isEnding) return;
     
     const isOutgoing = call.from === currentUser?.id;
 
@@ -122,7 +130,7 @@ export default function CallPage() {
             break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [call, currentUser]);
+  }, [call, currentUser, isEnding]);
 
 
   const playRingtone = () => {
@@ -144,7 +152,7 @@ export default function CallPage() {
 
   
   const startTimerAndCoins = () => {
-    if (callStartTimeRef.current) return; // Prevent timer from restarting
+    if (timerIntervalRef.current) return; // Prevent timer from restarting
 
     callStartTimeRef.current = Date.now();
     coinsUsedRef.current = 0;
@@ -239,11 +247,10 @@ export default function CallPage() {
     timerIntervalRef.current = null;
     timeoutRef.current = null;
 
-    if (localAudioTrack) {
-        localAudioTrack.stop();
-        localAudioTrack.close();
-        localAudioTrack = null;
-    }
+    localAudioTrack?.stop();
+    localAudioTrack?.close();
+    localAudioTrack = null;
+    
     if (client) {
         try {
             await client.leave();
@@ -278,11 +285,13 @@ export default function CallPage() {
   
   const handleAccept = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (isEnding) return;
     updateCallStatus(callId, 'accepted');
   };
 
   const handleDecline = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (isEnding) return;
     updateCallStatus(callId, 'rejected');
   };
   
@@ -328,9 +337,6 @@ export default function CallPage() {
           src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
           loop
           muted
-          onCanPlay={(e) => {
-            e.currentTarget.play().catch(console.warn);
-          }}
         />
       <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">
@@ -406,5 +412,3 @@ export default function CallPage() {
     </div>
   );
 }
-
-    

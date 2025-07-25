@@ -9,234 +9,13 @@ export const CHARGE_COSTS = {
   call: 150,
 };
 
-let mockUsers: User[] = [
-  {
-    id: 'user-1',
-    name: 'NightWhisper',
-    email: 'nightwhisper@example.com',
-    isAnonymous: false,
-    age: 28,
-    dob: new Date('1996-05-15').toISOString(),
-    gender: 'male',
-    bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey. I enjoy hiking, photography, and trying new craft beers.',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Hiking', 'Photography', 'Craft Beer', 'Traveling', 'Sci-Fi Movies'],
-    isCertified: true,
-    coins: 250,
-    followers: ['user-2', 'user-4', 'user-7'],
-    following: ['user-2', 'user-3', 'user-4', 'user-5'],
-    visitors: [
-      { userId: 'user-2', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-      { userId: 'user-4', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() },
-      { userId: 'user-8', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
-    ],
-    blockedUsers: [],
-    country: 'Kenya',
-    exercise: 'Sometimes',
-    education: 'Bachelor\'s Degree',
-    smoking: 'Non-smoker',
-    liquor: 'Socially',
-    superpower: 'Invisibility',
-    pets: 'Dog Person',
-    personalityType: 'INTJ',
-    horoscope: 'Taurus',
-  },
-  {
-    id: 'user-2',
-    name: 'Bella',
-    email: 'bella@example.com',
-    isAnonymous: false,
-    age: 26,
-    dob: new Date('1998-03-20').toISOString(),
-    gender: 'female',
-    bio: 'Artist and dog lover. My perfect date involves a walk in the park with my golden retriever, Leo, followed by a cozy night in with a good movie.',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Painting', 'Dogs', 'Yoga', 'Indie Music', 'Thrift Shopping'],
-    isCertified: true,
-    coins: 1000,
-    followers: ['user-1', 'user-3', 'user-8'],
-    following: ['user-1', 'user-8'],
-    visitors: [
-      { userId: 'user-1', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-      { userId: 'user-3', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-    ],
-    blockedUsers: [],
-    country: 'United States of America',
-    exercise: 'Frequently',
-    education: 'Master\'s Degree',
-    smoking: 'Non-smoker',
-    liquor: 'Rarely',
-    superpower: 'Flying',
-    pets: 'Dog Person',
-    personalityType: 'ENFP',
-    horoscope: 'Aries',
-  },
-  {
-    id: 'user-3',
-    name: 'Charlie',
-    email: 'charlie@example.com',
-    isAnonymous: false,
-    age: 31,
-    dob: new Date('1993-08-10').toISOString(),
-    gender: 'male',
-    bio: 'Chef with a passion for Italian cuisine. I can make you the best pasta you\'ve ever had. Seeking a fellow foodie to explore the city\'s culinary scene.',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Cooking', 'Wine Tasting', 'Jazz Music', 'Cycling', 'History'],
-    isCertified: false,
-    coins: 150,
-    followers: ['user-2'],
-    following: ['user-2'],
-    visitors: [],
-    blockedUsers: [],
-    country: 'Italy',
-    exercise: 'Rarely',
-    education: 'Some College',
-    smoking: 'Smoker',
-    liquor: 'Frequently',
-    superpower: 'Super strength',
-    pets: 'Neither',
-    personalityType: 'ESTP',
-    horoscope: 'Leo',
-  },
-  {
-    id: 'user-4',
-    name: 'Diana',
-    email: 'diana@example.com',
-    isAnonymous: false,
-    age: 29,
-    dob: new Date('1995-11-25').toISOString(),
-    gender: 'female',
-    bio: 'Fitness enthusiast and personal trainer. I believe in a healthy body and a healthy mind. Let\'s hit the gym together or go for a run!',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Weightlifting', 'Running', 'Meal Prep', 'Podcasts', 'Beach Days'],
-    isCertified: true,
-    coins: 200,
-    followers: ['user-1'],
-    following: ['user-1'],
-    visitors: [],
-    blockedUsers: [],
-    country: 'Australia',
-    exercise: 'Frequently',
-    education: 'Associate Degree',
-    smoking: 'Non-smoker',
-    liquor: 'Sober',
-    superpower: 'Teleportation',
-    pets: 'Both',
-    personalityType: 'ESTJ',
-    horoscope: 'Sagittarius',
-  },
-  {
-    id: 'user-5',
-    name: 'Ethan',
-    email: 'ethan@example.com',
-    isAnonymous: false,
-    age: 27,
-    dob: new Date('1997-02-12').toISOString(),
-    gender: 'male',
-    bio: 'Musician and coffee aficionado. You can usually find me at a local coffee shop with my guitar, writing songs. Looking for my muse.',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Guitar', 'Songwriting', 'Coffee', 'Live Music', 'Philosophy'],
-    isCertified: false,
-    coins: 500,
-    followers: [],
-    following: ['user-1'],
-    visitors: [],
-    blockedUsers: [],
-    country: 'Canada',
-    exercise: 'Sometimes',
-    education: 'High School',
-    smoking: 'Social smoker',
-    liquor: 'Socially',
-    superpower: 'Time travel',
-    pets: 'Cat Person',
-    personalityType: 'INFP',
-    horoscope: 'Aquarius',
-  },
-  {
-    id: 'user-6',
-    name: 'Fiona',
-    email: 'fiona@example.com',
-    isAnonymous: false,
-    age: 25,
-    dob: new Date('1999-07-01').toISOString(),
-    gender: 'female',
-    bio: 'Bookworm and aspiring novelist. I love getting lost in a good story. Tell me about the last book you read and couldn\'t put down.',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Reading', 'Creative Writing', 'Cats', 'Tea', 'Museums'],
-    isCertified: false,
-    coins: 50,
-    followers: [],
-    following: [],
-    visitors: [],
-    blockedUsers: [],
-    country: 'United Kingdom',
-    exercise: 'Rarely',
-    education: 'Master\'s Degree',
-    smoking: 'Non-smoker',
-    liquor: 'Rarely',
-    superpower: 'Invisibility',
-    pets: 'Cat Person',
-    personalityType: 'INFJ',
-    horoscope: 'Cancer',
-  },
-  {
-    id: 'user-7',
-    name: 'George',
-    email: 'george@example.com',
-    isAnonymous: false,
-    age: 35,
-    dob: new Date('1989-09-05').toISOString(),
-    gender: 'male',
-    bio: 'Travel blogger who has been to 30 countries and counting. My goal is to see the world. Join me?',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Traveling', 'Blogging', 'Photography', 'Culture', 'Food'],
-    isCertified: true,
-    coins: 1200,
-    followers: ['user-1'],
-    following: [],
-    visitors: [],
-    blockedUsers: [],
-    country: 'Germany',
-    exercise: 'Sometimes',
-    education: 'PhD',
-    smoking: 'Non-smoker',
-    liquor: 'Socially',
-    superpower: 'Flying',
-    pets: 'Neither',
-    personalityType: 'ENTJ',
-    horoscope: 'Virgo',
-  },
-  {
-    id: 'user-8',
-    name: 'Hannah',
-    email: 'hannah@example.com',
-    isAnonymous: false,
-    age: 22,
-    dob: new Date('2002-01-30').toISOString(),
-    gender: 'female',
-    bio: 'University student studying graphic design. I\'m passionate about all things creative. Let\'s make something beautiful together.',
-    profilePicture: 'https://placehold.co/600x800.png',
-    interests: ['Graphic Design', 'Art', 'Video Games', 'Anime', 'K-Pop'],
-    isCertified: false,
-    coins: 80,
-    followers: ['user-2'],
-    following: ['user-2'],
-    visitors: [],
-    blockedUsers: [],
-    country: 'South Korea',
-    exercise: 'Sometimes',
-    education: 'Some College',
-    smoking: 'Non-smoker',
-    liquor: 'Socially',
-    superpower: 'Teleportation',
-    pets: 'Have other pets',
-    personalityType: 'ISFP',
-    horoscope: 'Aquarius',
-  },
+let mockTransactions: Transaction[] = [
+    { id: 'txn-1', userId: 'user-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+    { id: 'txn-2', userId: 'user-1', type: 'spent', amount: 10, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
+    { id: 'txn-3', userId: 'user-1', type: 'spent', amount: 50, description: 'Voice call with @Diana', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+    { id: 'txn-4', userId: 'user-1', type: 'purchase', amount: 1000, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
 ];
 
-
-// Use a function to get the current user, prioritizing localStorage
 export function getCurrentUser(): User | null {
   if (typeof window !== 'undefined') {
     const storedUser = localStorage.getItem('currentUser');
@@ -253,7 +32,6 @@ export function getCurrentUser(): User | null {
   return null;
 }
 
-// Use a function to set the current user in localStorage
 export function setCurrentUser(user: User | null) {
     if (typeof window !== 'undefined') {
         if (user) {
@@ -264,16 +42,17 @@ export function setCurrentUser(user: User | null) {
     }
 }
 
-// This is a mock, in a real app this would be a firestore collection
-let mockTransactions: Transaction[] = [
-    { id: 'txn-1', userId: 'user-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
-    { id: 'txn-2', userId: 'user-1', type: 'spent', amount: 10, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
-    { id: 'txn-3', userId: 'user-1', type: 'spent', amount: 50, description: 'Voice call with @Diana', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-    { id: 'txn-4', userId: 'user-1', type: 'purchase', amount: 1000, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-];
-
-
 export async function seedInitialUsers() {
+    const mockUsers: User[] = [
+      {
+        id: 'user-1', name: 'NightWhisper', email: 'nightwhisper@example.com', isAnonymous: false, age: 28, dob: new Date('1996-05-15').toISOString(), gender: 'male', bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey.', profilePicture: 'https://placehold.co/600x800.png', interests: ['Hiking', 'Photography', 'Craft Beer'], isCertified: true, coins: 250, followers: ['user-2', 'user-4'], following: ['user-2', 'user-3'], visitors: [{ userId: 'user-2', timestamp: new Date().toISOString() }], blockedUsers: [], country: 'Kenya', exercise: 'Sometimes', education: 'Bachelor\'s Degree', smoking: 'Non-smoker', liquor: 'Socially', horoscope: 'Taurus',
+      },
+      {
+        id: 'user-2', name: 'Bella', email: 'bella@example.com', isAnonymous: false, age: 26, dob: new Date('1998-03-20').toISOString(), gender: 'female', bio: 'Artist and dog lover. My perfect date involves a walk in the park with my golden retriever, Leo.', profilePicture: 'https://placehold.co/600x800.png', interests: ['Painting', 'Dogs', 'Yoga'], isCertified: true, coins: 1000, followers: ['user-1'], following: ['user-1'], visitors: [], blockedUsers: [], country: 'USA', exercise: 'Frequently', education: 'Master\'s Degree', smoking: 'Non-smoker', liquor: 'Rarely', horoscope: 'Aries',
+      },
+      // ... more users if needed
+    ];
+    
     try {
         const usersCollection = collection(db, 'users');
         const q = query(usersCollection, limit(1));
@@ -308,8 +87,8 @@ export async function getUserById(id: string): Promise<User | null> {
         }
     } catch (error) {
         console.error("Error fetching user from Firestore:", error);
+        return null;
     }
-    return null;
 }
 
 export async function getDiscoverProfiles(currentUserId?: string, forSearch = false): Promise<User[]> {
@@ -323,11 +102,9 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
 
     const currentUser = currentUserId ? await getUserById(currentUserId) : null;
 
-    // Filter out blocked users
     if (currentUser?.blockedUsers && currentUser.blockedUsers.length > 0) {
         allUsers = allUsers.filter(user => !currentUser.blockedUsers?.includes(user.id));
     }
-    // Filter out users who have blocked the current user
     allUsers = allUsers.filter(user => !user.blockedUsers?.includes(currentUser?.id || ''));
 
 
@@ -345,7 +122,6 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
         }
     }
     
-    // Default fallback for new users or 'other' gender
     return otherUsers;
 }
 
@@ -374,18 +150,14 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 
 export async function findOrCreateConversation(userId1: string, userId2: string): Promise<string> {
     const conversationsRef = collection(db, "conversations");
-    
     const participantIds = [userId1, userId2].sort();
-    
     const q = query(conversationsRef, where("participantIds", "==", participantIds), limit(1));
     
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
-        // Conversation already exists
         return querySnapshot.docs[0].id;
     } else {
-        // Create a new conversation
         const newConversationRef = await addDoc(conversationsRef, {
             participantIds: participantIds,
             lastMessage: null,
@@ -396,7 +168,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
 
 export async function sendMessage(conversationId: string, senderId: string, text: string): Promise<boolean> {
     try {
-        await runTransaction(db, async (transaction) => {
+        const otherUserId = await runTransaction(db, async (transaction) => {
             const conversationRef = doc(db, 'conversations', conversationId);
             const conversationSnap = await transaction.get(conversationRef);
 
@@ -405,13 +177,13 @@ export async function sendMessage(conversationId: string, senderId: string, text
             }
 
             const participantIds = conversationSnap.data().participantIds;
-            const otherUserId = participantIds.find((id: string) => id !== senderId);
+            const otherId = participantIds.find((id: string) => id !== senderId);
 
-            if (!otherUserId) {
+            if (!otherId) {
                 throw "Other user not found in conversation";
             }
             
-            const otherUserRef = doc(db, 'users', otherUserId);
+            const otherUserRef = doc(db, 'users', otherId);
             const otherUserSnap = await transaction.get(otherUserRef);
 
             if (!otherUserSnap.exists()) {
@@ -424,26 +196,19 @@ export async function sendMessage(conversationId: string, senderId: string, text
             }
 
             const messagesRef = collection(db, 'conversations', conversationId, 'messages');
-            const newMessageRef = doc(messagesRef); // Create a new doc ref for the message
+            const newMessageRef = doc(messagesRef);
 
             const newMessage: Omit<Message, 'id'> = {
-                senderId,
-                text,
+                senderId, text, type: 'text', content: text,
                 timestamp: Timestamp.now(),
-                type: 'text',
-                content: text
             };
-
             transaction.set(newMessageRef, newMessage);
 
-            // Update the last message on the conversation for preview purposes
             transaction.update(conversationRef, {
-                lastMessage: {
-                    text,
-                    timestamp: Timestamp.now(),
-                    senderId,
-                }
+                lastMessage: { text, senderId, timestamp: Timestamp.now() }
             });
+
+            return otherId; // Return for potential further use, though not needed here
         });
         return true;
     } catch (e) {
@@ -459,17 +224,14 @@ export function getMessages(conversationId: string, callback: (messages: Message
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const messages: Message[] = [];
         querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            messages.push({ 
-                id: doc.id, 
-                ...data,
-                timestamp: (data.timestamp as Timestamp).toDate()
-            } as Message);
+            messages.push({ id: doc.id, ...doc.data() } as Message);
         });
         callback(messages);
+    }, (error) => {
+        console.error(`Error listening to messages for convo ${conversationId}: `, error);
     });
 
-    return unsubscribe; // Return the unsubscribe function to be called on cleanup
+    return unsubscribe;
 }
 
 export function getConversationsForUser(userId: string, callback: (conversations: Conversation[]) => void) {
@@ -491,6 +253,8 @@ export function getConversationsForUser(userId: string, callback: (conversations
       })
     );
     callback(conversations);
+  }, (error) => {
+    console.error(`Error listening to conversations for user ${userId}: `, error);
   });
 
   return unsubscribe;
@@ -501,7 +265,6 @@ export async function createUserInFirestore(userData: User) {
     const userRef = doc(db, 'users', userData.id);
     const { ...dataToSave } = userData;
 
-    // Ensure arrays are initialized
     dataToSave.followers = Array.isArray(dataToSave.followers) ? dataToSave.followers : [];
     dataToSave.following = Array.isArray(dataToSave.following) ? dataToSave.following : [];
     dataToSave.visitors = Array.isArray(dataToSave.visitors) ? dataToSave.visitors : [];
@@ -512,118 +275,48 @@ export async function createUserInFirestore(userData: User) {
 }
 
 export const personalInfoOptions: PersonalInfoOption[] = [
-    {
-      key: 'exercise',
-      label: 'Exercise',
-      icon: Dumbbell,
-      options: ['Frequently', 'Sometimes', 'Rarely', 'Never'],
-    },
-    {
-      key: 'education',
-      label: 'Education',
-      icon: GraduationCap,
-      options: ['High School', 'Some College', 'Associate Degree', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD'],
-    },
-    {
-      key: 'smoking',
-      label: 'Smoking',
-      icon: Cigarette,
-      options: ['Smoker', 'Social smoker', 'Non-smoker', 'Trying to quit'],
-    },
-    {
-      key: 'liquor',
-      label: 'Liquor',
-      icon: Beer,
-      options: ['Frequently', 'Socially', 'Rarely', 'Sober'],
-    },
-    {
-      key: 'superpower',
-      label: 'Superpower',
-      icon: Sparkles,
-      options: ['Flying', 'Invisibility', 'Super strength', 'Teleportation', 'Time travel'],
-    },
-    {
-      key: 'pets',
-      label: 'Pets',
-      icon: Ghost,
-      options: ['Dog Person', 'Cat Person', 'Both', 'Neither', 'Have other pets'],
-    },
-    {
-      key: 'personalityType',
-      label: 'Personality type',
-      icon: Smile,
-      options: ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'],
-    },
-    {
-      key: 'horoscope',
-      label: 'Horoscopes',
-      icon: Atom,
-      options: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'],
-    },
-  ];
+    { key: 'exercise', label: 'Exercise', icon: Dumbbell, options: ['Frequently', 'Sometimes', 'Rarely', 'Never'] },
+    { key: 'education', label: 'Education', icon: GraduationCap, options: ['High School', 'Some College', 'Associate Degree', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD'] },
+    { key: 'smoking', label: 'Smoking', icon: Cigarette, options: ['Smoker', 'Social smoker', 'Non-smoker', 'Trying to quit'] },
+    { key: 'liquor', label: 'Liquor', icon: Beer, options: ['Frequently', 'Socially', 'Rarely', 'Sober'] },
+    { key: 'superpower', label: 'Superpower', icon: Sparkles, options: ['Flying', 'Invisibility', 'Super strength', 'Teleportation', 'Time travel'] },
+    { key: 'pets', label: 'Pets', icon: Ghost, options: ['Dog Person', 'Cat Person', 'Both', 'Neither', 'Have other pets'] },
+    { key: 'personalityType', label: 'Personality type', icon: Smile, options: ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'] },
+    { key: 'horoscope', label: 'Horoscopes', icon: Atom, options: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'] },
+];
 
-  export const countries = [
-    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
-    "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
-    "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo, Democratic Republic of the", "Congo, Republic of the", "Costa Rica", "Cote d'Ivoire", "Croatia", "Cuba", "Cyprus", "Czechia",
-    "Denmark", "Djibouti", "Dominica", "Dominican Republic",
-    "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
-    "Fiji", "Finland", "France",
-    "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
-    "Haiti", "Honduras", "Hungary",
-    "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
-    "Jamaica", "Japan", "Jordan",
-    "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait", "Kyrgyzstan",
-    "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
-    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
-    "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia",
-    "Oman",
-    "Pakistan", "Palau", "Palestine", "Panama", "Papua new Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
-    "Qatar",
-    "Romania", "Russia", "Rwanda",
-    "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
-    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
-    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States of America", "Uruguay", "Uzbekistan",
-    "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
-    "Yemen",
-    "Zambia", "Zimbabwe"
-  ];
+export const countries = [ "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo, Democratic Republic of the", "Congo, Republic of the", "Costa Rica", "Cote d'Ivoire", "Croatia", "Cuba", "Cyprus", "Czechia", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua new Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States of America", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe" ];
 
-  export function getTransactionsForUser(userId: string): Transaction[] {
-    // In a real app, this would filter transactions based on the userId from firestore
+export function getTransactionsForUser(userId: string): Transaction[] {
     return mockTransactions.filter(tx => tx.userId === userId);
-  }
+}
 
-  export async function addTransaction(data: Omit<Transaction, 'id' | 'timestamp'>) {
-      const newTransaction: Transaction = {
-          ...data,
-          id: `txn-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-      };
-      // In a real app, this would be saved to a 'transactions' collection in Firestore
-      mockTransactions.push(newTransaction);
-      console.log('Transaction added:', newTransaction);
-      return newTransaction;
-  }
+export async function addTransaction(data: Omit<Transaction, 'id' | 'timestamp'>) {
+    const newTransaction: Transaction = {
+        ...data,
+        id: `txn-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+    };
+    mockTransactions.push(newTransaction);
+    return newTransaction;
+}
 
 export async function followUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
-
-    await writeBatch(db)
-        .update(currentUserRef, { following: arrayUnion(targetUserId) })
-        .update(targetUserRef, { followers: arrayUnion(currentUserId) })
-        .commit();
+    const batch = writeBatch(db);
+    batch.update(currentUserRef, { following: arrayUnion(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayUnion(currentUserId) });
+    await batch.commit();
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
-    
-    await writeBatch(db)
-        .update(currentUserRef, { following: arrayRemove(targetUserId) })
-        .update(targetUserRef, { followers: arrayRemove(currentUserId) })
-        .commit();
+    const batch = writeBatch(db);
+    batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
+    await batch.commit();
 }
 
 export async function blockUser(currentUserId: string, targetUserId: string) {
@@ -631,7 +324,6 @@ export async function blockUser(currentUserId: string, targetUserId: string) {
     await updateDoc(currentUserRef, {
         blockedUsers: arrayUnion(targetUserId)
     });
-    // Also remove from following/followers if they exist
     await unfollowUser(currentUserId, targetUserId).catch(e => console.error("Error unfollowing after block:", e));
     await unfollowUser(targetUserId, currentUserId).catch(e => console.error("Error unfollowing after block (reverse):", e));
 }
@@ -644,48 +336,26 @@ export async function unblockUser(currentUserId: string, targetUserId: string) {
 }
 
 export async function addVisitor(profileOwnerId: string, visitorId: string) {
-    if (profileOwnerId === visitorId) return; // Don't track self-visits
-
+    if (profileOwnerId === visitorId) return;
     const profileOwnerRef = doc(db, 'users', profileOwnerId);
-    
     try {
       await runTransaction(db, async (transaction) => {
         const userSnap = await transaction.get(profileOwnerRef);
         if (!userSnap.exists()) {
-            throw "Profile owner not found for adding a visitor";
+            throw "Profile owner not found";
         }
-
         const userData = userSnap.data() as User;
         const visitors = userData.visitors || [];
-
-        // Remove previous visit from the same user to keep the list unique by ID
         const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
-
-        const newVisitor: Visitor = {
-            userId: visitorId,
-            timestamp: new Date().toISOString(),
-        };
-
-        // Add the new visit to the front of the array, and limit to 50 visitors
+        const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
         const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
-        
-        transaction.update(profileOwnerRef, {
-            visitors: updatedVisitors
-        });
+        transaction.update(profileOwnerRef, { visitors: updatedVisitors });
       });
     } catch (error) {
         console.error("Failed to add visitor:", error);
     }
 }
 
-// --- New Call Management Functions ---
-
-/**
- * Starts a new call by creating a document in the 'calls' collection.
- * @param from The ID of the user initiating the call.
- * @param to The ID of the user receiving the call.
- * @returns The ID of the newly created call document.
- */
 export async function startCall(from: string, to: string): Promise<string | null> {
     try {
         const toUserDoc = await getDoc(doc(db, 'users', to));
@@ -696,13 +366,9 @@ export async function startCall(from: string, to: string): Promise<string | null
                 return null;
             }
         }
-
         const callsCollection = collection(db, 'calls');
         const newCallRef = await addDoc(callsCollection, {
-            from,
-            to,
-            status: 'ringing',
-            timestamp: serverTimestamp(),
+            from, to, status: 'ringing', timestamp: serverTimestamp(),
         });
         return newCallRef.id;
     } catch(e) {
@@ -711,11 +377,6 @@ export async function startCall(from: string, to: string): Promise<string | null
     }
 }
 
-/**
- * Updates the status of a call document.
- * @param callId The ID of the call to update.
- * @param status The new status for the call.
- */
 export async function updateCallStatus(callId: string, status: Call['status']) {
     try {
         const callRef = doc(db, 'calls', callId);
@@ -725,12 +386,6 @@ export async function updateCallStatus(callId: string, status: Call['status']) {
     }
 }
 
-/**
- * Listens for real-time updates to a specific call document.
- * @param callId The ID of the call to listen to.
- * @param callback A function to be called with the updated call data.
- * @returns An unsubscribe function to stop listening for updates.
- */
 export function onCallUpdate(callId: string, callback: (call: Call | null) => void) {
     const callRef = doc(db, 'calls', callId);
     const unsubscribe = onSnapshot(callRef, (docSnap) => {
@@ -745,12 +400,6 @@ export function onCallUpdate(callId: string, callback: (call: Call | null) => vo
     return unsubscribe;
 }
 
-/**
- * Listens for new incoming calls for a specific user.
- * @param userId The ID of the user to listen for incoming calls.
- * @param callback A function to be called with the new incoming call data.
- * @returns An unsubscribe function to stop listening for updates.
- */
 export function onIncomingCall(userId: string, callback: (call: Call) => void) {
     const callsRef = collection(db, "calls");
     const q = query(
@@ -772,5 +421,3 @@ export function onIncomingCall(userId: string, callback: (call: Call) => void) {
 
     return unsubscribe;
 }
-
-    

@@ -6,15 +6,14 @@ import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle, Ban } from 'lucide-react';
+import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle, Ban, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 
 export default function ChatPage() {
@@ -30,23 +29,27 @@ export default function ChatPage() {
   const [messageText, setMessageText] = useState('');
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
+  const [isLoading, setIsLoading] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
   const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
   const isBlocked = isBlockedByYou || areYouBlocked;
 
-
   useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setCurrentUserFromState(user);
+
     const fetchConvo = async () => {
-      if (!currentUser) {
-        router.push('/login');
-        return;
-      }
+      setIsLoading(true);
       const convoData = await getConversationById(convoId);
       if (convoData) {
         setConversation(convoData);
-        const otherParticipantId = convoData.participantIds.find(pId => pId !== currentUser?.id);
+        const otherParticipantId = convoData.participantIds.find(pId => pId !== user?.id);
         if (otherParticipantId) {
             const otherUserProfile = await getUserById(otherParticipantId);
             setOtherUser(otherUserProfile);
@@ -56,10 +59,11 @@ export default function ChatPage() {
       } else {
         notFound();
       }
+      setIsLoading(false);
     };
 
     fetchConvo();
-  }, [convoId, currentUser, router]);
+  }, [convoId, router]);
 
   useEffect(() => {
     if (!convoId) return;
@@ -72,7 +76,6 @@ export default function ChatPage() {
   }, [convoId]);
   
   useEffect(() => {
-    // Scroll to bottom when new messages arrive
     if (scrollAreaRef.current) {
         scrollAreaRef.current.scrollTo({
             top: scrollAreaRef.current.scrollHeight,
@@ -80,10 +83,6 @@ export default function ChatPage() {
         });
     }
   }, [messages]);
-
-  if (!conversation || !currentUser || !otherUser) {
-    return <div>Loading chat...</div>;
-  }
 
   const handleInsufficientCoins = (type: 'message' | 'call') => {
       const cost = type === 'message' ? CHARGE_COSTS.message : CHARGE_COSTS.call;
@@ -96,21 +95,22 @@ export default function ChatPage() {
 
   const handleSendMessage = async (text: string) => {
       const messageToSend = text.trim();
-      if (!messageToSend) return;
+      if (!messageToSend || !currentUser || isBlocked) return;
 
       if (currentUser.gender === 'male') {
-          if (currentUser.coins < CHARGE_COSTS.message) {
+          const freshUser = await getUserById(currentUser.id);
+          if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
               handleInsufficientCoins('message');
               return;
           }
-          const updatedUser = { ...currentUser, coins: currentUser.coins - CHARGE_COSTS.message };
+          const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
           setCurrentUserFromState(updatedUser);
           setCurrentUser(updatedUser);
           await createUserInFirestore(updatedUser);
           await addTransaction({
               type: 'spent',
               amount: CHARGE_COSTS.message,
-              description: `Message to ${otherUser.name}`,
+              description: `Message to ${otherUser?.name || 'user'}`,
               userId: currentUser.id,
           });
       }
@@ -124,18 +124,32 @@ export default function ChatPage() {
   };
 
   const handleCall = async () => {
-     if (!currentUser || !otherUser) return;
-     if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
-        handleInsufficientCoins('call');
-        return;
+     if (!currentUser || !otherUser || isBlocked) return;
+     if (currentUser.gender === 'male') {
+        const freshUser = await getUserById(currentUser.id);
+        if (!freshUser || freshUser.coins < CHARGE_COSTS.call) {
+            handleInsufficientCoins('call');
+            return;
+        }
     }
       
     const callId = await startCall(currentUser.id, otherUser.id);
     if (callId) {
       router.push(`/call/${callId}?otherUserId=${otherUser.id}`);
     } else {
-      toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not start the call. You may be blocked.' });
+      toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not start the call. The user might be busy or has blocked you.' });
     }
+  }
+  
+  if (isLoading || !conversation || !currentUser || !otherUser) {
+    return (
+        <div className="flex flex-col h-screen bg-muted/20">
+             <MainHeader title="Loading..." showBackButton={true} />
+             <div className="flex-1 flex items-center justify-center">
+                 <Loader2 className="w-8 h-8 animate-spin" />
+             </div>
+        </div>
+    );
   }
 
   return (
@@ -253,5 +267,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

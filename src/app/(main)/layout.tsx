@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getCurrentUser, onIncomingCall } from "@/lib/data";
 import type { Call, User } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 
 const mainNavPaths = ['/discover', '/chat', '/profile'];
 
@@ -22,8 +21,12 @@ export default function MainLayout({
 
   useEffect(() => {
     const user = getCurrentUser();
-    setCurrentUser(user);
-  }, [pathname]);
+    if (user) {
+        setCurrentUser(user);
+    } else {
+        router.push('/login');
+    }
+  }, [pathname, router]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -31,7 +34,7 @@ export default function MainLayout({
     // Listen for new incoming calls
     const unsubscribe = onIncomingCall(currentUser.id, (call: Call) => {
         if (!pathname.startsWith('/call/')) {
-            router.push(`/call/${call.id}?otherUserId=${call.from}&callType=incoming`);
+            router.push(`/call/${call.id}?otherUserId=${call.from}`);
         }
     });
 
@@ -42,7 +45,7 @@ export default function MainLayout({
     };
   }, [currentUser, router, pathname]);
 
-  const showNavBar = mainNavPaths.includes(pathname);
+  const showNavBar = mainNavPaths.some(path => pathname === path || (path !== '/profile' && pathname.startsWith(path)));
 
   return (
     <div className="min-h-screen bg-background">

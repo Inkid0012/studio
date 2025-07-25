@@ -86,14 +86,16 @@ export default function UserProfilePage() {
   const isFollowing = useMemo(() => currentUser?.following?.includes(userId), [currentUser, userId]);
   const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(userId), [currentUser, userId]);
   const areYouBlocked = useMemo(() => user?.blockedUsers?.includes(currentUser?.id || ''), [user, currentUser]);
+  const isBlocked = isBlockedByYou || areYouBlocked;
 
   useEffect(() => {
     const fetchUser = async () => {
       const userProfile = await getUserById(userId);
       if (userProfile) {
         setUser(userProfile);
-        if (currentUser && currentUser.id !== userId) {
-          await addVisitor(userId, currentUser.id);
+        const localUser = getCurrentUser();
+        if (localUser && localUser.id !== userId) {
+          await addVisitor(userId, localUser.id);
         }
       } else {
         notFound();
@@ -103,7 +105,13 @@ export default function UserProfilePage() {
     if (userId) {
       fetchUser();
     }
-  }, [userId, currentUser]);
+    const localUser = getCurrentUser();
+    if (localUser) {
+        setCurrentUser(localUser);
+    } else {
+        router.push('/login');
+    }
+  }, [userId, router]);
 
   const userAge = useMemo(() => {
     if (user?.dob) {
@@ -113,7 +121,7 @@ export default function UserProfilePage() {
   }, [user]);
 
   const handleChat = async () => {
-    if (!currentUser || !user) return;
+    if (!currentUser || !user || isBlocked) return;
     setIsProcessing(true);
     const conversationId = await findOrCreateConversation(currentUser.id, user.id);
     router.push(`/chat/${conversationId}`);
@@ -121,7 +129,7 @@ export default function UserProfilePage() {
   };
   
   const handleCall = async () => {
-      if (!currentUser || !user) return;
+      if (!currentUser || !user || isBlocked) return;
       if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
           setShowRechargeDialog(true);
           return;
@@ -137,7 +145,7 @@ export default function UserProfilePage() {
   };
   
   const handleFollow = async () => {
-    if (!currentUser || !user) return;
+    if (!currentUser || !user || isBlocked) return;
     setIsProcessing(true);
     
     try {
@@ -279,6 +287,7 @@ export default function UserProfilePage() {
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
             </div>
+            {canInteract && (
             <div className="absolute top-4 right-4">
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -298,6 +307,7 @@ export default function UserProfilePage() {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+            )}
         </div>
 
         <div className="relative p-4 -mt-16 space-y-4">
@@ -356,7 +366,7 @@ export default function UserProfilePage() {
             </div>
         </div>
 
-      {canInteract && !isBlockedByYou && !areYouBlocked && (
+      {canInteract && !isBlocked && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
             <div className="max-w-md mx-auto flex items-center gap-3">
                 <Button onClick={handleChat} disabled={isProcessing} className="flex-1 py-6 text-base rounded-full bg-orange-500 hover:bg-orange-600 text-white">
@@ -375,7 +385,9 @@ export default function UserProfilePage() {
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
              <div className="max-w-md mx-auto text-center">
                 <p className="text-destructive font-semibold mb-2">You have blocked this user.</p>
-                <Button onClick={handleBlockToggle} variant="outline">Unblock</Button>
+                <Button onClick={handleBlockToggle} variant="outline" disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="animate-spin" /> : 'Unblock'}
+                </Button>
              </div>
          </div>
       )}
@@ -467,5 +479,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    

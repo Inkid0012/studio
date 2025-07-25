@@ -48,14 +48,6 @@ export default function WalletPage() {
   }, [router]);
 
   const displayedPackages = isFolded ? coinPackages.slice(0, 6) : coinPackages;
-
-  if (!currentUser) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary"/>
-      </div>
-    );
-  }
   
   const handlePurchase = async () => {
     if (!currentUser) return;
@@ -95,6 +87,13 @@ export default function WalletPage() {
     }
   };
 
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary"/>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-muted/30 min-h-screen">

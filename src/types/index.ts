@@ -38,7 +38,7 @@ export type Message = {
   id: string;
   senderId: string;
   text: string;
-  timestamp: Date | Timestamp;
+  timestamp: Timestamp; // Keep as Timestamp for Firestore
   type: 'text' | 'image' | 'voice';
   content: string; 
 };
