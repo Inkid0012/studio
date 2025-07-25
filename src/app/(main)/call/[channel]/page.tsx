@@ -119,7 +119,7 @@ export default function CallPage() {
     try {
         const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
         const role = "publisher";
-        const response = await fetch(`https://fizu-agora-token-server.onrender.com/rtc/${channelName}/${role}/${currentUser.id}`);
+        const response = await fetch(`https://agora-token-server-fizu.onrender.com/rtc/${channelName}/${role}/${currentUser.id}`);
         const data = await response.json();
         const token = data.token;
         
