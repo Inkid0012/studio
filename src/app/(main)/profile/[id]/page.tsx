@@ -4,13 +4,25 @@ import { notFound, useParams, useRouter } from 'next/navigation';
 import { getUserById, addVisitor, getCurrentUser, findOrCreateConversation, followUser, unfollowUser, setCurrentUser as setLocalUser } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, MoreVertical, MessageSquare, ShieldAlert, XCircle, Loader2, ChevronLeft, Phone, UserPlus } from 'lucide-react';
+import { CheckCircle, MoreVertical, MessageSquare, ShieldAlert, XCircle, Loader2, ChevronLeft, Phone, UserPlus, ShieldCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { User } from '@/types';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const calculateAge = (dob: string | Date) => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -43,10 +55,17 @@ export default function UserProfilePage() {
     fetchUser();
   }, [userId, currentUser]);
 
+  const userAge = useMemo(() => {
+    if (user?.dob) {
+      return calculateAge(user.dob);
+    }
+    return user?.age || 0;
+  }, [user]);
+
   const handleChat = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !user) return;
     setIsProcessing(true);
-    const conversationId = await findOrCreateConversation(currentUser.id, user!.id);
+    const conversationId = await findOrCreateConversation(currentUser.id, user.id);
     router.push(`/chat/${conversationId}`);
     setIsProcessing(false);
   };
@@ -60,7 +79,7 @@ export default function UserProfilePage() {
   };
   
   const handleFollow = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !user) return;
     setIsProcessing(true);
     
     try {
@@ -151,7 +170,7 @@ export default function UserProfilePage() {
                 <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-2xl font-bold flex items-center">
-                            {user.name}, {user.age}
+                            {user.name}, {userAge}
                              {user.isCertified && <ShieldCheck className="ml-2 h-6 w-6 text-green-500 fill-green-200" />}
                         </h1>
                         <span className="text-sm text-muted-foreground">ID: {user.id}</span>
@@ -165,7 +184,7 @@ export default function UserProfilePage() {
                     </div>
                 </div>
                 <div className="flex gap-2 mt-3">
-                    <Badge className="bg-pink-100 text-pink-700">♀ {user.age}</Badge>
+                    <Badge className="bg-pink-100 text-pink-700">♀ {userAge}</Badge>
                     <Badge className="bg-blue-100 text-blue-700">{user.country || 'Nigeria'}</Badge>
                 </div>
             </div>
@@ -221,4 +240,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
