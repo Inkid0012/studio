@@ -52,7 +52,7 @@ export default function MainLayout({
     };
   }, [currentUser, router, pathname]);
 
-  const showNavBar = mainNavPaths.includes(pathname) || pathname.startsWith('/profile');
+  const showNavBar = mainNavPaths.includes(pathname);
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,5 +61,3 @@ export default function MainLayout({
     </div>
   );
 }
-
-    
