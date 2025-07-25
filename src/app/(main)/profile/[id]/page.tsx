@@ -26,7 +26,8 @@ import {
     UserPlus, 
     ShieldCheck, 
     Ban,
-    Upload
+    Upload,
+    Plus
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -326,24 +327,21 @@ export default function UserProfilePage() {
 
       {canInteract && !isBlocked && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
-            <div className="max-w-md mx-auto grid grid-cols-3 gap-3">
-                <Button 
-                    onClick={handleFollow} 
-                    disabled={isProcessing} 
-                    variant={isFollowing ? 'secondary' : 'default'}
-                    className="py-6 text-base"
-                >
-                    {isProcessing && !isFollowing ? <Loader2 className="animate-spin" /> : <UserPlus />}
-                    {isFollowing ? 'Following' : 'Follow'}
+            <div className="max-w-md mx-auto flex items-center gap-3">
+                <Button onClick={handleChat} disabled={isProcessing} className="flex-1 py-6 text-base rounded-full bg-orange-500 hover:bg-orange-600 text-white">
+                    {isProcessing ? <Loader2 className="animate-spin" /> : 'Chat'}
                 </Button>
-                <Button onClick={handleCall} disabled={isProcessing} className="py-6 text-base bg-blue-500 hover:bg-blue-600 text-white">
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Phone />}
-                    Call
-                </Button>
-                <Button onClick={handleChat} disabled={isProcessing} className="py-6 text-base bg-accent text-accent-foreground hover:bg-accent/90">
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <MessageSquare />}
-                    Chat
-                </Button>
+                <div className="relative">
+                    <Button onClick={handleCall} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-lime-400 hover:bg-lime-500 text-black">
+                        <Phone className="w-7 h-7" />
+                    </Button>
+                    <div className="absolute -top-2 -right-2 text-xs bg-lime-500 text-white px-1.5 py-0.5 rounded-full font-bold shadow-md">
+                        New
+                    </div>
+                </div>
+                 <Button onClick={handleFollow} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black">
+                    <Plus className="w-8 h-8"/>
+                 </Button>
             </div>
         </div>
       )}
