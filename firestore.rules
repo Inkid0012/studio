@@ -2,35 +2,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // By default, deny all access
+    // Default deny all reads and writes
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // --- USERS ---
-    // Allow authenticated users to read profiles (for discover, profile view, etc.)
-    // Allow users to only write to their own profile.
+    // User profiles can be read by any authenticated user, but only written by the owner.
     match /users/{userId} {
       allow get, list: if request.auth != null;
-      allow create, update, delete: if request.auth.uid == userId;
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // --- CONVERSATIONS ---
-    // Only participants can access a conversation or its messages.
+    // Conversations can only be accessed by participants.
     match /conversations/{conversationId} {
-      allow get, list, update: if request.auth.uid in resource.data.participantIds;
-      allow create: if request.auth.uid in request.resource.data.participantIds;
+      allow get, list: if request.auth != null && request.auth.uid in resource.data.participantIds;
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.participantIds;
+      allow update: if request.auth != null && request.auth.uid in resource.data.participantIds;
 
+      // Messages follow the same rule as the parent conversation.
       match /messages/{messageId} {
-        allow read, write: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+        allow read, write: if request.auth != null &&
+          get(/databases/$(database)/documents/conversations/$(conversationId))
+            .data.participantIds.hasAny([request.auth.uid]);
       }
     }
 
-    // --- CALLS ---
-    // Only the caller or receiver can access a call document.
+    // Calls can only be accessed by the sender or receiver.
     match /calls/{callId} {
-      allow read, write: if request.auth.uid == resource.data.from || request.auth.uid == resource.data.to;
-      allow create: if request.auth.uid == request.resource.data.from;
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.from;
     }
   }
 }
