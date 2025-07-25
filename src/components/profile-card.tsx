@@ -18,7 +18,7 @@ export function ProfileCard({ user }: ProfileCardProps) {
               src={user.profilePicture}
               alt={user.name}
               fill
-              className="object-cover w-full h-full rounded-2xl"
+              className="object-cover w-full h-full rounded-lg"
               data-ai-hint="portrait person"
             />
           </div>

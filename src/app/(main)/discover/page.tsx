@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
 import { findOrCreateConversation } from "@/lib/data";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -143,12 +144,11 @@ export default function DiscoverPage() {
         ) : (
             <div className="grid grid-cols-2 gap-4">
                 {displayedProfiles.map((user) => (
-                    <div key={user.id}>
-                        <ProfileCard user={user} />
-                        <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 text-xs rounded-md overflow-x-auto">
-                            {JSON.stringify(user, null, 2)}
-                        </pre>
-                    </div>
+                    <Card key={user.id}>
+                        <CardContent className="p-4 text-center">
+                            <h3 className="font-semibold text-foreground">{user.name}</h3>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
         )}
