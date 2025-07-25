@@ -182,11 +182,7 @@ export default function CallPage() {
 
     try {
         const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
-        const response = await fetch(`https://agora-token-service-production-75fc.up.railway.app/rtc/${channelName}/1/uid/${currentUser.id}/`);
-        const data = await response.json();
-        const token = data.rtcToken;
-        
-        if (!token) throw new Error("Token missing");
+        const token = null; // Using null token for testing/development environments
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
