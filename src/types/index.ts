@@ -22,6 +22,7 @@ export type User = {
   followers: string[]; // Array of user IDs
   following: string[]; // Array of user IDs
   visitors: Visitor[];
+  blockedUsers?: string[]; // Array of user IDs
   country?: string;
   exercise?: string;
   education?: string;

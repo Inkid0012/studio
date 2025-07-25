@@ -30,6 +30,7 @@ let mockUsers: User[] = [
       { userId: 'user-4', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() },
       { userId: 'user-8', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
     ],
+    blockedUsers: [],
     country: 'Kenya',
     exercise: 'Sometimes',
     education: 'Bachelor\'s Degree',
@@ -59,6 +60,7 @@ let mockUsers: User[] = [
       { userId: 'user-1', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
       { userId: 'user-3', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
     ],
+    blockedUsers: [],
     country: 'United States of America',
     exercise: 'Frequently',
     education: 'Master\'s Degree',
@@ -85,6 +87,7 @@ let mockUsers: User[] = [
     followers: ['user-2'],
     following: ['user-2'],
     visitors: [],
+    blockedUsers: [],
     country: 'Italy',
     exercise: 'Rarely',
     education: 'Some College',
@@ -111,6 +114,7 @@ let mockUsers: User[] = [
     followers: ['user-1'],
     following: ['user-1'],
     visitors: [],
+    blockedUsers: [],
     country: 'Australia',
     exercise: 'Frequently',
     education: 'Associate Degree',
@@ -137,6 +141,7 @@ let mockUsers: User[] = [
     followers: [],
     following: ['user-1'],
     visitors: [],
+    blockedUsers: [],
     country: 'Canada',
     exercise: 'Sometimes',
     education: 'High School',
@@ -163,6 +168,7 @@ let mockUsers: User[] = [
     followers: [],
     following: [],
     visitors: [],
+    blockedUsers: [],
     country: 'United Kingdom',
     exercise: 'Rarely',
     education: 'Master\'s Degree',
@@ -189,6 +195,7 @@ let mockUsers: User[] = [
     followers: ['user-1'],
     following: [],
     visitors: [],
+    blockedUsers: [],
     country: 'Germany',
     exercise: 'Sometimes',
     education: 'PhD',
@@ -215,6 +222,7 @@ let mockUsers: User[] = [
     followers: ['user-2'],
     following: ['user-2'],
     visitors: [],
+    blockedUsers: [],
     country: 'South Korea',
     exercise: 'Sometimes',
     education: 'Some College',
@@ -307,6 +315,16 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
         allUsers.push(doc.data() as User);
     });
 
+    const currentUser = await getUserById(currentUserId || '');
+
+    // Filter out blocked users
+    if (currentUser?.blockedUsers && currentUser.blockedUsers.length > 0) {
+        allUsers = allUsers.filter(user => !currentUser.blockedUsers?.includes(user.id));
+    }
+    // Filter out users who have blocked the current user
+    allUsers = allUsers.filter(user => !user.blockedUsers?.includes(currentUser?.id || ''));
+
+
     if (forSearch && currentUserId) {
       return allUsers.filter(user => user.id !== currentUserId);
     }
@@ -315,7 +333,6 @@ export async function getDiscoverProfiles(currentUserId?: string, forSearch = fa
         return allUsers.filter(u => u.gender === 'female');
     }
 
-    const currentUser = await getUserById(currentUserId);
     let otherUsers = allUsers.filter(user => user.id !== currentUserId);
 
     if (currentUser && currentUser.gender === 'male') {
@@ -458,6 +475,9 @@ export async function createUserInFirestore(userData: User) {
      if (!Array.isArray(dataToSave.visitors)) {
         dataToSave.visitors = [];
     }
+    if (!Array.isArray(dataToSave.blockedUsers)) {
+        dataToSave.blockedUsers = [];
+    }
 
     await setDoc(userRef, dataToSave, { merge: true });
 }
@@ -561,48 +581,36 @@ export async function followUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
 
-    // Add target to current user's following list
-    await updateDoc(currentUserRef, {
-        following: arrayUnion(targetUserId)
-    });
-    // Add current user to target's followers list
-    await updateDoc(targetUserRef, {
-        followers: arrayUnion(currentUserId)
-    });
-
-    // Mock data update
-    const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
-    const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
-    if (currentUserIndex !== -1 && !mockUsers[currentUserIndex].following.includes(targetUserId)) {
-        mockUsers[currentUserIndex].following.push(targetUserId);
-    }
-    if (targetUserIndex !== -1 && !mockUsers[targetUserIndex].followers.includes(currentUserId)) {
-        mockUsers[targetUserIndex].followers.push(currentUserId);
-    }
+    await writeBatch(db)
+        .update(currentUserRef, { following: arrayUnion(targetUserId) })
+        .update(targetUserRef, { followers: arrayUnion(currentUserId) })
+        .commit();
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
+    
+    await writeBatch(db)
+        .update(currentUserRef, { following: arrayRemove(targetUserId) })
+        .update(targetUserRef, { followers: arrayRemove(currentUserId) })
+        .commit();
+}
 
-    // Remove target from current user's following list
+export async function blockUser(currentUserId: string, targetUserId: string) {
+    const currentUserRef = doc(db, 'users', currentUserId);
     await updateDoc(currentUserRef, {
-        following: arrayRemove(targetUserId)
+        blockedUsers: arrayUnion(targetUserId)
     });
-    // Remove current user from target's followers list
-    await updateDoc(targetUserRef, {
-        followers: arrayRemove(currentUserId)
-    });
+    // Also remove from following/followers if they exist
+    await unfollowUser(currentUserId, targetUserId);
+}
 
-    // Mock data update
-     const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
-    const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
-    if (currentUserIndex !== -1) {
-        mockUsers[currentUserIndex].following = mockUsers[currentUserIndex].following.filter(id => id !== targetUserId);
-    }
-    if (targetUserIndex !== -1) {
-        mockUsers[targetUserIndex].followers = mockUsers[targetUserIndex].followers.filter(id => id !== targetUserId);
-    }
+export async function unblockUser(currentUserId: string, targetUserId: string) {
+    const currentUserRef = doc(db, 'users', currentUserId);
+    await updateDoc(currentUserRef, {
+        blockedUsers: arrayRemove(targetUserId)
+    });
 }
 
 export async function addVisitor(profileOwnerId: string, visitorId: string) {
@@ -628,18 +636,10 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
         timestamp: new Date().toISOString(),
     };
 
-    // Add the new visit to the front of the array
-    const updatedVisitors = [newVisitor, ...filteredVisitors];
+    // Add the new visit to the front of the array, and limit to 50 visitors
+    const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
     
     await updateDoc(profileOwnerRef, {
         visitors: updatedVisitors
     });
-    
-    // Also update mock data
-    const profileOwnerIndex = mockUsers.findIndex(u => u.id === profileOwnerId);
-    if (profileOwnerIndex !== -1) {
-        const mockVisitors = mockUsers[profileOwnerIndex].visitors || [];
-        const filteredMockVisitors = mockVisitors.filter(v => v.userId !== visitorId);
-        mockUsers[profileOwnerIndex].visitors = [newVisitor, ...filteredMockVisitors];
-    }
 }

@@ -6,9 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { User } from "@/types";
 import { Card } from "./ui/card";
-import { followUser, unfollowUser, getCurrentUser, setCurrentUser } from "@/lib/data";
+import { followUser, unfollowUser, getCurrentUser, setCurrentUser, unblockUser, blockUser } from "@/lib/data";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 interface UserListCardProps {
   user: User;
@@ -18,35 +19,39 @@ interface UserListCardProps {
 export function UserListCard({ user, onFollowChange }: UserListCardProps) {
   const [currentUser, setCurrentUserFromState] = useState(getCurrentUser());
   const [isProcessing, setIsProcessing] = useState(false);
+  const pathname = usePathname();
 
   if (!currentUser) {
     return null; // Or some other placeholder
   }
   
   const isFollowing = currentUser.following.includes(user.id);
+  const isBlockedPage = pathname === '/settings/blocked';
+  const isBlocked = currentUser.blockedUsers?.includes(user.id) ?? false;
+
 
   const handleFollowToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsProcessing(true);
     
     try {
+        let updatedUser;
         if (isFollowing) {
             await unfollowUser(currentUser.id, user.id);
-            const updatedUser = {
+            updatedUser = {
                 ...currentUser,
                 following: currentUser.following.filter(id => id !== user.id)
             };
-            setCurrentUserFromState(updatedUser);
-            setCurrentUser(updatedUser);
         } else {
             await followUser(currentUser.id, user.id);
-             const updatedUser = {
+             updatedUser = {
                 ...currentUser,
                 following: [...currentUser.following, user.id]
             };
-            setCurrentUserFromState(updatedUser);
-            setCurrentUser(updatedUser);
         }
+        setCurrentUserFromState(updatedUser);
+        setCurrentUser(updatedUser);
         onFollowChange?.(user.id, !isFollowing);
     } catch (error) {
         console.error("Failed to update follow status", error);
@@ -54,6 +59,39 @@ export function UserListCard({ user, onFollowChange }: UserListCardProps) {
         setIsProcessing(false);
     }
   };
+  
+  const handleBlockToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsProcessing(true);
+    
+    try {
+        let updatedUser;
+        if (isBlocked) {
+            await unblockUser(currentUser.id, user.id);
+            updatedUser = {
+                ...currentUser,
+                blockedUsers: currentUser.blockedUsers?.filter(id => id !== user.id)
+            };
+        } else {
+            // This case might not be used on the blocked list page, but included for completeness
+            await blockUser(currentUser.id, user.id);
+             updatedUser = {
+                ...currentUser,
+                blockedUsers: [...(currentUser.blockedUsers || []), user.id]
+            };
+        }
+        setCurrentUserFromState(updatedUser);
+        setCurrentUser(updatedUser);
+        // This is used to remove the user from the list on the blocked page
+        onFollowChange?.(user.id, !isBlocked);
+    } catch (error) {
+        console.error("Failed to update block status", error);
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
 
   return (
     <Card className="p-3 w-full">
@@ -71,12 +109,14 @@ export function UserListCard({ user, onFollowChange }: UserListCardProps) {
             
             {user.id !== currentUser.id && (
                  <Button 
-                    onClick={handleFollowToggle} 
-                    variant={isFollowing ? 'outline' : 'default'}
+                    onClick={isBlockedPage ? handleBlockToggle : handleFollowToggle} 
+                    variant={isBlockedPage ? 'destructive' : isFollowing ? 'outline' : 'default'}
                     className="rounded-full px-6"
                     disabled={isProcessing}
                 >
-                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : (isFollowing ? 'Following' : 'Follow')}
+                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                        isBlockedPage ? 'Unblock' : (isFollowing ? 'Following' : 'Follow')
+                    }
                  </Button>
             )}
         </div>
