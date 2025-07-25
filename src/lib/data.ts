@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateD
 import { db } from './firebase';
 
 export const CHARGE_COSTS = {
-  message: 30,
+  message: 20,
   call: 150,
 };
 

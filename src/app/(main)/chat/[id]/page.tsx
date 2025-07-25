@@ -110,7 +110,7 @@ export default function ChatPage() {
   };
 
   const handleCall = async () => {
-     if (currentUser.coins < CHARGE_COSTS.call) {
+     if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
         handleInsufficientCoins('call');
         return;
     }
