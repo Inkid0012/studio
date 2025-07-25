@@ -326,7 +326,13 @@ export default function CallPage() {
                 </Button>
             </div>
        )}
-       <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3" loop />
+        <audio
+          ref={ringtoneRef}
+          src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
+          loop
+          muted
+          onCanPlay={(e) => e.currentTarget.play().catch(console.error)}
+        />
       <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">
             <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} />
@@ -400,5 +406,3 @@ export default function CallPage() {
     </div>
   );
 }
-
-    
