@@ -10,7 +10,7 @@ import AgoraRTC, {
 } from 'agora-rtc-sdk-ng';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Loader2 } from 'lucide-react';
 import { MainHeader } from '@/components/layout/main-header';
 import { useToast } from '@/hooks/use-toast';
 import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
@@ -18,7 +18,45 @@ import type { User } from '@/types';
 import { cn } from '@/lib/utils';
 
 const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
-const token = process.env.NEXT_PUBLIC_AGORA_TEMP_TOKEN || null;
+
+/**
+ * Fetches a token from an Agora token server and joins a voice call.
+ * @param client The Agora RTC client instance.
+ * @param channelName The name of the channel to join.
+ * @param userId The ID of the user joining the call.
+ * @returns The local microphone audio track.
+ */
+async function joinAgoraCall(client: IAgoraRTCClient, channelName: string, userId: string): Promise<IMicrophoneAudioTrack> {
+  // IMPORTANT: Replace this URL with your actual Agora token server endpoint.
+  const tokenServerUrl = `https://your-token-server.com/agora-token?channelName=${channelName}&userId=${userId}`;
+  
+  let token: string | null = null;
+  
+  try {
+    const response = await fetch(tokenServerUrl);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch token: ${response.statusText}`);
+    }
+    const data = await response.json();
+    token = data.token;
+  } catch (error) {
+    console.error('Could not fetch Agora token.', error);
+    // Fallback to a null token for development if the server is not available.
+    // In production, you should handle this error more gracefully.
+    token = process.env.NEXT_PUBLIC_AGORA_TEMP_TOKEN || null;
+  }
+  
+  if (!token) {
+    throw new Error("Agora token is missing. Call cannot be initiated.");
+  }
+  
+  await client.join(appId, channelName, token, userId);
+  const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
+  await client.publish([micTrack]);
+  
+  return micTrack;
+}
+
 
 export default function CallPage() {
   const router = useRouter();
@@ -91,11 +129,9 @@ export default function CallPage() {
       });
 
       try {
-        await clientRef.current.join(appId, channelName, token, currentUser.id);
-        const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        localAudioTrackRef.current = micTrack;
-        await clientRef.current.publish([micTrack]);
         setCallStatus('Ringing...');
+        const micTrack = await joinAgoraCall(clientRef.current, channelName, currentUser.id);
+        localAudioTrackRef.current = micTrack;
       } catch (error) {
         console.error('Agora initialization failed:', error);
         setCallStatus('Failed to connect');
@@ -113,6 +149,7 @@ export default function CallPage() {
       stopTimer();
       localAudioTrackRef.current?.close();
       clientRef.current?.leave();
+      clientRef.current = null;
       callConnectedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,7 +181,7 @@ export default function CallPage() {
   };
 
   const handleCoinDeduction = async () => {
-    if(!currentUser) return;
+    if(!currentUser || !otherUser) return;
 
     // Fetch the latest user data to ensure coin balance is accurate
     const latestUser = await getUserById(currentUser.id);
@@ -153,13 +190,12 @@ export default function CallPage() {
         return;
     }
     
-    const updatedCoins = (latestUser.coins || 0) - CHARGE_COSTS.call;
-    
-    if (updatedCoins < 0) {
+    if (latestUser.coins < CHARGE_COSTS.call) {
         handleLeave('You have insufficient coins.', true);
         return;
     }
 
+    const updatedCoins = (latestUser.coins || 0) - CHARGE_COSTS.call;
     const updatedUser = { ...latestUser, coins: updatedCoins };
     
     await createUserInFirestore(updatedUser);
@@ -167,7 +203,7 @@ export default function CallPage() {
         userId: currentUser.id,
         type: 'spent',
         amount: CHARGE_COSTS.call,
-        description: `Call with ${otherUser?.name || 'user'}`
+        description: `Call with ${otherUser.name}`
     });
     
     setCurrentUser(updatedUser);
