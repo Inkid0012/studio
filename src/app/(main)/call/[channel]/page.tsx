@@ -80,16 +80,17 @@ export default function CallPage() {
             timeoutRef.current = setTimeout(() => {
                 setCallState('timeout');
                 endAgoraCall(false); 
-            }, 30000); // 30 second timeout for incoming call
+            }, 60000); // 60 second timeout for incoming call
         }
     }
     initializeCall();
     
     // Listen for the call ending via Firestore
-    window.addEventListener('call-ended', handleRemoteEndCall);
+    const handleRemoteEndCallEvent = () => handleRemoteEndCall();
+    window.addEventListener('call-ended', handleRemoteEndCallEvent);
 
     return () => {
-        window.removeEventListener('call-ended', handleRemoteEndCall);
+        window.removeEventListener('call-ended', handleRemoteEndCallEvent);
         if (client) {
             endAgoraCall(false);
         }
@@ -404,4 +405,4 @@ export default function CallPage() {
   );
 }
 
-    
+  
