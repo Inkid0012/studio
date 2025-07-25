@@ -72,7 +72,7 @@ export default function UserProfilePage() {
   const router = useRouter();
   const userId = params.id as string;
   const [user, setUser] = useState<User | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -89,12 +89,20 @@ export default function UserProfilePage() {
   const isBlocked = isBlockedByYou || areYouBlocked;
 
   useEffect(() => {
+    const localUser = getCurrentUser();
+    if (localUser) {
+        setCurrentUser(localUser);
+    } else {
+        router.push('/login');
+        return;
+    }
+
     const fetchUser = async () => {
       const userProfile = await getUserById(userId);
       if (userProfile) {
         setUser(userProfile);
-        const localUser = getCurrentUser();
-        if (localUser && localUser.id !== userId) {
+        // Only add visitor if it's not the current user's own profile
+        if (localUser.id !== userId) {
           await addVisitor(userId, localUser.id);
         }
       } else {
@@ -104,12 +112,6 @@ export default function UserProfilePage() {
 
     if (userId) {
       fetchUser();
-    }
-    const localUser = getCurrentUser();
-    if (localUser) {
-        setCurrentUser(localUser);
-    } else {
-        router.push('/login');
     }
   }, [userId, router]);
 
