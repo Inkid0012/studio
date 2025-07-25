@@ -667,7 +667,7 @@ export function onIncomingCall(userId: string, callback: (conversation: Conversa
         const changes = snapshot.docChanges();
         for (const change of changes) {
             if (change.type === "modified") {
-                const convoData = change.doc.data() as Conversation;
+                const convoData = change.doc.data();
                 if (convoData.activeCall && convoData.activeCall.callerId !== userId) {
                     const fullConvo = await getConversationById(change.doc.id);
                     if (fullConvo) {
@@ -680,5 +680,3 @@ export function onIncomingCall(userId: string, callback: (conversation: Conversa
 
     return unsubscribe;
 }
-
-    

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS, seedInitialUsers } from "@/lib/data";
+import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS, seedInitialUsers, startCallInFirestore } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
-import { findOrCreateConversation, startCallInFirestore } from "@/lib/data";
+import { findOrCreateConversation } from "@/lib/data";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
