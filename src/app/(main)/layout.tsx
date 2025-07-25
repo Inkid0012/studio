@@ -28,22 +28,31 @@ export default function MainLayout({
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribe = onIncomingCall(currentUser.id, (convo) => {
-      const caller = convo.participants.find(p => p.id === convo.activeCall?.callerId);
-      if (caller) {
-          // Navigate to the call screen
-          router.push(`/call/${convo.id}?otherUserId=${caller.id}&callType=incoming`);
-      }
-    });
+    const handleCallEvent = (convo: Conversation) => {
+        if (convo.activeCall && convo.activeCall.callerId !== currentUser.id) {
+            // Incoming call
+            if(!pathname.startsWith('/call/')) {
+                 router.push(`/call/${convo.id}?otherUserId=${convo.activeCall.callerId}&callType=incoming`);
+            }
+        } else if (!convo.activeCall) {
+            // Call ended
+             if(pathname.startsWith('/call/')) {
+                // Dispatch a custom event to notify the call page
+                window.dispatchEvent(new CustomEvent('call-ended'));
+            }
+        }
+    };
+
+    const unsubscribe = onIncomingCall(currentUser.id, handleCallEvent);
 
     return () => {
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [currentUser, router]);
+  }, [currentUser, router, pathname]);
 
-  const showNavBar = mainNavPaths.includes(pathname);
+  const showNavBar = mainNavPaths.includes(pathname) || pathname.startsWith('/profile');
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,3 +61,5 @@ export default function MainLayout({
     </div>
   );
 }
+
+    

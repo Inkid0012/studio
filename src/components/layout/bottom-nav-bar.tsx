@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -18,7 +19,7 @@ export function BottomNavBar() {
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background/90 backdrop-blur-sm border-t border-border rounded-t-2xl">
       <div className="grid h-full max-w-lg grid-cols-3 mx-auto font-medium">
         {navItems.map((item) => {
-          const isActive = item.href === '/profile' ? pathname === item.href : pathname.startsWith(item.href);
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
@@ -37,3 +38,5 @@ export function BottomNavBar() {
     </div>
   );
 }
+
+    
