@@ -50,10 +50,10 @@ export default function CallPage() {
   const callId = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
 
-  // Effect to end call on component unmount or dependencies change
+  // Effect to end call on component unmount
   useEffect(() => {
     return () => {
-      endCall(false); // Cleanup on unmount
+      endCall(false, 'Call ended unexpectedly.');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -206,7 +206,7 @@ export default function CallPage() {
     if (!currentUser || isJoined) return;
 
     try {
-        const appId = '5f5749cfcb054a82b4c779444f675284';
+        const appId = 'f2e343b679b34360bb77f48577317ad7'; // Use a verified App ID
         const token = null; // Use null token for testing/dev environments
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
@@ -337,6 +337,7 @@ export default function CallPage() {
           src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
           loop
           muted
+          onCanPlay={() => ringtoneRef.current?.play().catch(() => { /* Autoplay was blocked */ })}
         />
       <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">
