@@ -10,7 +10,7 @@ import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, S
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -27,11 +27,15 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
   const [otherUser, setOtherUser] = useState<User | null>(null);
-  const [isBlocked, setIsBlocked] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
+  const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
+  const isBlocked = isBlockedByYou || areYouBlocked;
+
 
   useEffect(() => {
     const fetchConvo = async () => {
@@ -42,14 +46,10 @@ export default function ChatPage() {
       const convoData = await getConversationById(convoId);
       if (convoData) {
         setConversation(convoData);
-        const other = convoData.participants.find(p => p.id !== currentUser?.id);
-        if (other) {
-            // Check for block status in both directions
-            const otherUserProfile = await getUserById(other.id);
+        const otherParticipantId = convoData.participantIds.find(pId => pId !== currentUser?.id);
+        if (otherParticipantId) {
+            const otherUserProfile = await getUserById(otherParticipantId);
             setOtherUser(otherUserProfile);
-            const youAreBlocked = otherUserProfile?.blockedUsers?.includes(currentUser.id);
-            const youBlockedThem = currentUser.blockedUsers?.includes(other.id);
-            setIsBlocked(youAreBlocked || youBlockedThem);
         } else {
             notFound();
         }
@@ -132,7 +132,7 @@ export default function ChatPage() {
       
     const callId = await startCall(currentUser.id, otherUser.id);
     if (callId) {
-      router.push(`/call/${callId}?otherUserId=${otherUser.id}&callType=outgoing`);
+      router.push(`/call/${callId}?otherUserId=${otherUser.id}`);
     } else {
       toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not start the call. You may be blocked.' });
     }
@@ -189,7 +189,7 @@ export default function ChatPage() {
         <div className="p-4 bg-background border-t text-center">
             <p className="text-sm text-destructive flex items-center justify-center gap-2">
                 <Ban className="h-4 w-4" />
-                Communication is blocked.
+                {areYouBlocked ? 'You have been blocked by this user.' : 'Communication is blocked.'}
             </p>
         </div>
       ) : (
@@ -253,3 +253,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    

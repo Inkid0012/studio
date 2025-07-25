@@ -74,9 +74,6 @@ export default function UserProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(getCurrentUser());
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isBlockedByYou, setIsBlockedByYou] = useState(false);
-  const [areYouBlocked, setAreYouBlocked] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
@@ -86,21 +83,15 @@ export default function UserProfilePage() {
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (currentUser?.following) {
-      setIsFollowing(currentUser.following.includes(userId));
-    }
-     if (currentUser?.blockedUsers) {
-      setIsBlockedByYou(currentUser.blockedUsers.includes(userId));
-    }
-  }, [currentUser, userId]);
+  const isFollowing = useMemo(() => currentUser?.following?.includes(userId), [currentUser, userId]);
+  const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(userId), [currentUser, userId]);
+  const areYouBlocked = useMemo(() => user?.blockedUsers?.includes(currentUser?.id || ''), [user, currentUser]);
 
   useEffect(() => {
     const fetchUser = async () => {
       const userProfile = await getUserById(userId);
       if (userProfile) {
         setUser(userProfile);
-        setAreYouBlocked(userProfile.blockedUsers?.includes(currentUser?.id || '') || false);
         if (currentUser && currentUser.id !== userId) {
           await addVisitor(userId, currentUser.id);
         }
@@ -109,7 +100,9 @@ export default function UserProfilePage() {
       }
     };
 
-    fetchUser();
+    if (userId) {
+      fetchUser();
+    }
   }, [userId, currentUser]);
 
   const userAge = useMemo(() => {
@@ -136,9 +129,9 @@ export default function UserProfilePage() {
       setIsProcessing(true);
       const callId = await startCall(currentUser.id, user.id);
       if (callId) {
-        router.push(`/call/${callId}?otherUserId=${user.id}&callType=outgoing`);
+        router.push(`/call/${callId}?otherUserId=${user.id}`);
       } else {
-        toast({ variant: 'destructive', title: 'Call Failed', description: "Could not initiate the call. The user might have blocked you." });
+        toast({ variant: 'destructive', title: 'Call Failed', description: "Could not initiate the call. The user might have blocked you or is unavailable." });
       }
       setIsProcessing(false);
   };
@@ -164,8 +157,8 @@ export default function UserProfilePage() {
       }
       setCurrentUser(updatedUser);
       setLocalUser(updatedUser);
-      setIsFollowing(!isFollowing);
     } catch (error) {
+      toast({ variant: 'destructive', title: 'Action Failed', description: 'Could not update follow status.'})
       console.error("Failed to update follow status", error);
     } finally {
       setIsProcessing(false);
@@ -188,12 +181,12 @@ export default function UserProfilePage() {
             await blockUser(currentUser.id, userId);
             updatedUser = {
                 ...currentUser,
-                blockedUsers: [...(currentUser.blockedUsers || []), userId]
+                blockedUsers: [...(currentUser.blockedUsers || []), userId],
+                following: currentUser.following?.filter(id => id !== userId) || []
             };
         }
         setCurrentUser(updatedUser);
         setLocalUser(updatedUser);
-        setIsBlockedByYou(!isBlockedByYou);
         toast({ title: `User ${action}ed`, description: `You have successfully ${action}ed ${user.name}.` });
     } catch(err) {
         toast({ variant: 'destructive', title: `Failed to ${action} user`, description: "Please try again." });
@@ -474,3 +467,5 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
+    

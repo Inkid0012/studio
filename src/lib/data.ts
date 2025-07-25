@@ -1,8 +1,4 @@
 
-
-
-
-
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -23,7 +19,7 @@ let mockUsers: User[] = [
     dob: new Date('1996-05-15').toISOString(),
     gender: 'male',
     bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey. I enjoy hiking, photography, and trying new craft beers.',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Hiking', 'Photography', 'Craft Beer', 'Traveling', 'Sci-Fi Movies'],
     isCertified: true,
     coins: 250,
@@ -54,7 +50,7 @@ let mockUsers: User[] = [
     dob: new Date('1998-03-20').toISOString(),
     gender: 'female',
     bio: 'Artist and dog lover. My perfect date involves a walk in the park with my golden retriever, Leo, followed by a cozy night in with a good movie.',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Painting', 'Dogs', 'Yoga', 'Indie Music', 'Thrift Shopping'],
     isCertified: true,
     coins: 1000,
@@ -84,7 +80,7 @@ let mockUsers: User[] = [
     dob: new Date('1993-08-10').toISOString(),
     gender: 'male',
     bio: 'Chef with a passion for Italian cuisine. I can make you the best pasta you\'ve ever had. Seeking a fellow foodie to explore the city\'s culinary scene.',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Cooking', 'Wine Tasting', 'Jazz Music', 'Cycling', 'History'],
     isCertified: false,
     coins: 150,
@@ -111,7 +107,7 @@ let mockUsers: User[] = [
     dob: new Date('1995-11-25').toISOString(),
     gender: 'female',
     bio: 'Fitness enthusiast and personal trainer. I believe in a healthy body and a healthy mind. Let\'s hit the gym together or go for a run!',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Weightlifting', 'Running', 'Meal Prep', 'Podcasts', 'Beach Days'],
     isCertified: true,
     coins: 200,
@@ -138,7 +134,7 @@ let mockUsers: User[] = [
     dob: new Date('1997-02-12').toISOString(),
     gender: 'male',
     bio: 'Musician and coffee aficionado. You can usually find me at a local coffee shop with my guitar, writing songs. Looking for my muse.',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Guitar', 'Songwriting', 'Coffee', 'Live Music', 'Philosophy'],
     isCertified: false,
     coins: 500,
@@ -165,7 +161,7 @@ let mockUsers: User[] = [
     dob: new Date('1999-07-01').toISOString(),
     gender: 'female',
     bio: 'Bookworm and aspiring novelist. I love getting lost in a good story. Tell me about the last book you read and couldn\'t put down.',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Reading', 'Creative Writing', 'Cats', 'Tea', 'Museums'],
     isCertified: false,
     coins: 50,
@@ -192,7 +188,7 @@ let mockUsers: User[] = [
     dob: new Date('1989-09-05').toISOString(),
     gender: 'male',
     bio: 'Travel blogger who has been to 30 countries and counting. My goal is to see the world. Join me?',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Traveling', 'Blogging', 'Photography', 'Culture', 'Food'],
     isCertified: true,
     coins: 1200,
@@ -219,7 +215,7 @@ let mockUsers: User[] = [
     dob: new Date('2002-01-30').toISOString(),
     gender: 'female',
     bio: 'University student studying graphic design. I\'m passionate about all things creative. Let\'s make something beautiful together.',
-    profilePicture: 'https://placehold.co/400x400.png',
+    profilePicture: 'https://placehold.co/600x800.png',
     interests: ['Graphic Design', 'Art', 'Video Games', 'Anime', 'K-Pop'],
     isCertified: false,
     coins: 80,
@@ -245,7 +241,13 @@ export function getCurrentUser(): User | null {
   if (typeof window !== 'undefined') {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      return JSON.parse(storedUser);
+      try {
+        return JSON.parse(storedUser);
+      } catch (e) {
+        console.error("Failed to parse currentUser from localStorage", e);
+        localStorage.removeItem('currentUser');
+        return null;
+      }
     }
   }
   return null;
@@ -500,18 +502,11 @@ export async function createUserInFirestore(userData: User) {
     const { ...dataToSave } = userData;
 
     // Ensure arrays are initialized
-    if (!Array.isArray(dataToSave.followers)) {
-        dataToSave.followers = [];
-    }
-     if (!Array.isArray(dataToSave.following)) {
-        dataToSave.following = [];
-    }
-     if (!Array.isArray(dataToSave.visitors)) {
-        dataToSave.visitors = [];
-    }
-    if (!Array.isArray(dataToSave.blockedUsers)) {
-        dataToSave.blockedUsers = [];
-    }
+    dataToSave.followers = Array.isArray(dataToSave.followers) ? dataToSave.followers : [];
+    dataToSave.following = Array.isArray(dataToSave.following) ? dataToSave.following : [];
+    dataToSave.visitors = Array.isArray(dataToSave.visitors) ? dataToSave.visitors : [];
+    dataToSave.blockedUsers = Array.isArray(dataToSave.blockedUsers) ? dataToSave.blockedUsers : [];
+    dataToSave.interests = Array.isArray(dataToSave.interests) ? dataToSave.interests : [];
 
     await setDoc(userRef, dataToSave, { merge: true });
 }
@@ -637,7 +632,8 @@ export async function blockUser(currentUserId: string, targetUserId: string) {
         blockedUsers: arrayUnion(targetUserId)
     });
     // Also remove from following/followers if they exist
-    await unfollowUser(currentUserId, targetUserId);
+    await unfollowUser(currentUserId, targetUserId).catch(e => console.error("Error unfollowing after block:", e));
+    await unfollowUser(targetUserId, currentUserId).catch(e => console.error("Error unfollowing after block (reverse):", e));
 }
 
 export async function unblockUser(currentUserId: string, targetUserId: string) {
@@ -652,30 +648,34 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
 
     const profileOwnerRef = doc(db, 'users', profileOwnerId);
     
-    // First, get the current user data to manipulate the array
-    const userSnap = await getDoc(profileOwnerRef);
-    if (!userSnap.exists()) {
-        console.error("Profile owner not found for adding a visitor");
-        return;
+    try {
+      await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(profileOwnerRef);
+        if (!userSnap.exists()) {
+            throw "Profile owner not found for adding a visitor";
+        }
+
+        const userData = userSnap.data() as User;
+        const visitors = userData.visitors || [];
+
+        // Remove previous visit from the same user to keep the list unique by ID
+        const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
+
+        const newVisitor: Visitor = {
+            userId: visitorId,
+            timestamp: new Date().toISOString(),
+        };
+
+        // Add the new visit to the front of the array, and limit to 50 visitors
+        const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
+        
+        transaction.update(profileOwnerRef, {
+            visitors: updatedVisitors
+        });
+      });
+    } catch (error) {
+        console.error("Failed to add visitor:", error);
     }
-
-    const userData = userSnap.data() as User;
-    const visitors = userData.visitors || [];
-
-    // Remove previous visit from the same user to keep the list unique
-    const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
-
-    const newVisitor: Visitor = {
-        userId: visitorId,
-        timestamp: new Date().toISOString(),
-    };
-
-    // Add the new visit to the front of the array, and limit to 50 visitors
-    const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
-    
-    await updateDoc(profileOwnerRef, {
-        visitors: updatedVisitors
-    });
 }
 
 // --- New Call Management Functions ---
@@ -717,8 +717,12 @@ export async function startCall(from: string, to: string): Promise<string | null
  * @param status The new status for the call.
  */
 export async function updateCallStatus(callId: string, status: Call['status']) {
-    const callRef = doc(db, 'calls', callId);
-    await updateDoc(callRef, { status });
+    try {
+        const callRef = doc(db, 'calls', callId);
+        await updateDoc(callRef, { status });
+    } catch (e) {
+        console.error(`Failed to update call ${callId} to status ${status}:`, e);
+    }
 }
 
 /**
@@ -735,6 +739,8 @@ export function onCallUpdate(callId: string, callback: (call: Call | null) => vo
         } else {
             callback(null);
         }
+    }, (error) => {
+        console.error("Error listening to call updates:", error);
     });
     return unsubscribe;
 }
@@ -760,7 +766,11 @@ export function onIncomingCall(userId: string, callback: (call: Call) => void) {
                 callback(callData);
             }
         });
+    }, (error) => {
+        console.error("Error listening for incoming calls:", error);
     });
 
     return unsubscribe;
 }
+
+    

@@ -38,12 +38,13 @@ export default function CallPage() {
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
   const [isJoined, setIsJoined] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
   
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const coinsUsedRef = useRef(0);
   const callStartTimeRef = useRef<number | null>(null);
-  const ringtoneRef = useRef<HTMLAudioElement>(null);
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
 
   const callId = params.channel as string;
@@ -101,7 +102,7 @@ export default function CallPage() {
                      if (!timeoutRef.current) {
                         timeoutRef.current = setTimeout(() => {
                            updateCallStatus(callId, 'timeout');
-                        }, 60000); 
+                        }, 30000); // 30 second timeout
                     }
                 }
             }
@@ -124,14 +125,13 @@ export default function CallPage() {
   }, [call, currentUser]);
 
 
-  const playRingtone = async () => {
+  const playRingtone = () => {
       if(ringtoneRef.current) {
-          try {
-              ringtoneRef.current.loop = true;
-              await ringtoneRef.current.play();
-          } catch (error) {
-              console.error("Ringtone autoplay failed:", error);
-          }
+          ringtoneRef.current.loop = true;
+          ringtoneRef.current.play().catch(error => {
+              console.warn("Ringtone autoplay was blocked by the browser.", error);
+              // It's fine, the user will see the UI and interact.
+          });
       }
   }
 
@@ -144,6 +144,8 @@ export default function CallPage() {
 
   
   const startTimerAndCoins = () => {
+    if (callStartTimeRef.current) return; // Prevent timer from restarting
+
     callStartTimeRef.current = Date.now();
     coinsUsedRef.current = 0;
 
@@ -167,6 +169,7 @@ export default function CallPage() {
   const handleCoinDeduction = async () => {
     if(!currentUser || !otherUser) return;
     
+    // We get a fresh copy of user data to ensure coin count is accurate
     const latestUser = await getUserById(currentUser.id);
     if (!latestUser || latestUser.coins < CHARGE_COSTS.call) {
         toast({ variant: 'destructive', title: 'Call Ended', description: 'You have run out of coins.' });
@@ -186,8 +189,8 @@ export default function CallPage() {
     });
     
     coinsUsedRef.current += CHARGE_COSTS.call;
-    setCurrentUser(updatedUser);
-    setCurrentUserFromState(updatedUser);
+    setCurrentUser(updatedUser); // Update local storage
+    setCurrentUserFromState(updatedUser); // Update component state
   };
 
 
@@ -195,8 +198,8 @@ export default function CallPage() {
     if (!currentUser || isJoined) return;
 
     try {
-        const appId = 'f25a74e5b9f7431e84a227845e69e3ed';
-        const token = null;
+        const appId = '5f5749cfcb054a82b4c779444f675284';
+        const token = null; // Use null token for testing/dev environments
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         setIsJoined(true);
@@ -227,9 +230,14 @@ export default function CallPage() {
   };
 
   const endCall = async (showToast = true, reason?: string) => {
+    if (isEnding) return;
+    setIsEnding(true);
+
     stopRingtone();
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timerIntervalRef.current = null;
+    timeoutRef.current = null;
 
     if (localAudioTrack) {
         localAudioTrack.stop();
@@ -247,15 +255,15 @@ export default function CallPage() {
     
     setIsJoined(false);
 
-    if (call?.status !== 'ended' && call?.status !== 'rejected' && call?.status !== 'timeout') {
+    if (call && call.status !== 'ended' && call.status !== 'rejected' && call.status !== 'timeout') {
        await updateCallStatus(callId, 'ended');
     }
     
     setTimer('00:00');
     
-    if (showToast) {
+    if (showToast && reason) {
         toast({
-            title: reason || "Call Ended",
+            title: reason,
             description: coinsUsedRef.current > 0 ? `You used ${coinsUsedRef.current} coins.` : '',
         });
     }
@@ -320,7 +328,9 @@ export default function CallPage() {
           src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
           loop
           muted
-          onCanPlay={(e) => e.currentTarget.play().catch(console.error)}
+          onCanPlay={(e) => {
+            e.currentTarget.play().catch(console.warn);
+          }}
         />
       <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">
@@ -396,3 +406,5 @@ export default function CallPage() {
     </div>
   );
 }
+
+    
