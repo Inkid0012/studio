@@ -32,6 +32,7 @@ export default function CallPage() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const coinsUsedRef = useRef(0);
   const callStartTimeRef = useRef<number | null>(null);
+  const ringtoneRef = useRef<HTMLAudioElement>(null);
 
   const channelName = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
@@ -48,7 +49,6 @@ export default function CallPage() {
 
     if(callType === 'outgoing') {
         setCallState('outgoing');
-        joinAgoraCall(); // Automatically join call if initiator
     } else {
         setCallState('incoming');
     }
@@ -69,9 +69,30 @@ export default function CallPage() {
         if (client) {
             endAgoraCall(false); // Don't show toast on unmount
         }
+        if (ringtoneRef.current) {
+            ringtoneRef.current.pause();
+        }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const handlePlayback = async () => {
+      if (callState === 'outgoing' && ringtoneRef.current) {
+        try {
+          await ringtoneRef.current.play();
+        } catch (error) {
+          console.error("Ringtone autoplay failed:", error);
+          // Browsers may block autoplay until user interaction.
+          // A toast could inform the user if needed.
+        }
+      } else if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+        ringtoneRef.current.currentTime = 0;
+      }
+    };
+    handlePlayback();
+  }, [callState]);
   
   const startTimerAndCoins = () => {
     callStartTimeRef.current = Date.now();
@@ -161,6 +182,10 @@ export default function CallPage() {
         await client.leave();
         client = null;
     }
+    
+    if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+    }
 
     if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -240,6 +265,7 @@ export default function CallPage() {
   if (callState === 'outgoing') {
       return (
         <CallInterface>
+            <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3" loop />
             <div className="w-full max-w-xs">
                 <p className="text-muted-foreground mb-8 animate-pulse">Ringing...</p>
                 <div className="flex justify-around items-center">
