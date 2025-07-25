@@ -10,7 +10,8 @@ import {
     unfollowUser, 
     setCurrentUser as setLocalUser,
     blockUser,
-    unblockUser
+    unblockUser,
+    CHARGE_COSTS
 } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +29,8 @@ import {
     Ban,
     Upload,
     Plus,
-    Copy
+    Copy,
+    Wallet
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -37,7 +39,7 @@ import type { User } from '@/types';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, Dialog, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -69,6 +71,7 @@ export default function UserProfilePage() {
   const [reportProof, setReportProof] = useState<string | null>(null);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -113,6 +116,10 @@ export default function UserProfilePage() {
   
   const handleCall = async () => {
       if (!currentUser || !user) return;
+      if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
+          setShowRechargeDialog(true);
+          return;
+      }
       setIsProcessing(true);
       const conversationId = await findOrCreateConversation(currentUser.id, user.id);
       router.push(`/call/${conversationId}?otherUserId=${user.id}&callType=outgoing`);
@@ -362,6 +369,24 @@ export default function UserProfilePage() {
              </div>
          </div>
       )}
+
+      <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Insufficient Coins</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You need {CHARGE_COSTS.call} coins to make a voice call. Please recharge.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => router.push('/wallet')} className="bg-green-500 hover:bg-green-600">
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Recharge
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
       <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
             <DialogContent>

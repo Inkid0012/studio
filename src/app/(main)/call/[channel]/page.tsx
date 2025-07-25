@@ -14,6 +14,16 @@ import type { User } from '@/types';
 import { MainHeader } from '@/components/layout/main-header';
 import { Loader2, Phone, PhoneOff, PhoneOutgoing } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 let client: IAgoraRTCClient | null = null;
 let localAudioTrack: IMicrophoneAudioTrack | null = null;
@@ -33,6 +43,7 @@ export default function CallPage() {
   const coinsUsedRef = useRef(0);
   const callStartTimeRef = useRef<number | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement>(null);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
 
   const channelName = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
@@ -47,8 +58,13 @@ export default function CallPage() {
     }
     setCurrentUserFromState(user);
 
-    if(callType === 'outgoing') {
+    if (callType === 'outgoing') {
+        if (user.gender === 'male' && user.coins < CHARGE_COSTS.call) {
+            setShowRechargeDialog(true);
+            return;
+        }
         setCallState('outgoing');
+        joinAgoraCall(); // Auto-join for outgoing calls
     } else {
         setCallState('incoming');
     }
@@ -64,27 +80,24 @@ export default function CallPage() {
     }
     fetchOtherUser();
 
-    // Ensure we leave the call if the component is unmounted
     return () => {
         if (client) {
-            endAgoraCall(false); // Don't show toast on unmount
+            endAgoraCall(false);
         }
         if (ringtoneRef.current) {
             ringtoneRef.current.pause();
         }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [otherUserId, callType, router, toast]);
 
   useEffect(() => {
     const handlePlayback = async () => {
-      if (callState === 'outgoing' && ringtoneRef.current) {
+      if ((callState === 'outgoing' || callState === 'incoming') && ringtoneRef.current) {
         try {
+          ringtoneRef.current.loop = true;
           await ringtoneRef.current.play();
         } catch (error) {
           console.error("Ringtone autoplay failed:", error);
-          // Browsers may block autoplay until user interaction.
-          // A toast could inform the user if needed.
         }
       } else if (ringtoneRef.current) {
         ringtoneRef.current.pause();
@@ -98,8 +111,9 @@ export default function CallPage() {
     callStartTimeRef.current = Date.now();
     coinsUsedRef.current = 0;
 
-    // Initial deduction for the first minute
-    handleCoinDeduction();
+    if (currentUser?.gender === 'male') {
+        handleCoinDeduction();
+    }
     
     timerIntervalRef.current = setInterval(() => {
         if (!callStartTimeRef.current) return;
@@ -108,8 +122,7 @@ export default function CallPage() {
         const seconds = String(elapsed % 60)).padStart(2, '0');
         setTimer(`${minutes}:${seconds}`);
 
-        // Deduct coins every minute
-        if (elapsed > 0 && elapsed % 60 === 0) {
+        if (currentUser?.gender === 'male' && elapsed > 0 && elapsed % 60 === 0) {
             handleCoinDeduction();
         }
     }, 1000);
@@ -117,8 +130,7 @@ export default function CallPage() {
 
   const handleCoinDeduction = async () => {
     if(!currentUser || !otherUser) return;
-    if (currentUser.gender !== 'male') return; // Only charge men
-
+    
     const latestUser = await getUserById(currentUser.id);
     if (!latestUser || latestUser.coins < CHARGE_COSTS.call) {
         toast({ variant: 'destructive', title: 'Call Ended', description: 'You have run out of coins.' });
@@ -146,6 +158,10 @@ export default function CallPage() {
   const joinAgoraCall = async () => {
     if (!currentUser || !channelName) return;
 
+    if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+    }
+
     try {
         const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
         const role = "publisher";
@@ -156,12 +172,24 @@ export default function CallPage() {
         if (!token) throw new Error("Token missing");
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+        client.on('user-published', async (user, mediaType) => {
+            await client?.subscribe(user, mediaType);
+            if (mediaType === 'audio') {
+                user.audioTrack?.play();
+            }
+        });
+
+        client.on('user-unpublished', user => {});
+
+        client.on('user-left', () => {
+            endAgoraCall(true, 'Other user left the call.');
+        });
+        
         await client.join(appId, channelName, token, currentUser.id);
 
         localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         await client.publish([localAudioTrack]);
-        
-        console.log("✅ Joined voice call!");
         
         setCallState('active');
         startTimerAndCoins();
@@ -169,10 +197,11 @@ export default function CallPage() {
     } catch (error) {
         console.error("Agora join failed", error);
         toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not connect to the call.' });
+        endAgoraCall(false);
     }
   };
 
-  const endAgoraCall = async (showToast = true) => {
+  const endAgoraCall = async (showToast = true, reason?: string) => {
     if (localAudioTrack) {
         localAudioTrack.stop();
         localAudioTrack.close();
@@ -196,13 +225,12 @@ export default function CallPage() {
     
     if (showToast) {
         toast({
-            title: "Call Ended",
+            title: reason || "Call Ended",
             description: coinsUsedRef.current > 0 ? `You used ${coinsUsedRef.current} coins.` : '',
         });
     }
     coinsUsedRef.current = 0;
     
-    // Redirect after a delay
     setTimeout(() => router.push('/discover'), 1500);
   };
   
@@ -213,12 +241,32 @@ export default function CallPage() {
   const handleDecline = () => {
     toast({ title: 'Call Declined' });
     setCallState('declined');
-    router.push('/discover');
+    endAgoraCall(false);
   };
   
   const handleEndCall = () => {
-    endAgoraCall();
+    endAgoraCall(true);
   }
+  
+  if (showRechargeDialog) {
+    return (
+        <AlertDialog open={true} onOpenChange={() => router.back()}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Insufficient Coins</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You need at least {CHARGE_COSTS.call} coins to make a call. Please recharge your balance.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => router.back()}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => router.push('/wallet')}>Recharge</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+  }
+
 
   if (!otherUser || !currentUser) {
      return (
@@ -231,6 +279,7 @@ export default function CallPage() {
   const CallInterface = ({ children }: {children: React.ReactNode}) => (
      <div className="bg-background min-h-screen text-center flex flex-col items-center justify-between p-8">
       <MainHeader title="Voice Call" />
+       <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3" />
       <div className="flex flex-col items-center gap-4">
         <Avatar className="w-32 h-32 border-4 border-primary">
             <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} />
@@ -248,7 +297,7 @@ export default function CallPage() {
     return (
         <CallInterface>
             <div className="w-full max-w-xs">
-                <p className="text-muted-foreground mb-8">Incoming Call...</p>
+                <p className="text-muted-foreground mb-8 animate-pulse">Incoming Call...</p>
                 <div className="flex justify-around items-center">
                     <Button onClick={handleDecline} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
                         <PhoneOff className="w-8 h-8" />
@@ -265,7 +314,6 @@ export default function CallPage() {
   if (callState === 'outgoing') {
       return (
         <CallInterface>
-            <audio ref={ringtoneRef} src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3" loop />
             <div className="w-full max-w-xs">
                 <p className="text-muted-foreground mb-8 animate-pulse">Ringing...</p>
                 <div className="flex justify-around items-center">
