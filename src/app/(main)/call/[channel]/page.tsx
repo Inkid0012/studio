@@ -9,8 +9,8 @@ import AgoraRTC, {
 } from 'agora-rtc-sdk-ng';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser, endCallInFirestore } from '@/lib/data';
-import type { User } from '@/types';
+import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser, onCallUpdate, updateCallStatus } from '@/lib/data';
+import type { User, Call } from '@/types';
 import { Loader2, Phone, PhoneOff, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -33,10 +33,11 @@ export default function CallPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [callState, setCallState] = useState<'idle' | 'outgoing' | 'incoming' | 'active' | 'declined' | 'timeout' | 'ended'>('idle');
+  const [call, setCall] = useState<Call | null>(null);
   const [timer, setTimer] = useState('00:00');
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
+  const [isJoined, setIsJoined] = useState(false);
   
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,7 +46,7 @@ export default function CallPage() {
   const ringtoneRef = useRef<HTMLAudioElement>(null);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
 
-  const channelName = params.channel as string;
+  const callId = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
   const callType = searchParams.get('callType') as 'outgoing' | 'incoming' | null;
 
@@ -58,72 +59,88 @@ export default function CallPage() {
     }
     setCurrentUserFromState(user);
 
-    const initializeCall = async () => {
+    const fetchOtherUser = async () => {
         const otherUserProfile = await getUserById(otherUserId);
         if (otherUserProfile) {
             setOtherUser(otherUserProfile);
         } else {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find user to call.' });
             router.push('/chat');
-            return;
-        }
-
-        if (callType === 'outgoing') {
-            if (user.gender === 'male' && user.coins < CHARGE_COSTS.call) {
-                setShowRechargeDialog(true);
-                return;
-            }
-            setCallState('outgoing');
-            joinAgoraCall(true); // Join immediately for outgoing calls
-        } else if (callType === 'incoming') {
-            setCallState('incoming');
-            timeoutRef.current = setTimeout(() => {
-                setCallState('timeout');
-                endAgoraCall(false); 
-            }, 60000); // 60 second timeout for incoming call
         }
     }
-    initializeCall();
-    
-    // Listen for the call ending via Firestore
-    const handleRemoteEndCallEvent = () => handleRemoteEndCall();
-    window.addEventListener('call-ended', handleRemoteEndCallEvent);
+    fetchOtherUser();
+
+    // Listen for call status updates
+    const unsubscribe = onCallUpdate(callId, (updatedCall) => {
+        if (updatedCall) {
+            setCall(updatedCall);
+        } else {
+            // Call document deleted or not found
+            endCall(false, 'Call ended unexpectedly.');
+        }
+    });
 
     return () => {
-        window.removeEventListener('call-ended', handleRemoteEndCallEvent);
-        if (client) {
-            endAgoraCall(false);
-        }
-        if (ringtoneRef.current) {
-            ringtoneRef.current.pause();
-        }
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
+        unsubscribe();
+        endCall(false); // Cleanup on unmount
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [otherUserId, callType, router, toast]);
-
-  const handleRemoteEndCall = () => {
-      endAgoraCall(true, 'Call ended by other user.');
-  }
+  }, [callId, otherUserId, router, toast]);
 
   useEffect(() => {
-    const handlePlayback = async () => {
-      if ((callState === 'outgoing' || callState === 'incoming') && ringtoneRef.current) {
-        try {
-          ringtoneRef.current.loop = true;
-          await ringtoneRef.current.play();
-        } catch (error) {
-          console.error("Ringtone autoplay failed:", error);
-        }
-      } else if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current.currentTime = 0;
+    if (!call) return;
+    
+    const isOutgoing = call.callerId === currentUser?.id;
+
+    // Handle state transitions based on call status
+    switch (call.status) {
+        case 'calling':
+            if (isOutgoing) {
+                // Ringing sound for caller
+                playRingtone();
+            } else {
+                // Incoming call screen with timeout
+                playRingtone();
+                if (!timeoutRef.current) {
+                    timeoutRef.current = setTimeout(() => {
+                       updateCallStatus(callId, 'timeout');
+                    }, 60000); 
+                }
+            }
+            break;
+        case 'accepted':
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            stopRingtone();
+            if (!isJoined) joinAgoraCall();
+            break;
+        case 'rejected':
+        case 'ended':
+        case 'timeout':
+            endCall(true, call.status === 'timeout' ? 'Call timed out' : 'Call ended');
+            break;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [call, currentUser]);
+
+
+  const playRingtone = async () => {
+      if(ringtoneRef.current) {
+          try {
+              ringtoneRef.current.loop = true;
+              await ringtoneRef.current.play();
+          } catch (error) {
+              console.error("Ringtone autoplay failed:", error);
+          }
       }
-    };
-    handlePlayback();
-  }, [callState]);
+  }
+
+  const stopRingtone = () => {
+      if(ringtoneRef.current) {
+          ringtoneRef.current.pause();
+          ringtoneRef.current.currentTime = 0;
+      }
+  }
+
   
   const startTimerAndCoins = () => {
     callStartTimeRef.current = Date.now();
@@ -152,7 +169,7 @@ export default function CallPage() {
     const latestUser = await getUserById(currentUser.id);
     if (!latestUser || latestUser.coins < CHARGE_COSTS.call) {
         toast({ variant: 'destructive', title: 'Call Ended', description: 'You have run out of coins.' });
-        endAgoraCall();
+        updateCallStatus(callId, 'ended');
         return;
     }
 
@@ -173,61 +190,46 @@ export default function CallPage() {
   };
 
 
-  const joinAgoraCall = async (isOutgoing = false) => {
-    if (!currentUser || !channelName || client) return;
-
-    if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-    }
+  const joinAgoraCall = async () => {
+    if (!currentUser || isJoined) return;
+    setIsJoined(true);
 
     try {
         const appId = '5f5749cfcb054a82b4c779444f675284';
-        const token = null; // Using null token for testing/development environments
+        const token = null;
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
         client.on('user-published', async (user, mediaType) => {
             await client?.subscribe(user, mediaType);
             if (mediaType === 'audio') {
-                if(callState !== 'active'){
-                    setCallState('active');
-                    startTimerAndCoins();
-                }
                 user.audioTrack?.play();
             }
         });
 
-        client.on('user-unpublished', user => {});
-
         client.on('user-left', () => {
-            endAgoraCall(true, 'Other user left the call.');
+            updateCallStatus(callId, 'ended');
         });
         
-        await client.join(appId, channelName, token, currentUser.id);
+        await client.join(appId, callId, token, currentUser.id);
 
         localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         await client.publish([localAudioTrack]);
         
-        if (isOutgoing) {
-            // Already published, just waiting for the other user.
-        } else {
-             setCallState('active');
-             startTimerAndCoins();
-        }
+        startTimerAndCoins();
 
     } catch (error) {
         console.error("Agora join failed", error);
         toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not connect to the call.' });
-        endAgoraCall(false);
+        updateCallStatus(callId, 'ended');
     }
   };
 
-  const endAgoraCall = async (showToast = true, reason?: string) => {
-    if (callState === 'ended') return;
+  const endCall = async (showToast = true, reason?: string) => {
+    stopRingtone();
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-    setCallState('ended');
-    await endCallInFirestore(channelName);
-    
     if (localAudioTrack) {
         localAudioTrack.stop();
         localAudioTrack.close();
@@ -242,15 +244,10 @@ export default function CallPage() {
         client = null;
     }
     
-    if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-    }
+    setIsJoined(false);
 
-    if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-    }
-     if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    if (call?.status !== 'ended' && call?.status !== 'rejected' && call?.status !== 'timeout') {
+       await updateCallStatus(callId, 'ended');
     }
     
     setTimer('00:00');
@@ -264,30 +261,21 @@ export default function CallPage() {
     coinsUsedRef.current = 0;
     
     setTimeout(() => {
-        if (router) {
+        if (router && window.location.pathname.includes('/call/')) {
             router.push('/discover');
         }
     }, 1500);
   };
   
   const handleAccept = () => {
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-    }
-    joinAgoraCall();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    updateCallStatus(callId, 'accepted');
   };
 
   const handleDecline = () => {
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-    }
-    setCallState('declined');
-    endAgoraCall(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    updateCallStatus(callId, 'rejected');
   };
-  
-  const handleEndCall = () => {
-    endAgoraCall(true);
-  }
   
   if (showRechargeDialog) {
     return (
@@ -309,7 +297,7 @@ export default function CallPage() {
   }
 
 
-  if (!otherUser || !currentUser) {
+  if (!otherUser || !currentUser || !call) {
      return (
        <div className="flex items-center justify-center h-screen bg-background">
             <Loader2 className="w-8 h-8 animate-spin text-primary"/>
@@ -347,7 +335,7 @@ export default function CallPage() {
   );
 
 
-  if (callState === 'incoming') {
+  if (call.status === 'calling' && call.receiverId === currentUser.id) {
     return (
         <CallInterface showCloseButton={true} title="Incoming Call...">
             <div className="w-full max-w-xs">
@@ -364,12 +352,12 @@ export default function CallPage() {
     )
   }
   
-  if (callState === 'outgoing') {
+  if (call.status === 'calling' && call.callerId === currentUser.id) {
       return (
         <CallInterface title="Ringing...">
             <div className="w-full max-w-xs">
                 <div className="flex justify-around items-center">
-                    <Button onClick={handleEndCall} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
+                    <Button onClick={handleDecline} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
                         <PhoneOff className="w-8 h-8" />
                     </Button>
                 </div>
@@ -378,13 +366,13 @@ export default function CallPage() {
       )
   }
 
-  if (callState === 'active') {
+  if (call.status === 'accepted') {
       return (
          <CallInterface>
             <div className="w-full max-w-xs">
                 <p id="timer" className="font-mono text-2xl font-bold mb-8 text-green-500">{timer}</p>
                  <div className="flex justify-around items-center">
-                    <Button onClick={handleEndCall} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
+                    <Button onClick={() => updateCallStatus(callId, 'ended')} variant="destructive" size="icon" className="w-20 h-20 rounded-full">
                         <PhoneOff className="w-8 h-8" />
                     </Button>
                 </div>
@@ -395,8 +383,9 @@ export default function CallPage() {
   
   const EndCallMessage = () => {
       let message = "Call Ended";
-      if (callState === 'declined') message = "Call Declined";
-      if (callState === 'timeout') message = "Call Timed Out";
+      if (call.status === 'rejected') message = "Call Declined";
+      if (call.status === 'timeout') message = "Call Timed Out";
+      if (call.status === 'ended') message = "Call Ended";
       return <p>{message}</p>;
   }
 

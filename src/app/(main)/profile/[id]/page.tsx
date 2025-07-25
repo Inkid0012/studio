@@ -12,7 +12,7 @@ import {
     blockUser,
     unblockUser,
     CHARGE_COSTS,
-    startCallInFirestore
+    startCall
 } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -132,9 +132,8 @@ export default function UserProfilePage() {
           return;
       }
       setIsProcessing(true);
-      const conversationId = await findOrCreateConversation(currentUser.id, user.id);
-      await startCallInFirestore(conversationId, currentUser.id);
-      router.push(`/call/${conversationId}?otherUserId=${user.id}&callType=outgoing`);
+      const callId = await startCall(currentUser.id, user.id);
+      router.push(`/call/${callId}?otherUserId=${user.id}&callType=outgoing`);
       setIsProcessing(false);
   };
   

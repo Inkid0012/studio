@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS, seedInitialUsers, startCallInFirestore } from "@/lib/data";
+import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS, seedInitialUsers, startCall } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
@@ -83,13 +83,12 @@ export default function DiscoverPage() {
         Math.floor(Math.random() * oppositeGenderProfiles.length)
       ];
 
-    const conversationId = await findOrCreateConversation(
+    const callId = await startCall(
       currentUser.id,
       randomUser.id
     );
 
-    await startCallInFirestore(conversationId, currentUser.id);
-    router.push(`/call/${conversationId}?otherUserId=${randomUser.id}&callType=outgoing`);
+    router.push(`/call/${callId}?otherUserId=${randomUser.id}&callType=outgoing`);
   };
 
   const showPlaceholder = !isLoading && displayedProfiles.length === 0;

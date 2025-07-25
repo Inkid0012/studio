@@ -1,7 +1,7 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCallInFirestore } from '@/lib/data';
+import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCall } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -115,9 +115,8 @@ export default function ChatPage() {
         return;
     }
       
-    await startCallInFirestore(convoId, currentUser.id);
-
-    router.push(`/call/${convoId}?otherUserId=${otherUser.id}&callType=outgoing`);
+    const callId = await startCall(currentUser.id, otherUser.id);
+    router.push(`/call/${callId}?otherUserId=${otherUser.id}&callType=outgoing`);
   }
 
   return (

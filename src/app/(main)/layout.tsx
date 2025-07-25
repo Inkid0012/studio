@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getCurrentUser, onIncomingCall } from "@/lib/data";
-import type { Conversation, User } from "@/types";
+import type { Call, User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
 const mainNavPaths = ['/discover', '/chat', '/profile'];
@@ -28,22 +28,12 @@ export default function MainLayout({
   useEffect(() => {
     if (!currentUser) return;
 
-    const handleCallEvent = (convo: Conversation) => {
-        if (convo.activeCall && convo.activeCall.callerId !== currentUser.id) {
-            // Incoming call
-            if(!pathname.startsWith('/call/')) {
-                 router.push(`/call/${convo.id}?otherUserId=${convo.activeCall.callerId}&callType=incoming`);
-            }
-        } else if (!convo.activeCall) {
-            // Call ended
-             if(pathname.startsWith('/call/')) {
-                // Dispatch a custom event to notify the call page
-                window.dispatchEvent(new CustomEvent('call-ended'));
-            }
+    // Listen for new incoming calls
+    const unsubscribe = onIncomingCall(currentUser.id, (call: Call) => {
+        if (!pathname.startsWith('/call/')) {
+            router.push(`/call/${call.id}?otherUserId=${call.callerId}&callType=incoming`);
         }
-    };
-
-    const unsubscribe = onIncomingCall(currentUser.id, handleCallEvent);
+    });
 
     return () => {
       if (unsubscribe) {

@@ -1,8 +1,9 @@
 
 
-import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor } from '@/types';
+
+import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const CHARGE_COSTS = {
@@ -384,7 +385,6 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
         const newConversationRef = await addDoc(conversationsRef, {
             participantIds: participantIds,
             lastMessage: null,
-            activeCall: null,
         });
         return newConversationRef.id;
     }
@@ -642,40 +642,74 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
     });
 }
 
-export async function startCallInFirestore(conversationId: string, callerId: string) {
-    const conversationRef = doc(db, 'conversations', conversationId);
-    await updateDoc(conversationRef, {
-        activeCall: {
-            callerId: callerId,
-            timestamp: Timestamp.now(),
+// --- New Call Management Functions ---
+
+/**
+ * Starts a new call by creating a document in the 'calls' collection.
+ * @param callerId The ID of the user initiating the call.
+ * @param receiverId The ID of the user receiving the call.
+ * @returns The ID of the newly created call document.
+ */
+export async function startCall(callerId: string, receiverId: string): Promise<string> {
+    const callsCollection = collection(db, 'calls');
+    const newCallRef = await addDoc(callsCollection, {
+        callerId,
+        receiverId,
+        status: 'calling',
+        timestamp: serverTimestamp(),
+    });
+    return newCallRef.id;
+}
+
+/**
+ * Updates the status of a call document.
+ * @param callId The ID of the call to update.
+ * @param status The new status for the call.
+ */
+export async function updateCallStatus(callId: string, status: Call['status']) {
+    const callRef = doc(db, 'calls', callId);
+    await updateDoc(callRef, { status });
+}
+
+/**
+ * Listens for real-time updates to a specific call document.
+ * @param callId The ID of the call to listen to.
+ * @param callback A function to be called with the updated call data.
+ * @returns An unsubscribe function to stop listening for updates.
+ */
+export function onCallUpdate(callId: string, callback: (call: Call | null) => void) {
+    const callRef = doc(db, 'calls', callId);
+    const unsubscribe = onSnapshot(callRef, (docSnap) => {
+        if (docSnap.exists()) {
+            callback({ id: docSnap.id, ...docSnap.data() } as Call);
+        } else {
+            callback(null);
         }
     });
+    return unsubscribe;
 }
 
-export async function endCallInFirestore(conversationId: string) {
-    const conversationRef = doc(db, 'conversations', conversationId);
-    await updateDoc(conversationRef, {
-        activeCall: null
-    });
-}
+/**
+ * Listens for new incoming calls for a specific user.
+ * @param userId The ID of the user to listen for incoming calls.
+ * @param callback A function to be called with the new incoming call data.
+ * @returns An unsubscribe function to stop listening for updates.
+ */
+export function onIncomingCall(userId: string, callback: (call: Call) => void) {
+    const callsRef = collection(db, "calls");
+    const q = query(
+        callsRef, 
+        where("receiverId", "==", userId), 
+        where("status", "==", "calling"),
+    );
 
-export function onIncomingCall(userId: string, callback: (conversation: Conversation) => void) {
-    const conversationsRef = collection(db, "conversations");
-    const q = query(conversationsRef, where("participantIds", "array-contains", userId));
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-        const changes = snapshot.docChanges();
-        for (const change of changes) {
-            if (change.type === "modified") {
-                const convoData = change.doc.data();
-                if (convoData.activeCall && convoData.activeCall.callerId !== userId) {
-                    const fullConvo = await getConversationById(change.doc.id);
-                    if (fullConvo) {
-                        callback(fullConvo);
-                    }
-                }
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const callData = { id: change.doc.id, ...change.doc.data() } as Call;
+                callback(callData);
             }
-        }
+        });
     });
 
     return unsubscribe;
