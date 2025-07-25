@@ -5,87 +5,39 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import AgoraRTC, {
   IAgoraRTCClient,
-  IAgoraRTCRemoteUser,
   IMicrophoneAudioTrack,
 } from 'agora-rtc-sdk-ng';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Phone, PhoneOff, Loader2 } from 'lucide-react';
-import { MainHeader } from '@/components/layout/main-header';
 import { useToast } from '@/hooks/use-toast';
 import { getUserById, getCurrentUser, CHARGE_COSTS, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
 import type { User } from '@/types';
-import { cn } from '@/lib/utils';
+import { MainHeader } from '@/components/layout/main-header';
+import { Loader2 } from 'lucide-react';
 
-const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
 let client: IAgoraRTCClient | null = null;
-let localAudioTrackRef: IMicrophoneAudioTrack | null = null;
-
-async function joinAgoraCall(channelName: string, userId: string): Promise<void> {
-  if (!appId) {
-      throw new Error("Agora App ID is missing.");
-  }
-  const role = "publisher";
-
-  // Get token from your Render backend
-  const response = await fetch(`https://fizu-agora-token-server.onrender.com/rtc/${channelName}/${role}/${userId}`);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch token: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const token = data.token;
-  
-  if (!token) {
-    throw new Error("Agora token is missing. Call cannot be initiated.");
-  }
-
-  client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-  await client.join(appId, channelName, token, userId);
-  
-  // Voice only: create microphone audio track
-  const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-  localAudioTrackRef = micTrack;
-  await client.publish([micTrack]);
-
-  console.log("🎤 Joined Agora voice call successfully!");
-}
-
-async function endAgoraCall() {
-  if (localAudioTrackRef) {
-    localAudioTrackRef.stop();
-    localAudioTrackRef.close();
-    localAudioTrackRef = null;
-  }
-  if (client) {
-    await client.leave();
-    client = null;
-  }
-  console.log("❌ Left voice call.");
-}
+let localAudioTrack: IMicrophoneAudioTrack | null = null;
 
 export default function CallPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  
+
+  const [callState, setCallState] = useState<'idle' | 'incoming' | 'active' | 'declined'>('incoming');
+  const [timer, setTimer] = useState('00:00');
+  const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
+
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const coinsUsedRef = useRef(0);
+  const callStartTimeRef = useRef<number | null>(null);
+
   const channelName = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
 
-  const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
-  const [otherUser, setOtherUser] = useState<User | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [callStatus, setCallStatus] = useState('Idle');
-  const [callDuration, setCallDuration] = useState(0);
-  
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const callConnectedRef = useRef(false);
-
   useEffect(() => {
     const user = getCurrentUser();
-    if (!user || !appId || !otherUserId) {
+     if (!user || !otherUserId) {
       toast({ variant: 'destructive', title: 'Error', description: 'Invalid call session.' });
       router.push('/discover');
       return;
@@ -103,102 +55,47 @@ export default function CallPage() {
     }
     fetchOtherUser();
 
-    // Cleanup on component unmount
+    // Ensure we leave the call if the component is unmounted
     return () => {
-        if(callConnectedRef.current) {
-            handleLeave("Component unmounted");
+        if (client) {
+            endAgoraCall();
         }
-    }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleJoin = async () => {
-      if (!currentUser || !channelName) return;
-      setCallStatus('Connecting...');
-      try {
-          await joinAgoraCall(channelName, currentUser.id);
-          setCallStatus('Connected');
-          callConnectedRef.current = true;
-          startTimer();
-
-          client?.on('user-published', async (user, mediaType) => {
-            await client?.subscribe(user, mediaType);
-            if (mediaType === 'audio') {
-              user.audioTrack?.play();
-            }
-          });
-    
-          client?.on('user-left', () => {
-            handleLeave('The other user left the call.');
-          });
-
-      } catch (error) {
-          console.error("Failed to join Agora call", error);
-          setCallStatus('Failed');
-          toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not connect to the voice call.' });
-      }
-  }
-
-
-  const handleLeave = async (reason?: string, isError = false) => {
-    stopTimer();
-    setCallStatus('Leaving...');
-    await endAgoraCall();
-    callConnectedRef.current = false;
-    if(reason) {
-        toast({ title: 'Call Ended', description: reason, variant: isError ? 'destructive' : 'default' });
-    }
-    setCallStatus('Idle');
-    // Go back to discover after a short delay to allow user to see the message
-    setTimeout(() => router.push('/discover'), 2000);
-  };
   
+  const startTimerAndCoins = () => {
+    callStartTimeRef.current = Date.now();
+    coinsUsedRef.current = 0;
 
-  const startTimer = () => {
-    if(timerIntervalRef.current) return;
-    
     // Initial deduction for the first minute
     handleCoinDeduction();
-
+    
     timerIntervalRef.current = setInterval(() => {
-        setCallDuration(prev => {
-            const newDuration = prev + 1;
-            // Deduct coins every 60 seconds
-            if (newDuration > 0 && newDuration % 60 === 0) {
-                handleCoinDeduction();
-            }
-            return newDuration;
-        });
-    }, 1000);
-  };
+        if (!callStartTimeRef.current) return;
+        const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
+        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const seconds = String(elapsed % 60)).padStart(2, '0');
+        setTimer(`${minutes}:${seconds}`);
 
-  const stopTimer = () => {
-    if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-    }
-    setCallDuration(0);
+        // Deduct coins every minute
+        if (elapsed > 0 && elapsed % 60 === 0) {
+            handleCoinDeduction();
+        }
+    }, 1000);
   };
 
   const handleCoinDeduction = async () => {
     if(!currentUser || !otherUser) return;
+    if (currentUser.gender !== 'male') return; // Only charge men
 
-    // We only charge male users
-    if (currentUser.gender !== 'male') return;
-
-    // Fetch the latest user data to ensure coin balance is accurate
     const latestUser = await getUserById(currentUser.id);
-    if (!latestUser) {
-        await handleLeave('Could not verify your coin balance.', true);
+    if (!latestUser || latestUser.coins < CHARGE_COSTS.call) {
+        toast({ variant: 'destructive', title: 'Call Ended', description: 'You have run out of coins.' });
+        endAgoraCall();
         return;
     }
-    
-    // Check for sufficient coins *before* making the deduction
-    if (latestUser.coins < CHARGE_COSTS.call) {
-        await handleLeave('You have run out of coins.', true);
-        return;
-    }
-    
+
     const updatedCoins = latestUser.coins - CHARGE_COSTS.call;
     const updatedUser: User = { ...latestUser, coins: updatedCoins };
     
@@ -210,92 +107,108 @@ export default function CallPage() {
         description: `Call with ${otherUser.name}`
     });
     
-    // Update local state to reflect new coin balance
+    coinsUsedRef.current += CHARGE_COSTS.call;
     setCurrentUser(updatedUser);
     setCurrentUserFromState(updatedUser);
-    
-    toast({
-        title: 'Coins Deducted',
-        description: `${CHARGE_COSTS.call} coins were spent for the call.`,
-    });
   };
 
-  const toggleMute = async () => {
-    if (localAudioTrackRef) {
-      await localAudioTrackRef.setMuted(!isMuted);
-      setIsMuted(!isMuted);
+
+  const joinAgoraCall = async () => {
+    if (!currentUser || !channelName) return;
+
+    try {
+        const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '5f5749cfcb054a82b4c779444f675284';
+        const role = "publisher";
+        const response = await fetch(`https://fizu-agora-token-server.onrender.com/rtc/${channelName}/${role}/${currentUser.id}`);
+        const data = await response.json();
+        const token = data.token;
+        
+        if (!token) throw new Error("Token missing");
+
+        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        await client.join(appId, channelName, token, currentUser.id);
+
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await client.publish([localAudioTrack]);
+        
+        console.log("✅ Joined voice call!");
+        
+        setCallState('active');
+        startTimerAndCoins();
+
+    } catch (error) {
+        console.error("Agora join failed", error);
+        toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not connect to the call.' });
     }
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const secs = (seconds % 60).toString().padStart(2, '0');
-    return `${mins}:${secs}`;
-  }
+  const endAgoraCall = async () => {
+    if (localAudioTrack) {
+        localAudioTrack.stop();
+        localAudioTrack.close();
+        localAudioTrack = null;
+    }
+    if (client) {
+        await client.leave();
+        client = null;
+    }
+
+    if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+    }
+    
+    setCallState('idle');
+    setTimer('00:00');
+    
+    toast({
+        title: "Call Ended",
+        description: `You used ${coinsUsedRef.current} coins.`,
+    });
+    coinsUsedRef.current = 0;
+    
+    // Redirect after a delay
+    setTimeout(() => router.push('/discover'), 2000);
+  };
+  
+  const handleAccept = () => {
+    joinAgoraCall();
+  };
+
+  const handleDecline = () => {
+    toast({ title: 'Call Declined' });
+    setCallState('declined');
+    router.push('/discover');
+  };
 
   if (!otherUser || !currentUser) {
-    return (
+     return (
        <div className="flex items-center justify-center h-screen bg-background">
             <Loader2 className="w-8 h-8 animate-spin text-primary"/>
        </div>
     );
   }
 
-  return (
-    <div className="flex flex-col h-screen bg-background">
-      <MainHeader title="Voice Call" showBackButton={true} />
-      <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-8">
-        <div className="flex flex-col items-center space-y-4">
-          <Avatar className="w-40 h-40 border-4 border-accent">
-            <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} data-ai-hint="portrait person" />
-            <AvatarFallback className="text-5xl">{otherUser.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <h2 className="text-3xl font-bold">{otherUser.name}</h2>
-          <p className="text-muted-foreground text-lg">{callStatus}</p>
-          {callStatus === 'Connected' && (
-             <p className="text-muted-foreground text-xl font-mono">{formatDuration(callDuration)}</p>
-          )}
-        </div>
-      </div>
-      <div className="fixed bottom-0 left-0 right-0 p-8 bg-background/80 backdrop-blur-sm border-t">
-        <div className="flex justify-center items-center gap-8">
-            <Button
-                size="lg"
-                variant="outline"
-                onClick={toggleMute}
-                className={cn(
-                'rounded-full w-20 h-20',
-                isMuted ? 'bg-primary text-primary-foreground' : 'bg-muted',
-                !callConnectedRef.current && 'opacity-50 pointer-events-none'
-                )}
-                disabled={!callConnectedRef.current}
-            >
-                {isMuted ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-            </Button>
-            
-            {!callConnectedRef.current ? (
-                 <Button
-                    size="lg"
-                    onClick={handleJoin}
-                    disabled={callStatus === 'Connecting...'}
-                    className="rounded-full w-20 h-20 bg-green-500 hover:bg-green-600"
-                >
-                    {callStatus === 'Connecting...' ? <Loader2 className="w-8 h-8 animate-spin"/> : <Phone className="w-8 h-8" />}
-                </Button>
-            ) : (
-                <Button
-                    size="lg"
-                    onClick={() => handleLeave('Call ended by user')}
-                    className="rounded-full w-20 h-20 bg-destructive hover:bg-destructive/90"
-                >
-                    <PhoneOff className="w-8 h-8" />
-                </Button>
-            )}
 
-            {/* Placeholder for a potential third button, can be removed if not needed */}
-             <div className="w-20 h-20" />
+  return (
+    <div className="bg-background min-h-screen text-center flex flex-col items-center justify-center p-8">
+      <MainHeader title="Voice Call" />
+      {callState === 'incoming' && (
+        <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Incoming Voice Call from {otherUser.name}</h2>
+            <div className="flex justify-center gap-4">
+                <Button onClick={handleAccept} className="bg-green-500 hover:bg-green-600">✅ Accept Call</Button>
+                <Button onClick={handleDecline} variant="destructive">❌ Decline</Button>
+            </div>
         </div>
-      </div>
+      )}
+
+      {callState === 'active' && (
+         <div id="call-ui" className="space-y-4">
+            <p className="text-xl">🟢 Call in Progress with {otherUser.name}...</p>
+            <p id="timer" className="font-mono text-4xl font-bold">⏱️ {timer}</p>
+            <Button onClick={endAgoraCall} variant="destructive">🔴 End Call</Button>
+        </div>
+      )}
     </div>
   );
 }
