@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -29,6 +30,7 @@ export default function DiscoverPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [showConfirmCallDialog, setShowConfirmCallDialog] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -76,26 +78,33 @@ export default function DiscoverPage() {
     setIsSearching(false);
   };
   
-  const joinAgoraCall = () => {
+  const confirmJoinCall = () => {
     const currentUser = getCurrentUser();
     if (!currentUser) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-        return;
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+      return;
     }
-    if (currentUser.coins < CHARGE_COSTS.call) {
-        toast({ variant: 'destructive', title: 'Insufficient Coins', description: `You need at least ${CHARGE_COSTS.call} coins to make a call.`});
-        return;
+    if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
+      toast({ variant: 'destructive', title: 'Insufficient Coins', description: `You need at least ${CHARGE_COSTS.call} coins to make a call.` });
+      return;
     }
+    setShowConfirmCallDialog(true);
+  };
+
+  const joinAgoraCall = () => {
+    setShowConfirmCallDialog(false);
+    const currentUser = getCurrentUser();
+    
     // In a real app, you might have a more sophisticated matchmaking system.
     // Here, we just pick a random user from the available profiles.
-    const availableUsers = displayedProfiles.filter(p => p.id !== currentUser.id);
+    const availableUsers = displayedProfiles.filter(p => p.id !== currentUser?.id);
     if (availableUsers.length === 0) {
         toast({ variant: 'destructive', title: 'No users available', description: 'Could not find a user to call right now.' });
         return;
     }
     const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
 
-    const conversationId = [currentUser.id, randomUser.id].sort().join('-');
+    const conversationId = [currentUser!.id, randomUser.id].sort().join('-');
     router.push(`/call/${conversationId}?otherUserId=${randomUser.id}`);
   };
 
@@ -130,7 +139,7 @@ export default function DiscoverPage() {
       </MainHeader>
       <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <Button onClick={joinAgoraCall} className="h-auto py-4 bg-[#800000] text-white shadow-lg hover:bg-[#800000]/90">
+          <Button onClick={confirmJoinCall} className="h-auto py-4 bg-[#800000] text-white shadow-lg hover:bg-[#800000]/90">
              <CardContent className="p-0 flex flex-col justify-between items-start h-full w-full">
               <h3 className="font-bold text-lg">Join Voice Call</h3>
               <div className="flex justify-end w-full">
@@ -196,6 +205,24 @@ export default function DiscoverPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+       <AlertDialog open={showConfirmCallDialog} onOpenChange={setShowConfirmCallDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Voice Call</AlertDialogTitle>
+                <AlertDialogDescription>
+                    A voice call costs {CHARGE_COSTS.call} coins per minute. This amount will be deducted from your account. Do you want to proceed?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={joinAgoraCall} className="bg-green-500 hover:bg-green-600">
+                    Join Call
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

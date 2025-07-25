@@ -149,17 +149,21 @@ export default function CallPage() {
         toast({ title: 'Call Ended', description: reason, variant: isError ? 'destructive' : 'default' });
     }
     setCallStatus('Idle');
+    // Go back to discover after a short delay to allow user to see the message
+    setTimeout(() => router.push('/discover'), 2000);
   };
   
 
   const startTimer = () => {
     if(timerIntervalRef.current) return;
     
+    // Initial deduction for the first minute
     handleCoinDeduction();
 
     timerIntervalRef.current = setInterval(() => {
         setCallDuration(prev => {
             const newDuration = prev + 1;
+            // Deduct coins every 60 seconds
             if (newDuration > 0 && newDuration % 60 === 0) {
                 handleCoinDeduction();
             }
@@ -179,32 +183,41 @@ export default function CallPage() {
   const handleCoinDeduction = async () => {
     if(!currentUser || !otherUser) return;
 
+    // We only charge male users
+    if (currentUser.gender !== 'male') return;
+
+    // Fetch the latest user data to ensure coin balance is accurate
     const latestUser = await getUserById(currentUser.id);
     if (!latestUser) {
         await handleLeave('Could not verify your coin balance.', true);
         return;
     }
     
-    if (latestUser.gender === 'male' && latestUser.coins < CHARGE_COSTS.call) {
-        await handleLeave('You have insufficient coins.', true);
+    // Check for sufficient coins *before* making the deduction
+    if (latestUser.coins < CHARGE_COSTS.call) {
+        await handleLeave('You have run out of coins.', true);
         return;
     }
-
-    if (latestUser.gender === 'male') {
-        const updatedCoins = (latestUser.coins || 0) - CHARGE_COSTS.call;
-        const updatedUser = { ...latestUser, coins: updatedCoins };
-        
-        await createUserInFirestore(updatedUser);
-        await addTransaction({
-            userId: currentUser.id,
-            type: 'spent',
-            amount: CHARGE_COSTS.call,
-            description: `Call with ${otherUser.name}`
-        });
-        
-        setCurrentUser(updatedUser);
-        setCurrentUserFromState(updatedUser);
-    }
+    
+    const updatedCoins = latestUser.coins - CHARGE_COSTS.call;
+    const updatedUser: User = { ...latestUser, coins: updatedCoins };
+    
+    await createUserInFirestore(updatedUser);
+    await addTransaction({
+        userId: currentUser.id,
+        type: 'spent',
+        amount: CHARGE_COSTS.call,
+        description: `Call with ${otherUser.name}`
+    });
+    
+    // Update local state to reflect new coin balance
+    setCurrentUser(updatedUser);
+    setCurrentUserFromState(updatedUser);
+    
+    toast({
+        title: 'Coins Deducted',
+        description: `${CHARGE_COSTS.call} coins were spent for the call.`,
+    });
   };
 
   const toggleMute = async () => {
@@ -264,9 +277,10 @@ export default function CallPage() {
                  <Button
                     size="lg"
                     onClick={handleJoin}
+                    disabled={callStatus === 'Connecting...'}
                     className="rounded-full w-20 h-20 bg-green-500 hover:bg-green-600"
                 >
-                    <Phone className="w-8 h-8" />
+                    {callStatus === 'Connecting...' ? <Loader2 className="w-8 h-8 animate-spin"/> : <Phone className="w-8 h-8" />}
                 </Button>
             ) : (
                 <Button
@@ -277,6 +291,9 @@ export default function CallPage() {
                     <PhoneOff className="w-8 h-8" />
                 </Button>
             )}
+
+            {/* Placeholder for a potential third button, can be removed if not needed */}
+             <div className="w-20 h-20" />
         </div>
       </div>
     </div>
