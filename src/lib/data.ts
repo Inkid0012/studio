@@ -1,6 +1,7 @@
 
 
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp } from 'firebase/firestore';
@@ -646,16 +647,16 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
 
 /**
  * Starts a new call by creating a document in the 'calls' collection.
- * @param callerId The ID of the user initiating the call.
- * @param receiverId The ID of the user receiving the call.
+ * @param from The ID of the user initiating the call.
+ * @param to The ID of the user receiving the call.
  * @returns The ID of the newly created call document.
  */
-export async function startCall(callerId: string, receiverId: string): Promise<string> {
+export async function startCall(from: string, to: string): Promise<string> {
     const callsCollection = collection(db, 'calls');
     const newCallRef = await addDoc(callsCollection, {
-        callerId,
-        receiverId,
-        status: 'calling',
+        from,
+        to,
+        status: 'ringing',
         timestamp: serverTimestamp(),
     });
     return newCallRef.id;
@@ -699,8 +700,8 @@ export function onIncomingCall(userId: string, callback: (call: Call) => void) {
     const callsRef = collection(db, "calls");
     const q = query(
         callsRef, 
-        where("receiverId", "==", userId), 
-        where("status", "==", "calling"),
+        where("to", "==", userId), 
+        where("status", "==", "ringing"),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

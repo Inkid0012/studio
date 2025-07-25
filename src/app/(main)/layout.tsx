@@ -31,7 +31,7 @@ export default function MainLayout({
     // Listen for new incoming calls
     const unsubscribe = onIncomingCall(currentUser.id, (call: Call) => {
         if (!pathname.startsWith('/call/')) {
-            router.push(`/call/${call.id}?otherUserId=${call.callerId}&callType=incoming`);
+            router.push(`/call/${call.id}?otherUserId=${call.from}&callType=incoming`);
         }
     });
 

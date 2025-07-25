@@ -89,11 +89,11 @@ export default function CallPage() {
   useEffect(() => {
     if (!call || !currentUser) return;
     
-    const isOutgoing = call.callerId === currentUser?.id;
+    const isOutgoing = call.from === currentUser?.id;
 
     // Handle state transitions based on call status
     switch (call.status) {
-        case 'calling':
+        case 'ringing':
             if (!isJoined) {
                 playRingtone();
                 if (!isOutgoing) {
@@ -195,7 +195,7 @@ export default function CallPage() {
     if (!currentUser || isJoined) return;
 
     try {
-        const appId = '5f5749cfcb054a82b4c779444f675284';
+        const appId = 'f25a74e5b9f7431e84a227845e69e3ed';
         const token = null;
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
@@ -336,7 +336,7 @@ export default function CallPage() {
   );
 
 
-  if (call.status === 'calling' && call.receiverId === currentUser.id) {
+  if (call.status === 'ringing' && call.to === currentUser.id) {
     return (
         <CallInterface showCloseButton={true} title="Incoming Call...">
             <div className="w-full max-w-xs">
@@ -353,7 +353,7 @@ export default function CallPage() {
     )
   }
   
-  if (call.status === 'calling' && call.callerId === currentUser.id) {
+  if (call.status === 'ringing' && call.from === currentUser.id) {
       return (
         <CallInterface title="Ringing...">
             <div className="w-full max-w-xs">

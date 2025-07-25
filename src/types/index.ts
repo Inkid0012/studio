@@ -57,9 +57,9 @@ export type Conversation = {
 
 export type Call = {
   id: string;
-  callerId: string;
-  receiverId: string;
-  status: 'calling' | 'accepted' | 'rejected' | 'ended' | 'timeout';
+  from: string; // callerId
+  to: string;   // receiverId
+  status: 'ringing' | 'accepted' | 'rejected' | 'ended' | 'timeout';
   timestamp: Timestamp;
 };
 
