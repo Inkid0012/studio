@@ -243,7 +243,7 @@ export default function UserProfilePage() {
     );
   }
   
-  const canInteract = currentUser.id !== user.id && currentUser.gender !== user.gender;
+  const canInteract = currentUser.id !== user.id;
 
   return (
     <div className="bg-muted/30 min-h-screen pb-32">
