@@ -18,18 +18,25 @@ export default function MainLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
         setCurrentUser(user);
     } else {
+      if (isClient) {
         router.push('/login');
+      }
     }
-  }, [pathname, router]);
+  }, [pathname, router, isClient]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !isClient) return;
 
     // Listen for new incoming calls
     const unsubscribe = onIncomingCall(currentUser.id, (call: Call) => {
@@ -43,10 +50,10 @@ export default function MainLayout({
         unsubscribe();
       }
     };
-  }, [currentUser, router, pathname]);
+  }, [currentUser, router, pathname, isClient]);
 
   // The nav bar should only appear on the exact main navigation paths.
-  const showNavBar = mainNavPaths.includes(pathname);
+  const showNavBar = isClient && mainNavPaths.includes(pathname);
 
   return (
     <div className="min-h-screen bg-background">
