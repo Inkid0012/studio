@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
+import { useRouter } from "next/navigation";
+import { findOrCreateConversation } from "@/lib/data";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -24,24 +26,26 @@ export default function DiscoverPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const router = useRouter();
+  const currentUser = getCurrentUser();
 
 
   useEffect(() => {
     const fetchProfiles = async () => {
       setIsLoading(true);
       await seedInitialUsers();
-      // Fetch all users without filtering by gender
+      // Fetch all users without filtering
       const fetchedProfiles = await getDiscoverProfiles(undefined, true); 
       setAllProfiles(fetchedProfiles);
-      setDisplayedProfiles(fetchedProfiles);
+      setDisplayedProfiles(fetchedProfiles.filter(p => p.id !== currentUser?.id));
       setIsLoading(false);
     };
     fetchProfiles();
-  }, []);
+  }, [currentUser?.id]);
   
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-        setDisplayedProfiles(allProfiles);
+        setDisplayedProfiles(allProfiles.filter(p => p.id !== currentUser?.id));
         setSearchOpen(false);
         return;
     }
@@ -57,8 +61,34 @@ export default function DiscoverPage() {
         user.id.toLowerCase().includes(lowerCaseQuery)
     );
     
-    setDisplayedProfiles(results);
+    setDisplayedProfiles(results.filter(p => p.id !== currentUser?.id));
     setIsLoading(false);
+    setIsSearching(false);
+  };
+  
+    const handleRandomCall = async () => {
+    if (!currentUser) return;
+
+    const oppositeGenderProfiles = allProfiles.filter(
+      (p) => p.gender !== currentUser.gender && p.id !== currentUser.id && p.gender !== 'other'
+    );
+
+    if (oppositeGenderProfiles.length === 0) {
+      alert("No users of the opposite gender found to start a random call.");
+      return;
+    }
+
+    const randomUser =
+      oppositeGenderProfiles[
+        Math.floor(Math.random() * oppositeGenderProfiles.length)
+      ];
+
+    const conversationId = await findOrCreateConversation(
+      currentUser.id,
+      randomUser.id
+    );
+
+    router.push(`/call/${conversationId}?otherUserId=${randomUser.id}`);
   };
 
   const showPlaceholder = !isLoading && displayedProfiles.length === 0;
