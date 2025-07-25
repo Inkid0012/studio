@@ -18,6 +18,10 @@ import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
 import { findOrCreateConversation } from "@/lib/data";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { app } from "@/lib/firebase";
+
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -27,21 +31,36 @@ export default function DiscoverPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
 
   useEffect(() => {
-    const fetchProfiles = async () => {
-      setIsLoading(true);
-      await seedInitialUsers();
-      // Fetch all users without filtering by passing `forSearch = true`
-      const fetchedProfiles = await getDiscoverProfiles(currentUser?.id, true); 
-      setAllProfiles(fetchedProfiles);
-      setDisplayedProfiles(fetchedProfiles);
-      setIsLoading(false);
-    };
-    fetchProfiles();
-  }, [currentUser?.id]);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        try {
+            await seedInitialUsers();
+            const fetchedProfiles = await getDiscoverProfiles(user.uid, true); 
+            setAllProfiles(fetchedProfiles);
+            setDisplayedProfiles(fetchedProfiles);
+        } catch (err) {
+            console.error("Error fetching discover items:", err);
+        } finally {
+            setIsLoading(false);
+        }
+      } else {
+        // Handle case where user is not logged in
+        setCurrentUser(null);
+        setIsLoading(false);
+        router.push('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
   
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -143,5 +162,3 @@ export default function DiscoverPage() {
     </div>
   );
 }
-
-    
