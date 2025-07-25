@@ -45,7 +45,8 @@ export default function MainLayout({
     };
   }, [currentUser, router, pathname]);
 
-  const showNavBar = mainNavPaths.some(path => pathname === path || (path !== '/profile' && pathname.startsWith(path)));
+  // The nav bar should only appear on the exact main navigation paths.
+  const showNavBar = mainNavPaths.includes(pathname);
 
   return (
     <div className="min-h-screen bg-background">
