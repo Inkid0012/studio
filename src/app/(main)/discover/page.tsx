@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
 import { findOrCreateConversation } from "@/lib/data";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -132,23 +131,11 @@ export default function DiscoverPage() {
                 <p className="text-muted-foreground mt-2">
                     This screen is connected to the 'users' collection in Firestore, but no documents were returned.
                 </p>
-                <div className="text-left text-sm text-muted-foreground mt-4 bg-muted p-4 rounded-lg">
-                    <h3 className="font-bold mb-2">Possible Reasons:</h3>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li>The 'users' collection does not exist or is empty in your Firestore database.</li>
-                        <li>Your Firestore Security Rules are preventing read access to the 'users' collection.</li>
-                        <li>The Firebase project configuration in your application is incorrect.</li>
-                    </ul>
-                </div>
             </div>
         ) : (
             <div className="grid grid-cols-2 gap-4">
                 {displayedProfiles.map((user) => (
-                    <Card key={user.id}>
-                        <CardContent className="p-4 text-center">
-                            <h3 className="font-semibold text-foreground">{user.name}</h3>
-                        </CardContent>
-                    </Card>
+                    <ProfileCard key={user.id} user={user} />
                 ))}
             </div>
         )}
