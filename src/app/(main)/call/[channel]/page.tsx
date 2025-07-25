@@ -48,7 +48,6 @@ export default function CallPage() {
 
   const callId = params.channel as string;
   const otherUserId = searchParams.get('otherUserId');
-  const callType = searchParams.get('callType') as 'outgoing' | 'incoming' | null;
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -88,23 +87,22 @@ export default function CallPage() {
   }, [callId, otherUserId, router, toast]);
 
   useEffect(() => {
-    if (!call) return;
+    if (!call || !currentUser) return;
     
     const isOutgoing = call.callerId === currentUser?.id;
 
     // Handle state transitions based on call status
     switch (call.status) {
         case 'calling':
-            if (isOutgoing) {
-                // Ringing sound for caller
+            if (!isJoined) {
                 playRingtone();
-            } else {
-                // Incoming call screen with timeout
-                playRingtone();
-                if (!timeoutRef.current) {
-                    timeoutRef.current = setTimeout(() => {
-                       updateCallStatus(callId, 'timeout');
-                    }, 60000); 
+                if (!isOutgoing) {
+                    // Timeout for incoming call
+                     if (!timeoutRef.current) {
+                        timeoutRef.current = setTimeout(() => {
+                           updateCallStatus(callId, 'timeout');
+                        }, 60000); 
+                    }
                 }
             }
             break;
@@ -116,7 +114,10 @@ export default function CallPage() {
         case 'rejected':
         case 'ended':
         case 'timeout':
-            endCall(true, call.status === 'timeout' ? 'Call timed out' : 'Call ended');
+            let reason = 'Call ended';
+            if (call.status === 'rejected') reason = 'Call rejected';
+            if (call.status === 'timeout') reason = 'Call timed out';
+            endCall(true, reason);
             break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -192,13 +193,13 @@ export default function CallPage() {
 
   const joinAgoraCall = async () => {
     if (!currentUser || isJoined) return;
-    setIsJoined(true);
 
     try {
         const appId = '5f5749cfcb054a82b4c779444f675284';
         const token = null;
 
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        setIsJoined(true);
 
         client.on('user-published', async (user, mediaType) => {
             await client?.subscribe(user, mediaType);
