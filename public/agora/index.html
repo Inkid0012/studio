@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Agora Voice Call</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.1.js"></script>
+  </head>
+  <body>
+    <h2>Agora Voice Call Demo</h2>
+    <button onclick="startCall()">Join Voice Call</button>
+
+    <script>
+      const APP_ID = "5f5749cfcb054a82b4c779444f675284";
+      const TOKEN = "007eJxTYHhcWnB/opSe06eqbLEvp3VYbzFNOrXUR6D+WE29ZfscPWMFBtM0U3MTy+S05CQDU5NEC6Mkk2Rzc0sTE5M0M3NTIwuTY+XNGQ2BjAzqt/MZGKEQxOdmKEktLnHOSMzLS81hYAAA9FohIw==";
+      const CHANNEL = "testChannel";
+
+      async function startCall() {
+        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+        await client.join(APP_ID, CHANNEL, TOKEN, null);
+
+        const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await client.publish([localAudioTrack]);
+
+        console.log("✅ Joined and published audio to channel:", CHANNEL);
+        alert("✅ Voice call started");
+      }
+    </script>
+  </body>
+</html>
