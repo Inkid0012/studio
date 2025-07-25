@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Search, Wallet, X, Loader2 } from "lucide-react";
+import { PlayCircle, Search, Wallet, X, Loader2, Phone } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileListItem } from "@/components/profile-list-item";
@@ -76,7 +76,7 @@ export default function DiscoverPage() {
     setIsSearching(false);
   };
   
-  const handleVoiceChat = () => {
+  const joinAgoraCall = () => {
     const currentUser = getCurrentUser();
     if (!currentUser) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
@@ -86,11 +86,15 @@ export default function DiscoverPage() {
         toast({ variant: 'destructive', title: 'Insufficient Coins', description: `You need at least ${CHARGE_COSTS.call} coins to make a call.`});
         return;
     }
-    const randomUser = displayedProfiles[0];
-    if (!randomUser) {
+    // In a real app, you might have a more sophisticated matchmaking system.
+    // Here, we just pick a random user from the available profiles.
+    const availableUsers = displayedProfiles.filter(p => p.id !== currentUser.id);
+    if (availableUsers.length === 0) {
         toast({ variant: 'destructive', title: 'No users available', description: 'Could not find a user to call right now.' });
         return;
     }
+    const randomUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
+
     const conversationId = [currentUser.id, randomUser.id].sort().join('-');
     router.push(`/call/${conversationId}?otherUserId=${randomUser.id}`);
   };
@@ -126,16 +130,16 @@ export default function DiscoverPage() {
       </MainHeader>
       <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <Card className="bg-[#800000] text-white shadow-lg overflow-hidden cursor-pointer" onClick={handleVoiceChat}>
-            <CardContent className="p-4 flex flex-col justify-between h-full">
-              <h3 className="font-bold text-lg">Voice Chat</h3>
-              <div className="flex justify-end">
-                <PlayCircle className="w-8 h-8 opacity-80" />
+          <Button onClick={joinAgoraCall} className="h-auto py-4 bg-[#800000] text-white shadow-lg hover:bg-[#800000]/90">
+             <CardContent className="p-0 flex flex-col justify-between items-start h-full w-full">
+              <h3 className="font-bold text-lg">Join Voice Call</h3>
+              <div className="flex justify-end w-full">
+                <Phone className="w-8 h-8 opacity-80" />
               </div>
             </CardContent>
-          </Card>
+          </Button>
           <Link href="/wallet">
-            <Card className="bg-green-600 text-white shadow-lg overflow-hidden">
+            <Card className="bg-green-600 text-white shadow-lg overflow-hidden h-full">
               <CardContent className="p-4 flex flex-col justify-between h-full">
                 <h3 className="font-bold text-lg">Recharge</h3>
                  <div className="flex justify-end">
