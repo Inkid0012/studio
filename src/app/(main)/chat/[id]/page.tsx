@@ -15,6 +15,7 @@ import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export default function ChatPage() {
   const params = useParams();
@@ -126,37 +127,13 @@ export default function ChatPage() {
     <div className="flex flex-col h-screen bg-muted/20">
         <MainHeader title={otherUser.name} showBackButton={true}>
             <span className='text-xs text-green-500 mr-2'>● Online</span>
-            <Avatar className="h-8 w-8">
-                <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} data-ai-hint="portrait person" />
-                <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
-            </Avatar>
+             <Link href={`/profile/${otherUser.id}`}>
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} data-ai-hint="portrait person" />
+                    <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </Link>
         </MainHeader>
-        
-        <div className="p-4">
-            <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-lg">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Badge className="bg-pink-200 text-pink-700">♀ {otherUser.age}</Badge>
-                            <Badge className="bg-green-200 text-green-700">{otherUser.country || 'Nigeria'}</Badge>
-                            <Badge className="bg-lime-200 text-lime-700">Active</Badge>
-                        </div>
-                        <p className="text-sm text-gray-700 mt-3">
-                           <span className="text-lg">🗨️</span> Personality similarity: <span className="font-bold">89%</span>
-                        </p>
-                    </div>
-                     <div className="text-center text-sm text-gray-600">
-                        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100">
-                            💧
-                        </div>
-                        <span>0°C</span>
-                    </div>
-                </div>
-                 <p className="text-sm text-gray-600 mt-2">
-                    Can chat with her/him 💄 Make-Up ✏️ Design 🎉 Festivals
-                </p>
-            </div>
-        </div>
 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef as any}>
         <div className="space-y-4">
@@ -182,6 +159,12 @@ export default function ChatPage() {
               >
                 <p className="text-sm">{message.text}</p>
               </div>
+                {message.senderId === currentUser.id && (
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={currentUser.profilePicture} alt={currentUser.name} data-ai-hint="portrait person" />
+                        <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                )}
             </div>
           ))}
         </div>
