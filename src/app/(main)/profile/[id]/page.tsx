@@ -132,18 +132,10 @@ export default function UserProfilePage() {
   
   const handleCall = async () => {
       if (!currentUser || !user || isBlocked) return;
-      if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
-          setShowRechargeDialog(true);
-          return;
-      }
-      setIsProcessing(true);
-      const callId = await startCall(currentUser.id, user.id);
-      if (callId) {
-        router.push(`/call/${callId}?otherUserId=${user.id}`);
-      } else {
-        toast({ variant: 'destructive', title: 'Call Failed', description: "Could not initiate the call. The user might have blocked you or is unavailable." });
-      }
-      setIsProcessing(false);
+      toast({
+        title: 'Coming Soon!',
+        description: 'This feature is under development.',
+      });
   };
   
   const handleFollow = async () => {

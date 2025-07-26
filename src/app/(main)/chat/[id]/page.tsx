@@ -84,11 +84,11 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  const handleInsufficientCoins = (type: 'message' | 'call') => {
-      const cost = type === 'message' ? CHARGE_COSTS.message : CHARGE_COSTS.call;
+  const handleInsufficientCoins = (type: 'message') => {
+      const cost = CHARGE_COSTS.message;
       setRechargeContext({
           title: 'Insufficient Coins',
-          description: `You need ${cost} coins to ${type === 'message' ? 'send a message' : 'make a voice call'}. Please recharge.`
+          description: `You need ${cost} coins to send a message. Please recharge.`
       });
       setShowRechargeDialog(true);
   };
@@ -123,22 +123,11 @@ export default function ChatPage() {
       }
   };
 
-  const handleCall = async () => {
-     if (!currentUser || !otherUser || isBlocked) return;
-     if (currentUser.gender === 'male') {
-        const freshUser = await getUserById(currentUser.id);
-        if (!freshUser || freshUser.coins < CHARGE_COSTS.call) {
-            handleInsufficientCoins('call');
-            return;
-        }
-    }
-      
-    const callId = await startCall(currentUser.id, otherUser.id);
-    if (callId) {
-      router.push(`/call/${callId}?otherUserId=${otherUser.id}`);
-    } else {
-      toast({ variant: 'destructive', title: 'Call Failed', description: 'Could not start the call. The user might be busy or has blocked you.' });
-    }
+  const handleFeatureComingSoon = () => {
+    toast({
+      title: 'Coming Soon!',
+      description: 'This feature is under development.',
+    });
   }
   
   if (isLoading || !conversation || !currentUser || !otherUser) {
@@ -232,7 +221,7 @@ export default function ChatPage() {
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
                 <ImageIcon className="h-7 w-7" />
             </Button>
-             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent" onClick={handleCall}>
+             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent" onClick={handleFeatureComingSoon}>
                 <Phone className="h-7 w-7" />
             </Button>
              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
