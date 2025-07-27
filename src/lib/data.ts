@@ -297,11 +297,14 @@ export function getConversationsForUser(userId: string, callback: (conversations
           data.participantIds.map((id: string) => getUserById(id))
         );
         
-        // Fetch unread count
+        // Fetch unread count by filtering on the client
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
-        const unreadSnapshot = await getDocs(unreadQuery);
-        const unreadCount = unreadSnapshot.docs.filter(doc => !doc.data().readBy.includes(userId)).length;
+        const allMessagesSnapshot = await getDocs(query(messagesRef, where('senderId', '!=', userId)));
+        
+        const unreadCount = allMessagesSnapshot.docs.filter(doc => {
+            const messageData = doc.data();
+            return !messageData.readBy || !messageData.readBy.includes(userId);
+        }).length;
 
         return {
           id: docSnap.id,
