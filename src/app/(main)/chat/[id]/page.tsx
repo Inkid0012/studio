@@ -10,12 +10,13 @@ import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, S
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, ChangeEvent } from 'react';
 import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 import { moderateMessage } from '@/ai/flows/moderate-chat-flow';
+import Image from 'next/image';
 
 export default function ChatPage() {
   const params = useParams();
@@ -33,6 +34,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
   const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
@@ -86,23 +88,24 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  const handleInsufficientCoins = (type: 'message') => {
+  const handleInsufficientCoins = (type: 'message' | 'image') => {
       const cost = CHARGE_COSTS.message;
+      const item = type === 'image' ? 'send a photo' : 'send a message';
       setRechargeContext({
           title: 'Insufficient Coins',
-          description: `You need ${cost} coins to send a message. Please recharge.`
+          description: `You need ${cost} coins to ${item}. Please recharge.`
       });
       setShowRechargeDialog(true);
   };
+  
+  const handleSendMessage = async (content: string, type: Message['type'] = 'text') => {
+    if (!content.trim() || !currentUser || isBlocked || isSending) return;
 
-  const handleSendMessage = async (text: string) => {
-      const messageToSend = text.trim();
-      if (!messageToSend || !currentUser || isBlocked || isSending) return;
+    setIsSending(true);
 
-      setIsSending(true);
-
-      try {
-        const moderationResult = await moderateMessage({ text: messageToSend });
+    try {
+      if (type === 'text') {
+        const moderationResult = await moderateMessage({ text: content });
         if (moderationResult.isBlocked) {
             toast({
                 variant: 'destructive',
@@ -112,38 +115,54 @@ export default function ChatPage() {
             setIsSending(false);
             return;
         }
-
-        if (currentUser.gender === 'male') {
-            const freshUser = await getUserById(currentUser.id);
-            if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
-                handleInsufficientCoins('message');
-                setIsSending(false);
-                return;
-            }
-            const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
-            setCurrentUserFromState(updatedUser);
-            setCurrentUser(updatedUser);
-            await createUserInFirestore(updatedUser);
-            await addTransaction({
-                type: 'spent',
-                amount: CHARGE_COSTS.message,
-                description: `Message to ${otherUser?.name || 'user'}`,
-                userId: currentUser.id,
-            });
-        }
-
-        const success = await sendMessage(convoId, currentUser.id, messageToSend);
-        if (success) {
-          setMessageText('');
-        } else {
-          toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
-        }
-      } catch (error) {
-          console.error("Error sending message:", error);
-          toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
-      } finally {
-        setIsSending(false);
       }
+
+      if (currentUser.gender === 'male') {
+          const freshUser = await getUserById(currentUser.id);
+          if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
+              handleInsufficientCoins(type);
+              setIsSending(false);
+              return;
+          }
+          const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
+          setCurrentUserFromState(updatedUser);
+          setCurrentUser(updatedUser);
+          await createUserInFirestore(updatedUser);
+          await addTransaction({
+              type: 'spent',
+              amount: CHARGE_COSTS.message,
+              description: `${type === 'image' ? 'Photo' : 'Message'} to ${otherUser?.name || 'user'}`,
+              userId: currentUser.id,
+          });
+      }
+
+      const success = await sendMessage(convoId, currentUser.id, content, type);
+      if (success) {
+        if (type === 'text') {
+          setMessageText('');
+        }
+      } else {
+        toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
+      }
+    } catch (error) {
+        console.error("Error sending message:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            // The content for an image message is the data URL itself.
+            handleSendMessage(dataUrl, 'image');
+        };
+        reader.readAsDataURL(file);
+    }
   };
   
   const handleFeatureComingSoon = () => {
@@ -198,7 +217,11 @@ export default function ChatPage() {
                     : 'bg-card text-foreground rounded-bl-none shadow-sm'
                 )}
               >
-                <p className="text-sm">{message.text}</p>
+                {message.type === 'image' ? (
+                  <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md" />
+                ) : (
+                  <p className="text-sm">{message.text}</p>
+                )}
               </div>
                 {message.senderId === currentUser.id && (
                     <Avatar className="h-8 w-8">
@@ -230,21 +253,29 @@ export default function ChatPage() {
                     className="pr-10 rounded-full bg-muted border-none"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(messageText)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(messageText, 'text')}
                     disabled={isSending}
                 />
                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-accent">
                     <Smile className="h-5 w-5" />
                 </Button>
             </div>
-            <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full" onClick={() => handleSendMessage(messageText)} disabled={isSending}>
-                {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full" onClick={() => handleSendMessage(messageText, 'text')} disabled={isSending || !messageText}>
+                {isSending && !fileInputRef.current?.value ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </Button>
         </div>
          <div className="flex justify-around items-center mt-3">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent" onClick={() => fileInputRef.current?.click()}>
                 <ImageIcon className="h-7 w-7" />
             </Button>
+            <Input 
+                type="file" 
+                className="hidden" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*"
+                disabled={isSending}
+            />
              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent" onClick={handleFeatureComingSoon}>
                 <Phone className="h-7 w-7" />
             </Button>
@@ -280,5 +311,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

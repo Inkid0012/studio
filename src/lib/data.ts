@@ -174,7 +174,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     }
 }
 
-export async function sendMessage(conversationId: string, senderId: string, text: string): Promise<boolean> {
+export async function sendMessage(conversationId: string, senderId: string, text: string, type: Message['type'] = 'text'): Promise<boolean> {
     try {
         await runTransaction(db, async (transaction) => {
             const conversationRef = doc(db, 'conversations', conversationId);
@@ -206,14 +206,17 @@ export async function sendMessage(conversationId: string, senderId: string, text
             const messagesRef = collection(db, 'conversations', conversationId, 'messages');
             const newMessageRef = doc(messagesRef);
 
+            const content = type === 'image' ? text : '';
+            const messageText = type === 'image' ? '[Photo]' : text;
+
             const newMessage: Omit<Message, 'id'> = {
-                senderId, text, type: 'text', content: text,
+                senderId, text: messageText, type, content,
                 timestamp: Timestamp.now(),
             };
             transaction.set(newMessageRef, newMessage);
 
             transaction.update(conversationRef, {
-                lastMessage: { text, senderId, timestamp: Timestamp.now() }
+                lastMessage: { text: messageText, senderId, timestamp: Timestamp.now() }
             });
         });
         return true;
@@ -230,7 +233,12 @@ export function getMessages(conversationId: string, callback: (messages: Message
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const messages: Message[] = [];
         querySnapshot.forEach((doc) => {
-            messages.push({ id: doc.id, ...doc.data() } as Message);
+            const data = doc.data();
+            messages.push({ 
+                id: doc.id, 
+                ...data,
+                content: data.content || (data.type === 'image' ? data.text : ''), // Backwards compatibility
+            } as Message);
         });
         callback(messages);
     }, (error) => {
@@ -450,5 +458,3 @@ export function onIncomingCall(userId: string, callback: (call: Call) => void) {
 
     return unsubscribe;
 }
-
-    
