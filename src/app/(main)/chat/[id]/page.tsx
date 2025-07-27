@@ -283,9 +283,6 @@ export default function ChatPage() {
                 <Gift className="h-7 w-7" />
             </Button>
              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
-                <Video className="h-7 w-7" />
-            </Button>
-             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
                 <MessageCircle className="h-7 w-7" />
             </Button>
         </div>
