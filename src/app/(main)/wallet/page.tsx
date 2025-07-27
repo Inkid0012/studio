@@ -6,12 +6,23 @@ import { useRouter } from 'next/navigation';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Check, WalletCards, History, ArrowUp, Loader2, ChevronRight } from 'lucide-react';
+import { Check, WalletCards, History, ArrowUp, Loader2, ChevronRight, Phone } from 'lucide-react';
 import { getCurrentUser, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import type { User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 const coinPackages = [
   { amount: 500, price: 60 },
@@ -36,6 +47,8 @@ export default function WalletPage() {
   const [selectedPackage, setSelectedPackage] = useState(coinPackages[0]);
   const [isFolded, setIsFolded] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,8 +63,18 @@ export default function WalletPage() {
   const displayedPackages = isFolded ? coinPackages.slice(0, 6) : coinPackages;
   
   const handlePurchase = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !phoneNumber.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Phone Number Required',
+            description: 'Please enter a valid M-Pesa phone number.',
+        });
+        return;
+    }
     setIsProcessing(true);
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     try {
         const updatedUser: User = {
@@ -84,6 +107,7 @@ export default function WalletPage() {
         console.error("Purchase failed", error);
     } finally {
         setIsProcessing(false);
+        setPaymentDialogOpen(false);
     }
   };
 
@@ -103,7 +127,7 @@ export default function WalletPage() {
         </Button>
       </MainHeader>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 pb-24">
         <Card>
             <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">My Balance</p>
@@ -153,25 +177,48 @@ export default function WalletPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
-          <Button onClick={handlePurchase} disabled={isProcessing} className="w-full h-14 bg-green-500 hover:bg-green-600 text-white text-lg">
-                <div className="flex items-center justify-between w-full">
-                    {isProcessing ? (
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto"/>
-                    ) : (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Google_Pay_logo.svg/1280px-Google_Pay_logo.svg.png" alt="GPay" width={48} height={20} className="filter invert brightness-0" />
-                            </div>
-                            <span className="font-semibold">KES {selectedPackage.price.toLocaleString()}</span>
-                            <ChevronRight className="h-5 w-5 opacity-70" />
-                        </>
-                    )}
-                </div>
-            </Button>
-      </div>
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+          <DialogTrigger asChild>
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+                <Button className="w-full h-14 bg-green-500 hover:bg-green-600 text-white text-lg">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/M-PESA_LOGO-01.svg/1280px-M-PESA_LOGO-01.svg.png" alt="M-Pesa" width={60} height={20} className="filter brightness-0 invert" />
+                        </div>
+                        <span className="font-semibold">KES {selectedPackage.price.toLocaleString()}</span>
+                        <ChevronRight className="h-5 w-5 opacity-70" />
+                    </div>
+                </Button>
+            </div>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Confirm M-Pesa Payment</DialogTitle>
+                <DialogDescription>
+                    Enter your phone number to complete the purchase of {selectedPackage.amount.toLocaleString()} coins for KES {selectedPackage.price.toLocaleString()}.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input 
+                    type="tel" 
+                    placeholder="e.g. 0712345678" 
+                    className="pl-10"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handlePurchase} disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Confirm Purchase
+                </Button>
+            </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-    
