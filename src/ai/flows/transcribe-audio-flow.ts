@@ -7,6 +7,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const TranscribeAudioInputSchema = z.object({
   audioDataUri: z
@@ -32,6 +33,7 @@ const prompt = ai.definePrompt({
   name: 'transcribeAudioPrompt',
   input: {schema: TranscribeAudioInputSchema},
   output: {schema: TranscribeAudioOutputSchema},
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `Transcribe the following audio file.
 {{media url=audioDataUri}}`,
 });

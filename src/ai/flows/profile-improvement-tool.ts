@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const ProfileImprovementInputSchema = z.object({
   profileDescription: z
@@ -38,6 +39,7 @@ const prompt = ai.definePrompt({
   name: 'profileImprovementPrompt',
   input: {schema: ProfileImprovementInputSchema},
   output: {schema: ProfileImprovementOutputSchema},
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `You are a dating profile expert. Analyze the user's current profile description and provide suggestions on how to improve it to attract more matches.
 
 Current Profile Description: {{{profileDescription}}}

@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const ReportUserInputSchema = z.object({
   reportingUserId: z.string().describe("The ID of the user submitting the report."),
@@ -36,6 +37,7 @@ const prompt = ai.definePrompt({
   name: 'userReportPrompt',
   input: { schema: ReportUserInputSchema },
   output: { schema: ReportUserOutputSchema },
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `A user report has been submitted. Please process it.
 
 Reporting User ID: {{{reportingUserId}}}

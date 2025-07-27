@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const ModerateImageInputSchema = z.object({
   photoDataUri: z.string().describe(
@@ -33,6 +34,7 @@ const prompt = ai.definePrompt({
   name: 'moderateImagePrompt',
   input: { schema: ModerateImageInputSchema },
   output: { schema: ModerateImageOutputSchema },
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `You are a strict content moderator for a dating app. Your task is to detect if an image contains any visible digits or numbers. This is to prevent users from sharing phone numbers or other contact information through images.
 
   Analyze the following image. The image should be blocked if it contains any sequence of numbers or standalone digits.

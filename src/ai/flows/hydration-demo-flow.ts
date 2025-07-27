@@ -7,6 +7,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const HydrationDemoInputSchema = z.object({
   prompt: z.string().describe('The user prompt.'),
@@ -28,6 +29,7 @@ const prompt = ai.definePrompt({
   name: 'hydrationDemoPrompt',
   input: {schema: HydrationDemoInputSchema},
   output: {schema: HydrationDemoOutputSchema},
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `You are a helpful assistant. The user said: {{{prompt}}}. Respond briefly.`,
 });
 
