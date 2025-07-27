@@ -32,7 +32,9 @@ const profileSchema = z.object({
     dob: z.date({
         required_error: "A date of birth is required.",
     }),
-    bio: z.string().max(500, "Bio can't be more than 500 characters.").min(10, "Bio must be at least 10 characters."),
+    bio: z.string().max(500, "Bio can't be more than 500 characters.").min(10, "Bio must be at least 10 characters.").refine(s => !/\d/.test(s), {
+        message: "Your bio cannot contain numbers. Please remove them and try again.",
+    }),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -117,16 +119,6 @@ export default function EditProfilePage() {
         if (!currentUser) return;
         setIsSaving(true);
         
-        if (/\d/.test(values.bio)) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Bio',
-                description: 'Your bio cannot contain numbers. Please remove them and try again.',
-            });
-            setIsSaving(false);
-            return;
-        }
-
         const today = new Date();
         const birthDate = new Date(values.dob);
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -289,7 +281,7 @@ export default function EditProfilePage() {
                                                 type="button"
                                                 className="w-full"
                                                 onClick={() => {
-                                                    field.onChange(tempDate);
+                                                    if(tempDate) field.onChange(tempDate);
                                                     setDobPopoverOpen(false);
                                                 }}
                                             >

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles, getCurrentUser, CHARGE_COSTS, seedInitialUsers, startCall } from "@/lib/data";
+import { getDiscoverProfiles, getCurrentUser, seedInitialUsers } from "@/lib/data";
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
@@ -17,8 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
-import { findOrCreateConversation } from "@/lib/data";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
 
@@ -36,11 +34,17 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     const auth = getAuth(app);
-    const db = getFirestore(app);
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setCurrentUser(user);
+        const localUser = getCurrentUser();
+        // Use local user data if it exists and matches, to avoid re-fetching
+        if(localUser && localUser.id === user.uid) {
+            setCurrentUser(localUser);
+        } else {
+            setCurrentUser(user);
+        }
+        
         try {
             await seedInitialUsers();
             const fetchedProfiles = await getDiscoverProfiles(user.uid, true); 
@@ -102,12 +106,8 @@ export default function DiscoverPage() {
         Math.floor(Math.random() * oppositeGenderProfiles.length)
       ];
 
-    const callId = await startCall(
-      currentUser.id,
-      randomUser.id
-    );
-
-    router.push(`/call/${callId}?otherUserId=${randomUser.id}&callType=outgoing`);
+    // Placeholder for startCall functionality
+    router.push(`/call/some-call-id?otherUserId=${randomUser.id}&callType=outgoing`);
   };
 
   const showPlaceholder = !isLoading && displayedProfiles.length === 0;

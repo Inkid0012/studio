@@ -41,6 +41,10 @@ const OtherLink = ({ href, icon: Icon, label, disabled = false }: { href: string
         </div>
     );
     
+    if (disabled) {
+        return <div className="cursor-not-allowed">{content}</div>;
+    }
+    
     return <Link href={href}>{content}</Link>;
 };
 
@@ -60,18 +64,20 @@ export default function ProfilePage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        const localUser = getCurrentUser();
+        // Use local user data for immediate UI, then fetch fresh data
+        if (localUser && localUser.id === firebaseUser.uid) {
+            setUser(localUser);
+            setIsLoading(false); // Render immediately with cached data
+        }
+
         // Fetch from Firestore to get the most up-to-date profile
         const userProfile = await getUserById(firebaseUser.uid);
         if(userProfile){
             setUser(userProfile);
-            setCurrentUser(userProfile);
+            setCurrentUser(userProfile); // Update local storage with fresh data
         } else {
-            // This can happen if the user authenticated but their Firestore record doesn't exist yet
-            // Or if they are an anonymous user going through the setup flow.
-            const localUser = getCurrentUser();
-            if (localUser && localUser.id === firebaseUser.uid) {
-                setUser(localUser);
-            } else {
+             if (!localUser) {
                 // Fallback if no local user is found, redirect to login to restart the flow
                 router.push('/login');
             }
@@ -82,7 +88,7 @@ export default function ProfilePage() {
         setUser(null);
         router.push('/login');
       }
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading after fetch/check is complete
     });
 
     return () => unsubscribe();
@@ -224,7 +230,7 @@ export default function ProfilePage() {
                 <h3 className="font-bold mb-4">Other</h3>
                  <div className="grid grid-cols-4 gap-y-6">
                     <OtherLink 
-                        href={user.isCertified ? '#' : '/profile/certification'} 
+                        href='/profile/certification' 
                         icon={user.isCertified ? ShieldCheck : ShieldAlert} 
                         label={user.isCertified ? "Certified" : "Uncertified"} 
                         disabled={user.isCertified}

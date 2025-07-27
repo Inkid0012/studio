@@ -1,12 +1,12 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCall, getUserById, markMessagesAsRead } from '@/lib/data';
+import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, getUserById, markMessagesAsRead } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle, Ban, Loader2, Circle, CheckCircle } from 'lucide-react';
+import { Phone, Mic, Send, Wallet, Image as ImageIcon, MessageCircle, Ban, Loader2, Circle, CheckCircle, Download, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +17,49 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Link from 'next/link';
 import { moderateMessage } from '@/ai/flows/moderate-chat-flow';
 import { moderateImage } from '@/ai/flows/moderate-image-flow';
+import { transcribeAudio } from '@/ai/flows/transcribe-audio-flow';
 import Image from 'next/image';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+
+const AudioPlayer = ({ src }: { src: string }) => {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const togglePlay = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (audio) {
+            const handleEnded = () => setIsPlaying(false);
+            audio.addEventListener('ended', handleEnded);
+            return () => {
+                audio.removeEventListener('ended', handleEnded);
+            };
+        }
+    }, []);
+
+    return (
+        <div className="flex items-center gap-2 w-48" onClick={togglePlay}>
+            <audio ref={audioRef} src={src} preload="auto" />
+            <div className={`flex items-center justify-center h-8 w-8 rounded-full ${isPlaying ? 'bg-primary/20' : 'bg-muted'}`}>
+                <div className={`h-2 w-1 rounded-full bg-primary transition-all ${isPlaying ? 'animate-[bounce_0.5s_ease-in-out_infinite] scale-y-100' : 'scale-y-50'}`} style={{ animationDelay: '0.1s' }}/>
+                <div className={`h-3 w-1 rounded-full bg-primary transition-all mx-0.5 ${isPlaying ? 'animate-[bounce_0.5s_ease-in-out_infinite] scale-y-100' : 'scale-y-50'}`} style={{ animationDelay: '0.2s' }} />
+                <div className={`h-2 w-1 rounded-full bg-primary transition-all ${isPlaying ? 'animate-[bounce_0.5s_ease-in-out_infinite] scale-y-100' : 'scale-y-50'}`} style={{ animationDelay: '0.3s' }}/>
+            </div>
+            <span className="text-xs text-muted-foreground">Voice Note</span>
+        </div>
+    );
+};
+
 
 export default function ChatPage() {
   const params = useParams();
@@ -27,7 +69,7 @@ export default function ChatPage() {
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentUser, setCurrentUserFromState] = useState<User | null>(getCurrentUser());
+  const [currentUser, setCurrentUserFromState] = useState<User | null>(null);
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
@@ -38,10 +80,6 @@ export default function ChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-
-  const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
-  const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
-  const isBlocked = isBlockedByYou || areYouBlocked;
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -72,13 +110,16 @@ export default function ChatPage() {
     fetchConvo();
   }, [convoId, router]);
 
+  const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
+  const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
+  const isBlocked = isBlockedByYou || areYouBlocked;
+
   useEffect(() => {
     if (!convoId || !currentUser?.id) return;
 
     const unsubscribe = getMessages(convoId, async (newMessages) => {
         setMessages(newMessages);
 
-        // Mark messages as read
         const unreadMessageIds = newMessages
             .filter(msg => msg.senderId !== currentUser.id && !msg.readBy.includes(currentUser.id))
             .map(msg => msg.id);
@@ -138,6 +179,19 @@ export default function ChatPage() {
               variant: 'destructive',
               title: 'Image Blocked',
               description: moderationResult.reason || 'This image appears to contain numbers and cannot be sent.',
+          });
+          setIsSending(false);
+          return;
+        }
+      }
+      if (type === 'voice') {
+        const transcriptionResult = await transcribeAudio({ audioDataUri: content });
+        const moderationResult = await moderateMessage({ text: transcriptionResult.transcription });
+        if (moderationResult.isBlocked) {
+          toast({
+              variant: 'destructive',
+              title: 'Voice Note Blocked',
+              description: "This voice note appears to contain numbers and cannot be sent.",
           });
           setIsSending(false);
           return;
@@ -276,20 +330,31 @@ export default function ChatPage() {
                   <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               )}
-              <div> {/* Wrapper for bubble and receipt */}
+              <div>
                 <div
                     className={cn('max-w-xs md:max-w-md rounded-2xl px-4 py-2', 
+                    message.type === 'image' || message.type === 'voice' ? 'p-1 bg-transparent' : '',
                     message.senderId === currentUser.id 
                         ? 'bg-primary text-primary-foreground rounded-br-none' 
                         : 'bg-card text-foreground rounded-bl-none shadow-sm'
                     )}
                 >
                     {message.type === 'image' ? (
-                    <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md" />
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md cursor-pointer" />
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl p-0">
+                                <Image src={message.content} alt="Sent image" width={800} height={800} className="w-full h-auto" />
+                                <a href={message.content} download={`image-${message.id}.png`} className="absolute bottom-4 right-4 bg-black/50 text-white p-2 rounded-full">
+                                    <Download className="h-5 w-5" />
+                                </a>
+                            </DialogContent>
+                        </Dialog>
                     ) : message.type === 'voice' ? (
-                    <audio src={message.content} controls className="h-10" />
+                        <AudioPlayer src={message.content} />
                     ) : (
-                    <p className="text-sm">{message.text}</p>
+                        <p className="text-sm">{message.text}</p>
                     )}
                 </div>
                  {message.senderId === currentUser.id && (
@@ -337,15 +402,12 @@ export default function ChatPage() {
             <div className="flex-1 relative">
                 <Input 
                     placeholder="Type a message..." 
-                    className="pr-10 rounded-full bg-muted border-none"
+                    className="pr-4 rounded-full bg-muted border-none"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(messageText, 'text')}
                     disabled={isSending}
                 />
-                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-accent">
-                    <Smile className="h-5 w-5" />
-                </Button>
             </div>
             <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full" onClick={() => handleSendMessage(messageText, 'text')} disabled={isSending || !messageText}>
                 {isSending && !fileInputRef.current?.value ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
