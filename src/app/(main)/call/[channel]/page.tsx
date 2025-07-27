@@ -184,7 +184,6 @@ export default function CallPage() {
         case 'ringing':
             if (componentState === 'initializing') {
                 setComponentState('ringing');
-                playRingtone();
             }
             break;
         case 'accepted':
@@ -205,19 +204,31 @@ export default function CallPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [call, currentUser]);
+  
+  // Effect to handle ringtone playback based on component state
+  useEffect(() => {
+    if (componentState === 'ringing') {
+      playRingtone();
+    } else {
+      stopRingtone();
+    }
+  }, [componentState]);
 
 
   const playRingtone = () => {
       if(ringtoneRef.current) {
           ringtoneRef.current.loop = true;
-          ringtoneRef.current.play().catch(error => {
-              console.warn("Ringtone autoplay was blocked by the browser.", error);
-          });
+          const playPromise = ringtoneRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.warn("Ringtone autoplay was blocked by the browser.", error);
+            });
+          }
       }
   }
 
   const stopRingtone = () => {
-      if(ringtoneRef.current) {
+      if(ringtoneRef.current && !ringtoneRef.current.paused) {
           ringtoneRef.current.pause();
           ringtoneRef.current.currentTime = 0;
       }
@@ -323,11 +334,7 @@ export default function CallPage() {
           ref={ringtoneRef}
           src="https://www.soundjay.com/phone/sounds/telephone-ring-02.mp3"
           loop
-          onCanPlayThrough={() => {
-              if(ringtoneRef.current && componentState === 'ringing') {
-                  ringtoneRef.current.play().catch(e => console.warn("Autoplay blocked", e));
-              }
-          }}
+          preload="auto"
         />
       <div className="flex flex-col items-center gap-4 mt-24">
         <Avatar className="w-32 h-32 border-4 border-primary">
