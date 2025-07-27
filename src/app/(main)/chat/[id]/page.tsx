@@ -15,6 +15,7 @@ import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
+import { moderateMessage } from '@/ai/flows/moderate-chat-flow';
 
 export default function ChatPage() {
   const params = useParams();
@@ -30,6 +31,7 @@ export default function ChatPage() {
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
@@ -95,34 +97,55 @@ export default function ChatPage() {
 
   const handleSendMessage = async (text: string) => {
       const messageToSend = text.trim();
-      if (!messageToSend || !currentUser || isBlocked) return;
+      if (!messageToSend || !currentUser || isBlocked || isSending) return;
 
-      if (currentUser.gender === 'male') {
-          const freshUser = await getUserById(currentUser.id);
-          if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
-              handleInsufficientCoins('message');
-              return;
-          }
-          const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
-          setCurrentUserFromState(updatedUser);
-          setCurrentUser(updatedUser);
-          await createUserInFirestore(updatedUser);
-          await addTransaction({
-              type: 'spent',
-              amount: CHARGE_COSTS.message,
-              description: `Message to ${otherUser?.name || 'user'}`,
-              userId: currentUser.id,
-          });
-      }
+      setIsSending(true);
 
-      const success = await sendMessage(convoId, currentUser.id, messageToSend);
-      if (success) {
-        setMessageText('');
-      } else {
-        toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
+      try {
+        const moderationResult = await moderateMessage({ text: messageToSend });
+        if (moderationResult.isBlocked) {
+            toast({
+                variant: 'destructive',
+                title: 'Message Blocked',
+                description: moderationResult.reason || 'This message violates our policy on sharing contact information.',
+            });
+            setIsSending(false);
+            return;
+        }
+
+        if (currentUser.gender === 'male') {
+            const freshUser = await getUserById(currentUser.id);
+            if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
+                handleInsufficientCoins('message');
+                setIsSending(false);
+                return;
+            }
+            const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
+            setCurrentUserFromState(updatedUser);
+            setCurrentUser(updatedUser);
+            await createUserInFirestore(updatedUser);
+            await addTransaction({
+                type: 'spent',
+                amount: CHARGE_COSTS.message,
+                description: `Message to ${otherUser?.name || 'user'}`,
+                userId: currentUser.id,
+            });
+        }
+
+        const success = await sendMessage(convoId, currentUser.id, messageToSend);
+        if (success) {
+          setMessageText('');
+        } else {
+          toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
+        }
+      } catch (error) {
+          console.error("Error sending message:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+      } finally {
+        setIsSending(false);
       }
   };
-
+  
   const handleFeatureComingSoon = () => {
     toast({
       title: 'Coming Soon!',
@@ -208,13 +231,14 @@ export default function ChatPage() {
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(messageText)}
+                    disabled={isSending}
                 />
                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-accent">
                     <Smile className="h-5 w-5" />
                 </Button>
             </div>
-            <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full" onClick={() => handleSendMessage(messageText)}>
-                <Send className="h-5 w-5" />
+            <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full" onClick={() => handleSendMessage(messageText)} disabled={isSending}>
+                {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </Button>
         </div>
          <div className="flex justify-around items-center mt-3">
