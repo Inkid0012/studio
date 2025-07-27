@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MainHeader } from '@/components/layout/main-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Check, WalletCards, History, ArrowUp, Loader2 } from 'lucide-react';
+import { Check, WalletCards, History, ArrowUp, Loader2, ChevronRight } from 'lucide-react';
 import { getCurrentUser, addTransaction, createUserInFirestore, setCurrentUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -14,14 +14,14 @@ import type { User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 const coinPackages = [
-  { amount: 500, price: 0.64 },
-  { amount: 1000, price: 1.28 },
-  { amount: 2000, price: 2.56 },
-  { amount: 5000, price: 6.40 },
-  { amount: 10000, price: 12.80 },
-  { amount: 20000, price: 25.60 },
-  { amount: 50000, price: 64.00, popular: true },
-  { amount: 100000, price: 128.00 },
+  { amount: 500, price: 60 },
+  { amount: 1000, price: 140 },
+  { amount: 2000, price: 300 },
+  { amount: 5000, price: 800 },
+  { amount: 10000, price: 1600 },
+  { amount: 20000, price: 3300 },
+  { amount: 50000, price: 8300, popular: true },
+  { amount: 100000, price: 16700 },
 ];
 
 const CoinIcon = () => (
@@ -163,7 +163,7 @@ export default function WalletPage() {
                             <div className="flex items-center gap-2">
                                 <Image src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Google_Pay_logo.svg/1280px-Google_Pay_logo.svg.png" alt="GPay" width={48} height={20} className="filter invert brightness-0" />
                             </div>
-                            <span className="font-semibold">USD {selectedPackage.price.toFixed(2)}</span>
+                            <span className="font-semibold">KES {selectedPackage.price.toLocaleString()}</span>
                             <ChevronRight className="h-5 w-5 opacity-70" />
                         </>
                     )}
@@ -173,10 +173,3 @@ export default function WalletPage() {
     </div>
   );
 }
-
-
-const ChevronRight = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5" {...props}>
-      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-    </svg>
-  );
