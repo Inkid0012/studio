@@ -285,13 +285,6 @@ export default function ChatPage() {
     }
   };
   
-  const handleFeatureComingSoon = () => {
-    toast({
-      title: 'Coming Soon!',
-      description: 'This feature is under development.',
-    });
-  }
-  
   if (isLoading || !conversation || !currentUser || !otherUser) {
     return (
         <div className="flex flex-col h-screen bg-muted/20">
@@ -425,7 +418,7 @@ export default function ChatPage() {
                 accept="image/*"
                 disabled={isSending}
             />
-             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent" onClick={handleFeatureComingSoon}>
+             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
                 <Phone className="h-7 w-7" />
             </Button>
              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">

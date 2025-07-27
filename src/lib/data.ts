@@ -228,10 +228,14 @@ export async function sendMessage(conversationId: string, senderId: string, text
 
 
             const newMessage: Omit<Message, 'id'> = {
-                senderId, text: messageText, type, content,
+                senderId, 
+                text: messageText, 
+                type, 
+                content,
                 timestamp: Timestamp.now(),
                 readBy: [senderId], // Initialize with sender
             };
+            
             transaction.set(newMessageRef, newMessage);
 
             transaction.update(conversationRef, {
@@ -256,7 +260,7 @@ export function getMessages(conversationId: string, callback: (messages: Message
             messages.push({ 
                 id: doc.id, 
                 ...data,
-                content: data.content || (data.type === 'image' ? data.text : ''), // Backwards compatibility
+                content: data.content || '',
                 readBy: data.readBy || [data.senderId], // Backwards compatibility
             } as Message);
         });
@@ -297,11 +301,11 @@ export function getConversationsForUser(userId: string, callback: (conversations
           data.participantIds.map((id: string) => getUserById(id))
         );
         
-        // Fetch unread count by filtering on the client
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const allMessagesSnapshot = await getDocs(query(messagesRef, where('senderId', '!=', userId)));
+        const unreadMessagesQuery = query(messagesRef, where('senderId', '!=', userId));
+        const unreadMessagesSnapshot = await getDocs(unreadMessagesQuery);
         
-        const unreadCount = allMessagesSnapshot.docs.filter(doc => {
+        const unreadCount = unreadMessagesSnapshot.docs.filter(doc => {
             const messageData = doc.data();
             return !messageData.readBy || !messageData.readBy.includes(userId);
         }).length;
@@ -377,7 +381,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     const targetUserRef = doc(db, 'users', targetUserId);
     const batch = writeBatch(db);
     batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
-    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
+    batch.update(targetUserRef, { followers: arrayRemove(targetUserId) });
     await batch.commit();
 }
 
