@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const ModerateMessageInputSchema = z.object({
   text: z.string().describe("The chat message text to analyze."),
@@ -31,6 +32,7 @@ const prompt = ai.definePrompt({
   name: 'moderateMessagePrompt',
   input: { schema: ModerateMessageInputSchema },
   output: { schema: ModerateMessageOutputSchema },
+  model: googleAI.model('gemini-1.5-flash-latest'),
   prompt: `You are a strict content moderator for a dating app. Your task is to detect if a user is trying to share contact information.
 
   Analyze the following message. A message should be blocked if it contains:
