@@ -5,29 +5,18 @@ import { getDiscoverProfiles, getCurrentUser, seedInitialUsers } from "@/lib/dat
 import { MainHeader } from "@/components/layout/main-header";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Search, Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
+import { SearchDialog } from "@/components/search-dialog";
 
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
   const [displayedProfiles, setDisplayedProfiles] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -66,16 +55,14 @@ export default function DiscoverPage() {
     return () => unsubscribe();
   }, [router]);
   
-  const handleSearch = async () => {
+  const handleSearch = async (searchQuery: string) => {
+    setIsLoading(true);
+
     if (!searchQuery.trim()) {
         setDisplayedProfiles(allProfiles);
-        setSearchOpen(false);
+        setIsLoading(false);
         return;
     }
-    
-    setIsLoading(true);
-    setIsSearching(true);
-    setSearchOpen(false);
 
     const lowerCaseQuery = searchQuery.toLowerCase();
     
@@ -86,7 +73,6 @@ export default function DiscoverPage() {
     
     setDisplayedProfiles(results);
     setIsLoading(false);
-    setIsSearching(false);
   };
   
     const handleRandomCall = async () => {
@@ -115,29 +101,7 @@ export default function DiscoverPage() {
   return (
     <div>
       <MainHeader title="Discover" showBackButton={false}>
-         <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-            <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <Search className="h-6 w-6"/>
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Search Users</DialogTitle>
-                </DialogHeader>
-                <div className="flex items-center space-x-2">
-                    <Input
-                        placeholder="Search by name or ID..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                    <Button type="submit" onClick={handleSearch} disabled={isLoading}>
-                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Search'}
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
+         <SearchDialog onSearch={handleSearch} />
       </MainHeader>
       <div className="p-4">
         {isLoading ? (
