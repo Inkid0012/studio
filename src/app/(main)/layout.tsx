@@ -21,17 +21,21 @@ export default function MainLayout({
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // This effect runs once on mount to confirm we are on the client.
     setIsClient(true);
+    // We also get the user synchronously on the first check.
     const user = getCurrentUser();
-    if (user) {
-        setCurrentUser(user);
-    } else {
-      // Only redirect if we are on the client and not on a public path.
-      if (isClient && !window.location.pathname.startsWith('/login')) {
-        router.push('/login');
-      }
+    setCurrentUser(user);
+  }, []);
+
+  useEffect(() => {
+    // This separate effect handles redirection once we know we are on the client.
+    if (isClient && !currentUser) {
+       if (!window.location.pathname.startsWith('/login')) {
+         router.push('/login');
+       }
     }
-  }, [pathname, router, isClient]);
+  }, [currentUser, isClient, router, pathname]);
 
   useEffect(() => {
     if (!currentUser || !isClient) return;
@@ -52,6 +56,12 @@ export default function MainLayout({
 
   // The nav bar should only appear on the exact main navigation paths.
   const showNavBar = isClient && mainNavPaths.includes(pathname);
+
+  // Avoid rendering children until we have confirmed auth status on the client.
+  // This prevents rendering content meant for logged-in users to logged-out users.
+  if (!currentUser && isClient) {
+      return null; // or a loading spinner
+  }
 
   return (
     <div className="min-h-screen bg-background">
