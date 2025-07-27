@@ -229,6 +229,7 @@ export async function sendMessage(conversationId: string, senderId: string, text
             const newMessage: Omit<Message, 'id'> = {
                 senderId, text: messageText, type, content,
                 timestamp: Timestamp.now(),
+                readBy: [senderId], // Initialize with sender
             };
             transaction.set(newMessageRef, newMessage);
 
@@ -255,6 +256,7 @@ export function getMessages(conversationId: string, callback: (messages: Message
                 id: doc.id, 
                 ...data,
                 content: data.content || (data.type === 'image' ? data.text : ''), // Backwards compatibility
+                readBy: data.readBy || [data.senderId], // Backwards compatibility
             } as Message);
         });
         callback(messages);
@@ -264,6 +266,23 @@ export function getMessages(conversationId: string, callback: (messages: Message
 
     return unsubscribe;
 }
+
+export async function markMessagesAsRead(conversationId: string, messageIds: string[], userId: string) {
+    if (messageIds.length === 0) return;
+    const batch = writeBatch(db);
+    messageIds.forEach(messageId => {
+        const messageRef = doc(db, 'conversations', conversationId, 'messages', messageId);
+        batch.update(messageRef, {
+            readBy: arrayUnion(userId)
+        });
+    });
+    try {
+        await batch.commit();
+    } catch (error) {
+        console.error("Failed to mark messages as read:", error);
+    }
+}
+
 
 export function getConversationsForUser(userId: string, callback: (conversations: Conversation[]) => void) {
   const conversationsRef = collection(db, "conversations");

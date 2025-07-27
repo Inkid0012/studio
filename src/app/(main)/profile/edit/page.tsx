@@ -116,6 +116,16 @@ export default function EditProfilePage() {
     async function onSubmit(values: ProfileFormValues) {
         if (!currentUser) return;
         setIsSaving(true);
+        
+        if (/\d/.test(values.bio)) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Bio',
+                description: 'Your bio cannot contain numbers. Please remove them and try again.',
+            });
+            setIsSaving(false);
+            return;
+        }
 
         const today = new Date();
         const birthDate = new Date(values.dob);

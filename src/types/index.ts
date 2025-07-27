@@ -41,6 +41,7 @@ export type Message = {
   timestamp: Timestamp; // Keep as Timestamp for Firestore
   type: 'text' | 'image' | 'voice';
   content: string; 
+  readBy: string[]; // Array of user IDs who have read the message
 };
 
 export type Conversation = {

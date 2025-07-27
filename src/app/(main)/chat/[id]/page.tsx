@@ -1,12 +1,12 @@
 
 'use client';
 import { notFound, useParams } from 'next/navigation';
-import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCall, getUserById } from '@/lib/data';
+import { addTransaction, getConversationById, getCurrentUser, setCurrentUser, createUserInFirestore, CHARGE_COSTS, getMessages, sendMessage, startCall, getUserById, markMessagesAsRead } from '@/lib/data';
 import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle, Ban, Loader2 } from 'lucide-react';
+import { Phone, Mic, Paperclip, Send, Wallet, Video, Gift, Image as ImageIcon, Smile, MessageCircle, Ban, Loader2, Circle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 import { moderateMessage } from '@/ai/flows/moderate-chat-flow';
+import { moderateImage } from '@/ai/flows/moderate-image-flow';
 import Image from 'next/image';
 
 export default function ChatPage() {
@@ -72,14 +73,23 @@ export default function ChatPage() {
   }, [convoId, router]);
 
   useEffect(() => {
-    if (!convoId) return;
+    if (!convoId || !currentUser?.id) return;
 
-    const unsubscribe = getMessages(convoId, (newMessages) => {
+    const unsubscribe = getMessages(convoId, async (newMessages) => {
         setMessages(newMessages);
+
+        // Mark messages as read
+        const unreadMessageIds = newMessages
+            .filter(msg => msg.senderId !== currentUser.id && !msg.readBy.includes(currentUser.id))
+            .map(msg => msg.id);
+        
+        if (unreadMessageIds.length > 0) {
+            await markMessagesAsRead(convoId, unreadMessageIds, currentUser.id);
+        }
     });
 
     return () => unsubscribe();
-  }, [convoId]);
+  }, [convoId, currentUser?.id]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -119,6 +129,18 @@ export default function ChatPage() {
             });
             setIsSending(false);
             return;
+        }
+      }
+      if (type === 'image') {
+        const moderationResult = await moderateImage({ photoDataUri: content });
+        if (moderationResult.isBlocked) {
+          toast({
+              variant: 'destructive',
+              title: 'Image Blocked',
+              description: moderationResult.reason || 'This image appears to contain numbers and cannot be sent.',
+          });
+          setIsSending(false);
+          return;
         }
       }
 
@@ -254,19 +276,30 @@ export default function ChatPage() {
                   <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               )}
-              <div
-                className={cn('max-w-xs md:max-w-md rounded-2xl px-4 py-2', 
-                  message.senderId === currentUser.id 
-                    ? 'bg-primary text-primary-foreground rounded-br-none' 
-                    : 'bg-card text-foreground rounded-bl-none shadow-sm'
-                )}
-              >
-                {message.type === 'image' ? (
-                  <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md" />
-                ) : message.type === 'voice' ? (
-                  <audio src={message.content} controls className="h-10" />
-                ) : (
-                  <p className="text-sm">{message.text}</p>
+              <div> {/* Wrapper for bubble and receipt */}
+                <div
+                    className={cn('max-w-xs md:max-w-md rounded-2xl px-4 py-2', 
+                    message.senderId === currentUser.id 
+                        ? 'bg-primary text-primary-foreground rounded-br-none' 
+                        : 'bg-card text-foreground rounded-bl-none shadow-sm'
+                    )}
+                >
+                    {message.type === 'image' ? (
+                    <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md" />
+                    ) : message.type === 'voice' ? (
+                    <audio src={message.content} controls className="h-10" />
+                    ) : (
+                    <p className="text-sm">{message.text}</p>
+                    )}
+                </div>
+                 {message.senderId === currentUser.id && (
+                    <div className="flex justify-end items-center mt-1 pr-1">
+                        {message.readBy?.includes(otherUser.id) ? (
+                            <CheckCircle className="h-4 w-4 text-blue-500" />
+                        ) : (
+                            <Circle className="h-3 w-3 text-muted-foreground" />
+                        )}
+                    </div>
                 )}
               </div>
                 {message.senderId === currentUser.id && (

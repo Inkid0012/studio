@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -30,12 +31,12 @@ const prompt = ai.definePrompt({
   name: 'moderateMessagePrompt',
   input: { schema: ModerateMessageInputSchema },
   output: { schema: ModerateMessageOutputSchema },
-  prompt: `You are a strict content moderator for a dating app. Your task is to detect if a user is trying to share contact information, specifically a phone number.
+  prompt: `You are a strict content moderator for a dating app. Your task is to detect if a user is trying to share contact information.
 
   Analyze the following message. A message should be blocked if it contains:
   1. A sequence of 7 or more digits.
   2. Any standalone digit (e.g., "1", "5").
-  3. Any words that spell out numbers (e.g., "one", "two", "three").
+  3. Any words that spell out numbers in English (e.g., "one", "two", "three") or Swahili (e.g., "sufuri", "moja", "mbili", "tatu", "nne", "tano", "sita", "saba", "nane", "tisa", "kumi").
   4. Any text that asks to share or exchange phone numbers.
 
   If the message should be blocked, set isBlocked to true and provide a brief reason. Otherwise, set isBlocked to false.
