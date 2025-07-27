@@ -69,7 +69,14 @@ export default function TransactionHistoryPage() {
             </CardContent>
           </Card>
         ))}
+        {transactions.length === 0 && (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">No transactions yet.</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+    

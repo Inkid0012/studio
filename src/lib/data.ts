@@ -5,23 +5,31 @@ import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateD
 import { db } from './firebase';
 
 export const CHARGE_COSTS = {
-  message: 20,
+  message: 40,
   call: 150,
 };
 
-let mockTransactions: Transaction[] = [
-    { id: 'txn-1', userId: 'user-1', type: 'purchase', amount: 500, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
-    { id: 'txn-2', userId: 'user-1', type: 'spent', amount: 10, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
-    { id: 'txn-3', userId: 'user-1', type: 'spent', amount: 50, description: 'Voice call with @Diana', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-    { id: 'txn-4', userId: 'user-1', type: 'purchase', amount: 1000, description: 'Coin package purchase', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-];
+let mockTransactions: Transaction[] = [];
+
+// Helper to add initial transactions for a user if they don't have any
+const seedInitialTransactions = (userId: string) => {
+    if (!mockTransactions.some(tx => tx.userId === userId)) {
+        mockTransactions.push(
+            { id: `txn-1-${userId}`, userId: userId, type: 'purchase', amount: 500, description: 'Welcome coins package', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+            { id: `txn-2-${userId}`, userId: userId, type: 'spent', amount: 40, description: 'Message to @Bella', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() },
+        );
+    }
+}
+
 
 export function getCurrentUser(): User | null {
   if (typeof window !== 'undefined') {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       try {
-        return JSON.parse(storedUser);
+        const user = JSON.parse(storedUser);
+        seedInitialTransactions(user.id);
+        return user;
       } catch (e) {
         console.error("Failed to parse currentUser from localStorage", e);
         localStorage.removeItem('currentUser');
@@ -442,3 +450,5 @@ export function onIncomingCall(userId: string, callback: (call: Call) => void) {
 
     return unsubscribe;
 }
+
+    
