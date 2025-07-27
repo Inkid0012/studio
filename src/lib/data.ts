@@ -1,4 +1,5 @@
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -295,10 +296,18 @@ export function getConversationsForUser(userId: string, callback: (conversations
         const participants = await Promise.all(
           data.participantIds.map((id: string) => getUserById(id))
         );
+        
+        // Fetch unread count
+        const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
+        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
+        const unreadSnapshot = await getDocs(unreadQuery);
+        const unreadCount = unreadSnapshot.docs.filter(doc => !doc.data().readBy.includes(userId)).length;
+
         return {
           id: docSnap.id,
           ...data,
           participants: participants.filter((p): p is User => p !== null),
+          unreadCount: unreadCount,
         } as Conversation;
       })
     );

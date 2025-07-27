@@ -54,6 +54,7 @@ export type Conversation = {
     senderId: string;
     timestamp: Timestamp;
   };
+  unreadCount?: number;
 };
 
 export type Call = {

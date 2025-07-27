@@ -5,8 +5,8 @@ import { BottomNavBar } from "@/components/layout/bottom-nav-bar";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { getCurrentUser, onIncomingCall } from "@/lib/data";
-import type { Call, User } from "@/types";
+import { getCurrentUser, getConversationsForUser, onIncomingCall } from "@/lib/data";
+import type { Call, User, Conversation } from "@/types";
 
 const mainNavPaths = ['/discover', '/chat', '/profile'];
 
@@ -19,6 +19,7 @@ export default function MainLayout({
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
   useEffect(() => {
     // This effect runs once on mount to confirm we are on the client.
@@ -35,22 +36,26 @@ export default function MainLayout({
          router.push('/login');
        }
     }
-  }, [currentUser, isClient, router, pathname]);
+  }, [currentUser, isClient, router]);
 
   useEffect(() => {
     if (!currentUser || !isClient) return;
 
     // Listen for new incoming calls
-    const unsubscribe = onIncomingCall(currentUser.id, (call: Call) => {
+    const unsubscribeCalls = onIncomingCall(currentUser.id, (call: Call) => {
         if (!pathname.startsWith('/call/')) {
             router.push(`/call/${call.id}?otherUserId=${call.from}`);
         }
     });
 
+    const unsubscribeConvos = getConversationsForUser(currentUser.id, (convos: Conversation[]) => {
+      const total = convos.reduce((sum, convo) => sum + (convo.unreadCount || 0), 0);
+      setTotalUnreadCount(total);
+    });
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      unsubscribeCalls();
+      unsubscribeConvos();
     };
   }, [currentUser, router, pathname, isClient]);
 
@@ -66,7 +71,7 @@ export default function MainLayout({
   return (
     <div className="min-h-screen bg-background">
       <main className={cn(showNavBar && "pb-24")}>{children}</main>
-      {showNavBar && <BottomNavBar />}
+      {showNavBar && <BottomNavBar totalUnreadCount={totalUnreadCount} />}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 const navItems = [
   { href: "/discover", icon: Home, label: "Home" },
@@ -12,7 +13,7 @@ const navItems = [
   { href: "/profile", icon: User, label: "Me" },
 ];
 
-export function BottomNavBar() {
+export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number }) {
   const pathname = usePathname();
 
   return (
@@ -25,12 +26,17 @@ export function BottomNavBar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group",
+                "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group relative",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
               <item.icon className={cn("w-7 h-7 mb-1", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
               <span className="text-sm font-body">{item.label}</span>
+              {item.href === "/chat" && totalUnreadCount > 0 && (
+                <Badge className="absolute top-2 right-6 px-2 py-0.5 text-xs h-5">
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </Badge>
+              )}
             </Link>
           );
         })}
@@ -38,5 +44,3 @@ export function BottomNavBar() {
     </div>
   );
 }
-
-    
