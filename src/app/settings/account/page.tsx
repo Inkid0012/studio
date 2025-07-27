@@ -22,6 +22,7 @@ import { auth, db } from "@/lib/firebase";
 import { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { deleteDoc, doc } from "firebase/firestore";
+import { setCurrentUser } from "@/lib/data";
 
 export default function AccountSettingsPage() {
     const [confirmationText, setConfirmationText] = useState('');
@@ -40,13 +41,14 @@ export default function AccountSettingsPage() {
         }
 
         try {
-            // Delete user data from Firestore
+            // Delete user data from Firestore first
             await deleteDoc(doc(db, "users", user.uid));
 
-            // Delete user from Firebase Auth
+            // Then, delete the user from Firebase Auth
             await deleteUser(user);
             
-            localStorage.removeItem('currentUser');
+            // Clear local storage and redirect
+            setCurrentUser(null);
 
             toast({
                 title: 'Account Deleted',
@@ -57,11 +59,14 @@ export default function AccountSettingsPage() {
 
         } catch (error: any) {
             console.error("Error deleting account:", error);
-            toast({
+             toast({
                 variant: 'destructive',
                 title: 'Deletion Failed',
-                description: 'An error occurred while deleting your account. You may need to sign in again to complete this action.',
+                description: error.code === 'auth/requires-recent-login'
+                    ? 'This is a sensitive operation. Please log out and log back in before deleting your account.'
+                    : 'An error occurred while deleting your account.',
             });
+        } finally {
             setIsDeleting(false);
         }
     };
