@@ -310,64 +310,69 @@ export default function ChatPage() {
 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef as any}>
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn('flex items-end gap-2', 
-                message.senderId === currentUser.id ? 'justify-end' : 'justify-start'
-              )}
-            >
-              {message.senderId !== currentUser.id && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} data-ai-hint="portrait person" />
-                  <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-              )}
-              <div>
-                <div
-                    className={cn('max-w-xs md:max-w-md rounded-2xl px-4 py-2', 
-                    message.type === 'image' || message.type === 'voice' ? 'p-1 bg-transparent' : '',
-                    message.senderId === currentUser.id 
-                        ? 'bg-primary text-primary-foreground rounded-br-none' 
+          {messages.map((message) => {
+            const isSender = message.senderId === currentUser.id;
+            return (
+              <div
+                key={message.id}
+                className={cn(
+                  'flex items-end gap-2',
+                  isSender ? 'justify-end' : 'justify-start'
+                )}
+              >
+                {!isSender && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={otherUser.profilePicture} alt={otherUser.name} data-ai-hint="portrait person" />
+                    <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                )}
+                <div>
+                  <div
+                    className={cn(
+                      'max-w-xs md:max-w-md rounded-2xl px-4 py-2',
+                      message.type === 'image' || message.type === 'voice' ? 'p-1 bg-transparent' : '',
+                      isSender
+                        ? 'bg-primary text-primary-foreground rounded-br-none'
                         : 'bg-card text-foreground rounded-bl-none shadow-sm'
                     )}
-                >
+                  >
                     {message.type === 'image' ? (
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md cursor-pointer" />
-                            </DialogTrigger>
-                            <DialogContent className="max-w-3xl p-0">
-                                <Image src={message.content} alt="Sent image" width={800} height={800} className="w-full h-auto" />
-                                <a href={message.content} download={`image-${message.id}.png`} className="absolute bottom-4 right-4 bg-black/50 text-white p-2 rounded-full">
-                                    <Download className="h-5 w-5" />
-                                </a>
-                            </DialogContent>
-                        </Dialog>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md cursor-pointer" />
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl p-0">
+                          <Image src={message.content} alt="Sent image" width={800} height={800} className="w-full h-auto" />
+                          <a href={message.content} download={`image-${message.id}.png`} className="absolute bottom-4 right-4 bg-black/50 text-white p-2 rounded-full">
+                            <Download className="h-5 w-5" />
+                          </a>
+                        </DialogContent>
+                      </Dialog>
                     ) : message.type === 'voice' ? (
-                        <AudioPlayer src={message.content} />
+                      <AudioPlayer src={message.content} />
                     ) : (
-                        <p className="text-sm">{message.text}</p>
+                      <p className="text-sm">{message.text}</p>
                     )}
-                </div>
-                 {message.senderId === currentUser.id && (
+                  </div>
+                  {isSender && (
                     <div className="flex justify-end items-center mt-1 pr-1">
-                        {message.readBy?.includes(otherUser.id) ? (
-                            <CheckCircle className="h-4 w-4 text-blue-500" />
-                        ) : (
-                            <Circle className="h-3 w-3 text-muted-foreground" />
-                        )}
+                      {message.readBy?.includes(otherUser.id) ? (
+                        <CheckCircle className="h-4 w-4 text-blue-500" />
+                      ) : (
+                        <Circle className="h-3 w-3 text-muted-foreground" />
+                      )}
                     </div>
+                  )}
+                </div>
+                {isSender && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={currentUser.profilePicture} alt={currentUser.name} data-ai-hint="portrait person" />
+                    <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
                 )}
               </div>
-                {message.senderId === currentUser.id && (
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={currentUser.profilePicture} alt={currentUser.name} data-ai-hint="portrait person" />
-                        <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </ScrollArea>
       
