@@ -33,8 +33,10 @@ export default function ChatPage() {
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(otherUser?.id || ''), [currentUser, otherUser]);
   const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
@@ -88,9 +90,12 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  const handleInsufficientCoins = (type: 'message' | 'image') => {
+  const handleInsufficientCoins = (type: Message['type']) => {
       const cost = CHARGE_COSTS.message;
-      const item = type === 'image' ? 'send a photo' : 'send a message';
+      let item = 'send a message';
+      if (type === 'image') item = 'send a photo';
+      if (type === 'voice') item = 'send a voice note';
+
       setRechargeContext({
           title: 'Insufficient Coins',
           description: `You need ${cost} coins to ${item}. Please recharge.`
@@ -131,7 +136,7 @@ export default function ChatPage() {
           await addTransaction({
               type: 'spent',
               amount: CHARGE_COSTS.message,
-              description: `${type === 'image' ? 'Photo' : 'Message'} to ${otherUser?.name || 'user'}`,
+              description: `${type.charAt(0).toUpperCase() + type.slice(1)} to ${otherUser?.name || 'user'}`,
               userId: currentUser.id,
           });
       }
@@ -152,13 +157,52 @@ export default function ChatPage() {
     }
   };
 
+  const handleStartRecording = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        const audioChunks: Blob[] = [];
+
+        mediaRecorderRef.current.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorderRef.current.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                handleSendMessage(base64String, 'voice');
+            };
+            reader.readAsDataURL(audioBlob);
+            stream.getTracks().forEach(track => track.stop()); // Stop microphone access
+        };
+        
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+    } catch (err) {
+        console.error("Microphone access denied:", err);
+        toast({
+            variant: 'destructive',
+            title: 'Microphone Access Denied',
+            description: 'Please allow microphone access in your browser settings.',
+        });
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onloadend = () => {
             const dataUrl = reader.result as string;
-            // The content for an image message is the data URL itself.
             handleSendMessage(dataUrl, 'image');
         };
         reader.readAsDataURL(file);
@@ -219,6 +263,8 @@ export default function ChatPage() {
               >
                 {message.type === 'image' ? (
                   <Image src={message.content} alt="Sent image" width={200} height={200} className="rounded-md" />
+                ) : message.type === 'voice' ? (
+                  <audio src={message.content} controls className="h-10" />
                 ) : (
                   <p className="text-sm">{message.text}</p>
                 )}
@@ -244,7 +290,15 @@ export default function ChatPage() {
       ) : (
       <div className="p-4 bg-background border-t">
         <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn("text-muted-foreground hover:text-accent", isRecording && 'text-red-500 animate-pulse')}
+              onMouseDown={handleStartRecording}
+              onMouseUp={handleStopRecording}
+              onTouchStart={handleStartRecording}
+              onTouchEnd={handleStopRecording}
+            >
                 <Mic className="h-6 w-6" />
             </Button>
             <div className="flex-1 relative">

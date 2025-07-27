@@ -174,7 +174,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     }
 }
 
-export async function sendMessage(conversationId: string, senderId: string, text: string, type: Message['type'] = 'text'): Promise<boolean> {
+export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<boolean> {
     try {
         await runTransaction(db, async (transaction) => {
             const conversationRef = doc(db, 'conversations', conversationId);
@@ -206,8 +206,25 @@ export async function sendMessage(conversationId: string, senderId: string, text
             const messagesRef = collection(db, 'conversations', conversationId, 'messages');
             const newMessageRef = doc(messagesRef);
 
-            const content = type === 'image' ? text : '';
-            const messageText = type === 'image' ? '[Photo]' : text;
+            let content = '';
+            let messageText = '';
+
+            switch (type) {
+                case 'image':
+                    content = textOrDataUrl;
+                    messageText = '[Photo]';
+                    break;
+                case 'voice':
+                    content = textOrDataUrl;
+                    messageText = '[Voice Note]';
+                    break;
+                case 'text':
+                default:
+                    content = ''; // No extra content for text messages
+                    messageText = textOrDataUrl;
+                    break;
+            }
+
 
             const newMessage: Omit<Message, 'id'> = {
                 senderId, text: messageText, type, content,
