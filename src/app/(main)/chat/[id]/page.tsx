@@ -177,16 +177,6 @@ export default function ChatPage() {
         }
       }
       
-      if (currentUser.gender === 'male') {
-          const freshUser = await getUserById(currentUser.id);
-          if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
-              handleInsufficientCoins(type);
-              setIsSending(false);
-              if (type === 'text') setMessageText(textToSend);
-              return;
-          }
-      }
-      
       await sendMessage(convoId, currentUser.id, textToSend, type);
       scrollToBottom();
 
@@ -373,5 +363,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

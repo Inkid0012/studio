@@ -1,5 +1,6 @@
 
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -198,7 +199,14 @@ export async function sendMessage(conversationId: string, senderId: string, text
                 if (sender.coins < CHARGE_COSTS.message) {
                     throw new Error("Insufficient coins");
                 }
-                transaction.update(senderRef, { coins: sender.coins - CHARGE_COSTS.message });
+                const newBalance = sender.coins - CHARGE_COSTS.message;
+                transaction.update(senderRef, { coins: newBalance });
+
+                // Update user in local storage immediately after transaction setup
+                 const localUser = getCurrentUser();
+                 if (localUser && localUser.id === senderId) {
+                     setCurrentUser({ ...localUser, coins: newBalance });
+                 }
             }
 
             const messagesRef = collection(conversationRef, 'messages');
@@ -224,25 +232,21 @@ export async function sendMessage(conversationId: string, senderId: string, text
                     timestamp: serverTimestamp(),
                 },
             });
+
+             // Record the transaction for spending coins
+            if (sender.gender === 'male') {
+                await addTransaction({
+                    userId: senderId,
+                    type: 'spent',
+                    amount: CHARGE_COSTS.message,
+                    description: `Message to ${otherUser.name}`,
+                });
+            }
         });
 
-        // Handle post-transaction tasks outside the transaction
-        const currentUser = getCurrentUser();
-        if (currentUser && currentUser.gender === 'male') {
-             await addTransaction({
-                userId: senderId,
-                type: 'spent',
-                amount: CHARGE_COSTS.message,
-                description: `Message to user`, // Generic description
-            });
-            const localUser = getCurrentUser();
-            if (localUser && localUser.id === senderId) {
-                setCurrentUser({ ...localUser, coins: localUser.coins - CHARGE_COSTS.message });
-            }
-        }
     } catch (e: any) {
         console.error("sendMessage transaction failed: ", e.message);
-        throw new Error(`sendMessage transaction failed:  "${e.message}"`);
+        throw e; // Re-throw to be handled by the caller UI
     }
 }
 
@@ -295,17 +299,18 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
+        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
-            unreadSnapshot.forEach(doc => {
-                const message = doc.data() as Message;
+            unreadSnapshot.docs.forEach(doc => {
+                 const message = doc.data() as Message;
                 if (!message.readBy || !message.readBy.includes(userId)) {
                     unreadCount++;
                 }
-            });
+            })
+
         } catch (e) {
             console.warn("Could not query unread messages.", e);
         }

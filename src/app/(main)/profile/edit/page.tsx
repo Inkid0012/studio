@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarIcon, Camera, ChevronRight, Save, Upload, Loader2, ArrowLeft } from 'lucide-react';
+import { CalendarIcon, Camera, ChevronRight, Save, Upload, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -179,11 +179,7 @@ export default function EditProfilePage() {
 
     return (
         <div>
-            <MainHeader title="Edit Profile" showBackButton={true}>
-                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-6 w-6" />
-                </Button>
-            </MainHeader>
+            <MainHeader title="Edit Profile" showBackButton={true} />
             <div className="p-4 md:p-8 max-w-2xl mx-auto">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

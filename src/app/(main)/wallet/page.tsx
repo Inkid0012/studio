@@ -210,7 +210,7 @@ export default function WalletPage() {
             </div>
             <DialogFooter>
                 <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
+                    <Button variant="outline" disabled={isProcessing}>Cancel</Button>
                 </DialogClose>
                 <Button onClick={handlePurchase} disabled={isProcessing}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
