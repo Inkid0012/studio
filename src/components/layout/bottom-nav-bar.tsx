@@ -17,7 +17,7 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t border-black rounded-t-2xl">
+    <div className="fixed bottom-0 left-0 z-50 w-full h-14 bg-background/90 backdrop-blur-sm border-t border-black">
       <div className="grid h-full max-w-lg grid-cols-3 mx-auto font-medium">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
@@ -28,15 +28,15 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
               href={item.href}
               className={cn(
                 "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group",
-                isActive ? "text-primary" : "text-accent"
+                isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
               <item.icon
                 className={cn(
-                  "w-7 h-7 mb-1"
+                  "w-5 h-5 mb-1"
                 )}
               />
-              <span className="text-sm font-body">{item.label}</span>
+              <span className="text-xs font-body">{item.label}</span>
               {item.href === "/chat" && totalUnreadCount > 0 && (
                 <Badge className="absolute top-2 right-6 px-2 py-0.5 text-xs h-5">
                     {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
