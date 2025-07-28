@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import AgoraRTC, {
+import type {
   IAgoraRTCClient,
   IMicrophoneAudioTrack,
 } from 'agora-rtc-sdk-ng';
@@ -145,8 +145,9 @@ export default function CallPage() {
 
   const joinAgoraCall = async () => {
     if (componentState !== 'ringing' || !currentUser) return;
-
+    
     try {
+        const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
         const appId = '03afb548b89d4435b0d0a5b28a964a32'; // Verified Agora App ID
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
@@ -401,5 +402,3 @@ export default function CallPage() {
     </div>
   );
 }
-
-    
