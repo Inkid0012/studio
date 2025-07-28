@@ -73,7 +73,13 @@ export default function UserProfilePage() {
   const userId = params.id as string;
   const [user, setUser] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  // Separate loading states for each button
+  const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
+  const [isFollowLoading, setIsFollowLoading] = useState<boolean>(false);
+  const [isCallLoading, setIsCallLoading] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false); // For general processing like block/unblock
+
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
@@ -124,23 +130,30 @@ export default function UserProfilePage() {
 
   const handleChat = async () => {
     if (!currentUser || !user || isBlocked) return;
-    setIsProcessing(true);
-    const conversationId = await findOrCreateConversation(currentUser.id, user.id);
-    router.push(`/chat/${conversationId}`);
-    setIsProcessing(false);
+    setIsChatLoading(true);
+    try {
+        const conversationId = await findOrCreateConversation(currentUser.id, user.id);
+        router.push(`/chat/${conversationId}`);
+    } catch (error) {
+        console.error("Failed to start chat:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not start chat.' });
+        setIsChatLoading(false);
+    }
   };
   
   const handleCall = async () => {
       if (!currentUser || !user || isBlocked) return;
+      setIsCallLoading(true);
       toast({
         title: 'Coming Soon!',
         description: 'This feature is under development.',
       });
+      setIsCallLoading(false);
   };
   
   const handleFollow = async () => {
     if (!currentUser || !user || isBlocked) return;
-    setIsProcessing(true);
+    setIsFollowLoading(true);
     
     try {
       let updatedUser;
@@ -163,13 +176,14 @@ export default function UserProfilePage() {
       toast({ variant: 'destructive', title: 'Action Failed', description: 'Could not update follow status.'})
       console.error("Failed to update follow status", error);
     } finally {
-      setIsProcessing(false);
+      setIsFollowLoading(false);
     }
   };
 
   const handleBlockToggle = async () => {
     if (!currentUser || !user) return;
     const action = isBlockedByYou ? 'unblock' : 'block';
+    setIsProcessing(true);
     
     try {
         let updatedUser;
@@ -192,6 +206,8 @@ export default function UserProfilePage() {
         toast({ title: `User ${action}ed`, description: `You have successfully ${action}ed ${user.name}.` });
     } catch(err) {
         toast({ variant: 'destructive', title: `Failed to ${action} user`, description: "Please try again." });
+    } finally {
+        setIsProcessing(false);
     }
   };
   
@@ -363,14 +379,14 @@ export default function UserProfilePage() {
       {canInteract && !isBlocked && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
             <div className="max-w-md mx-auto flex items-center gap-3">
-                <Button onClick={handleChat} disabled={isProcessing} className="flex-1 py-6 text-base rounded-full bg-primary hover:bg-primary/90 text-white">
-                    {isProcessing ? <Loader2 className="animate-spin" /> : 'Chat'}
+                <Button onClick={handleChat} disabled={isChatLoading || isCallLoading || isFollowLoading} className="flex-1 py-6 text-base rounded-full bg-primary hover:bg-primary/90 text-white">
+                    {isChatLoading ? <Loader2 className="animate-spin" /> : 'Chat'}
                 </Button>
-                <Button onClick={handleCall} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black">
-                    <Phone className="w-7 h-7" />
+                <Button onClick={handleCall} disabled={isChatLoading || isCallLoading || isFollowLoading} size="icon" className="w-14 h-14 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black">
+                     {isCallLoading ? <Loader2 className="animate-spin" /> : <Phone className="w-7 h-7" />}
                 </Button>
-                 <Button onClick={handleFollow} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white">
-                    <Plus className="w-8 h-8"/>
+                 <Button onClick={handleFollow} disabled={isChatLoading || isCallLoading || isFollowLoading} size="icon" className="w-14 h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white">
+                    {isFollowLoading ? <Loader2 className="animate-spin" /> : <Plus className="w-8 h-8"/>}
                  </Button>
             </div>
         </div>
