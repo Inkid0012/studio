@@ -1,0 +1,33 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      // Anyone authenticated can query the list of users for the discover page
+      allow list: if request.auth != null;
+      // Only the user themselves can read their full document or update/delete it
+      allow get, update, delete, write: if request.auth != null && request.auth.uid == userId;
+      // Anyone can create their own user document
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.id;
+    }
+
+    match /conversations/{conversationId} {
+      // Allow read/update on the conversation document if the user is a participant
+      allow get, update: if request.auth != null && request.auth.uid in resource.data.participantIds;
+      // Allow creation of a conversation if the user is one of the participants
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.participantIds;
+
+      // Allow writing messages if the user is a participant.
+      // This rule covers create and update operations for messages within a transaction.
+      match /messages/{messageId} {
+        allow write, get, list: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+      }
+    }
+
+    match /calls/{callId} {
+        allow read, write: if request.auth != null && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.from;
+    }
+  }
+}

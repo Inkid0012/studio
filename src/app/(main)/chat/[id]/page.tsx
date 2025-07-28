@@ -115,6 +115,10 @@ export default function ChatPage() {
 
     setIsSending(true);
 
+    if (type === 'text') {
+        setMessageText(''); // Clear input immediately for better UX
+    }
+
     try {
       if (type === 'text') {
         const moderationResult = await moderateMessage({ text: content });
@@ -125,6 +129,7 @@ export default function ChatPage() {
                 description: moderationResult.reason || 'This message violates our policy on sharing contact information.',
             });
             setIsSending(false);
+            setMessageText(content); // Restore message if blocked
             return;
         }
       }
@@ -146,6 +151,7 @@ export default function ChatPage() {
           if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
               handleInsufficientCoins(type);
               setIsSending(false);
+              if (type === 'text') setMessageText(content); // Restore on failure
               return;
           }
           const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
@@ -161,15 +167,12 @@ export default function ChatPage() {
       }
 
       await sendMessage(convoId, currentUser.id, content, type);
-      if (type === 'text') {
-        setMessageText('');
-      }
+
     } catch (error: any) {
         console.error("Error sending message:", error);
-        if (error.message.includes('blocked')) {
-             toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
-        } else {
-             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not send message. You may be blocked or have connection issues.' });
+        if (type === 'text') {
+            setMessageText(content); // Restore on failure
         }
     } finally {
       setIsSending(false);
