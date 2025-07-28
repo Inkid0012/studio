@@ -87,11 +87,9 @@ export default function MainLayout({
   }
 
   return (
-    <div>
+    <>
       <main className={cn(showNavBar && "pb-24")}>{children}</main>
       {showNavBar && <BottomNavBar totalUnreadCount={totalUnreadCount} />}
-    </div>
+    </>
   );
 }
-
-    
