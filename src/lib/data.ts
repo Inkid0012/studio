@@ -145,17 +145,16 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     const conversationRef = doc(conversationsRef, conversationId);
 
     try {
-        const docSnap = await getDoc(conversationRef);
-
-        if (docSnap.exists()) {
-            return docSnap.id;
-        } else {
-            await setDoc(conversationRef, {
-                participantIds: sortedIds,
-                lastMessage: null, // Initialize with null
-            });
-            return conversationRef.id;
-        }
+        await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(conversationRef);
+            if (!docSnap.exists()) {
+                transaction.set(conversationRef, {
+                    participantIds: sortedIds,
+                    lastMessage: null,
+                });
+            }
+        });
+        return conversationId;
     } catch(error) {
         console.error("Error finding or creating conversation:", error);
         throw error;
@@ -167,32 +166,35 @@ export async function sendMessage(conversationId: string, senderId: string, text
     if (!sender) {
         throw new Error("Sender not found.");
     }
-
-    // Check for blocked status first
+    
     const conversation = await getConversationById(conversationId);
     if (!conversation) throw new Error("Conversation not found");
     const otherUser = conversation.participants.find(p => p.id !== senderId);
     if (!otherUser) throw new Error("Recipient not found");
-
-    if (otherUser.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(otherUser.id)) {
-        throw new Error("You cannot send messages to this user.");
-    }
     
+    if (otherUser.blockedUsers?.includes(senderId)) {
+        throw new Error("Cannot send message: This user has blocked you.");
+    }
+    if (sender.blockedUsers?.includes(otherUser.id)) {
+        throw new Error("Cannot send message: You have blocked this user.");
+    }
+
     try {
         await runTransaction(db, async (transaction) => {
             const senderRef = doc(db, 'users', senderId);
-
+            
             if (sender.gender === 'male') {
                 const freshSenderSnap = await transaction.get(senderRef);
+                if (!freshSenderSnap.exists()) throw new Error("Sender not found in transaction.");
                 const freshSenderData = freshSenderSnap.data() as User;
-
+                
                 if (freshSenderData.coins < CHARGE_COSTS.message) {
                     throw new Error("Insufficient coins");
                 }
                 const newBalance = freshSenderData.coins - CHARGE_COSTS.message;
                 transaction.update(senderRef, { coins: newBalance });
             }
-
+            
             const conversationRef = doc(db, 'conversations', conversationId);
             const messagesRef = collection(conversationRef, 'messages');
             const newMessageRef = doc(messagesRef);
@@ -237,33 +239,13 @@ export async function sendMessage(conversationId: string, senderId: string, text
 export function getMessages(conversationId: string, callback: (messages: Message[]) => void) {
     const messagesRef = collection(db, 'conversations', conversationId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    const currentUser = getCurrentUser();
 
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        const messages: Message[] = [];
-        const unreadMessageIds: string[] = [];
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const message = { 
-                id: doc.id, 
-                ...data,
-                content: data.content || '',
-                readBy: data.readBy || [data.senderId],
-            } as Message;
-            messages.push(message);
-
-            if (currentUser && message.senderId !== currentUser.id && !message.readBy.includes(currentUser.id)) {
-                unreadMessageIds.push(message.id);
-            }
-        });
-        
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const messages = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        } as Message));
         callback(messages);
-        
-        if (unreadMessageIds.length > 0 && currentUser) {
-            await markMessagesAsRead(conversationId, unreadMessageIds, currentUser.id);
-        }
-
     }, (error) => {
         console.error(`Error listening to messages for convo ${conversationId}: `, error);
     });
@@ -302,14 +284,14 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
+        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
-            unreadCount = unreadSnapshot.docs.filter(doc => !doc.data().readBy?.includes(userId)).length;
+            unreadCount = unreadSnapshot.docs.length;
         } catch (e) {
-            // This can fail if the subcollection doesn't exist yet, which is fine.
+            console.warn("Could not query unread messages, possibly because the collection is empty.", e);
         }
 
         return {
@@ -422,10 +404,10 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
             }
             const userData = userSnap.data() as User;
             const visitors = userData.visitors || [];
-            // Remove existing entry for the same visitor
+            
             const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
             const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
-            // Add the new visit to the front and limit the list size
+            
             const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
             transaction.update(profileOwnerRef, { visitors: updatedVisitors });
         });

@@ -10,7 +10,7 @@ import { Phone, Send, Wallet, Image as ImageIcon, Ban, Loader2, Circle, CheckCir
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useRef, useMemo, ChangeEvent } from 'react';
+import { useEffect, useState, useRef, useMemo, ChangeEvent, useCallback } from 'react';
 import { Conversation, User, Message } from '@/types';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -71,32 +71,49 @@ export default function ChatPage() {
   const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
   const isBlocked = isBlockedByYou || areYouBlocked;
 
+  const scrollToBottom = useCallback(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!convoId || !currentUser?.id) return;
 
-    const unsubscribe = getMessages(convoId, async (newMessages) => {
-        setMessages(newMessages);
+    const unsubscribe = getMessages(convoId, (newMessages) => {
+      const isAtBottom = scrollAreaRef.current
+        ? scrollAreaRef.current.scrollHeight - scrollAreaRef.current.scrollTop <= scrollAreaRef.current.clientHeight + 1
+        : false;
 
-        const unreadMessageIds = newMessages
-            .filter(msg => msg.senderId !== currentUser.id && !msg.readBy.includes(currentUser.id))
-            .map(msg => msg.id);
-        
-        if (unreadMessageIds.length > 0) {
-            await markMessagesAsRead(convoId, unreadMessageIds, currentUser.id);
-        }
+      setMessages(newMessages);
+
+      // Only auto-scroll if user was already at the bottom
+      if (isAtBottom || messages.length === 0) {
+        setTimeout(scrollToBottom, 100);
+      }
+      
+      const unreadMessageIds = newMessages
+        .filter(msg => msg.senderId !== currentUser.id && !msg.readBy?.includes(currentUser.id))
+        .map(msg => msg.id);
+      
+      if (unreadMessageIds.length > 0) {
+        markMessagesAsRead(convoId, unreadMessageIds, currentUser.id);
+      }
     });
 
     return () => unsubscribe();
-  }, [convoId, currentUser?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convoId, currentUser?.id, scrollToBottom]);
   
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTo({
-            top: scrollAreaRef.current.scrollHeight,
-            behavior: 'smooth'
-        });
+    // Initial scroll to bottom when messages first load
+    if (messages.length > 0) {
+      setTimeout(scrollToBottom, 100);
     }
-  }, [messages]);
+  }, [messages.length, scrollToBottom]);
 
   const handleInsufficientCoins = (type: Message['type']) => {
       const cost = CHARGE_COSTS.message;
@@ -157,12 +174,7 @@ export default function ChatPage() {
       }
       
       await sendMessage(convoId, currentUser.id, textToSend, type);
-      // After sending, update local current user state if male
-      if (currentUser.gender === 'male') {
-          const updatedUser = { ...currentUser, coins: currentUser.coins - CHARGE_COSTS.message };
-          setCurrentUserFromState(updatedUser);
-          setCurrentUser(updatedUser);
-      }
+      scrollToBottom();
 
     } catch (error: any) {
         console.error("Error sending message:", error);
