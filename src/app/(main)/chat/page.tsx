@@ -58,7 +58,6 @@ export default function ChatListPage() {
 
         {showPlaceholder ? (
             <div className="flex items-center justify-center h-48">
-                <p className="text-muted-foreground">[ chats will appear here ]</p>
             </div>
         ) : (
             <div className="space-y-2">
