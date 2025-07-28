@@ -6,7 +6,7 @@ import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Mic, Send, Wallet, Image as ImageIcon, MessageCircle, Ban, Loader2, Circle, CheckCircle, Download, X } from 'lucide-react';
+import { Phone, Send, Wallet, Image as ImageIcon, MessageCircle, Ban, Loader2, Circle, CheckCircle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -17,49 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Link from 'next/link';
 import { moderateMessage } from '@/ai/flows/moderate-chat-flow';
 import { moderateImage } from '@/ai/flows/moderate-image-flow';
-import { transcribeAudio } from '@/ai/flows/transcribe-audio-flow';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-
-const AudioPlayer = ({ src }: { src: string }) => {
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-
-    const togglePlay = () => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-            } else {
-                audioRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
-        }
-    };
-
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (audio) {
-            const handleEnded = () => setIsPlaying(false);
-            audio.addEventListener('ended', handleEnded);
-            return () => {
-                audio.removeEventListener('ended', handleEnded);
-            };
-        }
-    }, []);
-
-    return (
-        <div className="flex items-center gap-2 w-48" onClick={togglePlay}>
-            <audio ref={audioRef} src={src} preload="auto" />
-            <div className={`flex items-center justify-center h-8 w-8 rounded-full ${isPlaying ? 'bg-primary/20' : 'bg-muted'}`}>
-                <div className={`h-2 w-1 rounded-full bg-primary transition-all ${isPlaying ? 'animate-[bounce_0.5s_ease-in-out_infinite] scale-y-100' : 'scale-y-50'}`} style={{ animationDelay: '0.1s' }}/>
-                <div className={`h-3 w-1 rounded-full bg-primary transition-all mx-0.5 ${isPlaying ? 'animate-[bounce_0.5s_ease-in-out_infinite] scale-y-100' : 'scale-y-50'}`} style={{ animationDelay: '0.2s' }} />
-                <div className={`h-2 w-1 rounded-full bg-primary transition-all ${isPlaying ? 'animate-[bounce_0.5s_ease-in-out_infinite] scale-y-100' : 'scale-y-50'}`} style={{ animationDelay: '0.3s' }}/>
-            </div>
-            <span className="text-xs text-muted-foreground">Voice Note</span>
-        </div>
-    );
-};
-
 
 export default function ChatPage() {
   const params = useParams();
@@ -76,10 +35,8 @@ export default function ChatPage() {
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -145,7 +102,6 @@ export default function ChatPage() {
       const cost = CHARGE_COSTS.message;
       let item = 'send a message';
       if (type === 'image') item = 'send a photo';
-      if (type === 'voice') item = 'send a voice note';
 
       setRechargeContext({
           title: 'Insufficient Coins',
@@ -179,19 +135,6 @@ export default function ChatPage() {
               variant: 'destructive',
               title: 'Image Blocked',
               description: moderationResult.reason || 'This image appears to contain numbers and cannot be sent.',
-          });
-          setIsSending(false);
-          return;
-        }
-      }
-      if (type === 'voice') {
-        const transcriptionResult = await transcribeAudio({ audioDataUri: content });
-        const moderationResult = await moderateMessage({ text: transcriptionResult.transcription });
-        if (moderationResult.isBlocked) {
-          toast({
-              variant: 'destructive',
-              title: 'Voice Note Blocked',
-              description: "This voice note appears to contain numbers and cannot be sent.",
           });
           setIsSending(false);
           return;
@@ -231,46 +174,6 @@ export default function ChatPage() {
     } finally {
       setIsSending(false);
     }
-  };
-
-  const handleStartRecording = async () => {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorderRef.current = new MediaRecorder(stream);
-        const audioChunks: Blob[] = [];
-
-        mediaRecorderRef.current.ondataavailable = (event) => {
-            audioChunks.push(event.data);
-        };
-
-        mediaRecorderRef.current.onstop = () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-                handleSendMessage(base64String, 'voice');
-            };
-            reader.readAsDataURL(audioBlob);
-            stream.getTracks().forEach(track => track.stop()); // Stop microphone access
-        };
-        
-        mediaRecorderRef.current.start();
-        setIsRecording(true);
-    } catch (err) {
-        console.error("Microphone access denied:", err);
-        toast({
-            variant: 'destructive',
-            title: 'Microphone Access Denied',
-            description: 'Please allow microphone access in your browser settings.',
-        });
-    }
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-    }
-    setIsRecording(false);
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -330,7 +233,7 @@ export default function ChatPage() {
                   <div
                     className={cn(
                       'max-w-xs md:max-w-md rounded-2xl px-4 py-2',
-                      message.type === 'image' || message.type === 'voice' ? 'p-1 bg-transparent' : '',
+                      message.type === 'image' ? 'p-1 bg-transparent' : '',
                       isSender
                         ? 'bg-primary text-primary-foreground rounded-br-none'
                         : 'bg-card text-foreground rounded-bl-none shadow-sm'
@@ -349,7 +252,7 @@ export default function ChatPage() {
                         </DialogContent>
                       </Dialog>
                     ) : message.type === 'voice' ? (
-                      <AudioPlayer src={message.content} />
+                       <p className="text-sm italic text-muted-foreground">[Voice note not supported]</p>
                     ) : (
                       <p className="text-sm">{message.text}</p>
                     )}
@@ -386,21 +289,10 @@ export default function ChatPage() {
       ) : (
       <div className="p-4 bg-background border-t">
         <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn("text-muted-foreground hover:text-accent", isRecording && 'text-red-500 animate-pulse')}
-              onMouseDown={handleStartRecording}
-              onMouseUp={handleStopRecording}
-              onTouchStart={handleStartRecording}
-              onTouchEnd={handleStopRecording}
-            >
-                <Mic className="h-6 w-6" />
-            </Button>
             <div className="flex-1 relative">
                 <Input 
                     placeholder="Type a message..." 
-                    className="pr-4 rounded-full bg-muted border-none"
+                    className="pr-10 rounded-full bg-muted border-none"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(messageText, 'text')}
