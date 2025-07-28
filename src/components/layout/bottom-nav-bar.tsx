@@ -27,7 +27,7 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
               key={item.href}
               href={item.href}
               className={cn(
-                "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group",
+                "inline-flex flex-col items-center justify-center px-5 group",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
