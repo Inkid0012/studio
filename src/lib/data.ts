@@ -143,18 +143,23 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     
     const q = query(conversationsRef, where("participantIds", "==", sortedIds), limit(1));
     
-    const querySnapshot = await getDocs(q);
+    try {
+        const querySnapshot = await getDocs(q);
 
-    if (!querySnapshot.empty) {
-        return querySnapshot.docs[0].id;
+        if (!querySnapshot.empty) {
+            return querySnapshot.docs[0].id;
+        } else {
+            const newConversationRef = doc(collection(db, 'conversations'));
+            await setDoc(newConversationRef, {
+                participantIds: sortedIds,
+                lastMessage: null,
+            });
+            return newConversationRef.id;
+        }
+    } catch(error) {
+        console.error("Error finding or creating conversation:", error);
+        throw error; // Re-throw the error to be handled by the caller
     }
-
-    // No existing conversation, so create a new one.
-    const newConversationRef = await addDoc(conversationsRef, {
-        participantIds: sortedIds,
-        lastMessage: null, // Initialize lastMessage as null
-    });
-    return newConversationRef.id;
 }
 
 export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<boolean> {
@@ -164,26 +169,26 @@ export async function sendMessage(conversationId: string, senderId: string, text
             const conversationSnap = await transaction.get(conversationRef);
 
             if (!conversationSnap.exists()) {
-                throw "Conversation does not exist!";
+                throw new Error("Conversation does not exist!");
             }
 
             const participantIds = conversationSnap.data().participantIds;
             const otherId = participantIds.find((id: string) => id !== senderId);
 
             if (!otherId) {
-                throw "Other user not found in conversation";
+                throw new Error("Other user not found in conversation");
             }
             
             const otherUserRef = doc(db, 'users', otherId);
             const otherUserSnap = await transaction.get(otherUserRef);
 
             if (!otherUserSnap.exists()) {
-                throw "Other user's profile does not exist";
+                throw new Error("Other user's profile does not exist");
             }
 
             const otherUser = otherUserSnap.data() as User;
             if (otherUser.blockedUsers?.includes(senderId)) {
-                throw "You have been blocked by this user.";
+                throw new Error("You have been blocked by this user.");
             }
 
             const messagesRef = collection(db, 'conversations', conversationId, 'messages');
@@ -273,29 +278,33 @@ export async function markMessagesAsRead(conversationId: string, messageIds: str
 
 export function getConversationsForUser(userId: string, callback: (conversations: Conversation[]) => void) {
   const conversationsRef = collection(db, "conversations");
-  const q = query(conversationsRef, where("participantIds", "array-contains", userId), orderBy("lastMessage.timestamp", "desc"));
+  const q = query(conversationsRef, where("participantIds", "array-contains", userId));
 
   const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-    const conversations: Conversation[] = await Promise.all(
-      querySnapshot.docs.map(async (docSnap) => {
+    const conversationsPromises = querySnapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
+        if (!data.lastMessage) return null; // Filter out conversations without any messages yet
+
         const participants = await Promise.all(
           data.participantIds.map((id: string) => getUserById(id))
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadMessagesQuery = query(messagesRef, where('readBy', 'not-in', [userId]));
+        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
         
         let unreadCount = 0;
         try {
-            const allMessagesSnapshot = await getDocs(query(messagesRef));
-            unreadCount = allMessagesSnapshot.docs.filter(doc => {
-                const messageData = doc.data();
-                return messageData.senderId !== userId && (!messageData.readBy || !messageData.readBy.includes(userId));
+            const unreadSnapshot = await getDocs(unreadQuery);
+            // Firestore's 'not-in' requires a non-empty array, so we query for messages not read by [userId]
+            // and then filter locally to be absolutely sure. This is more robust.
+            unreadCount = unreadSnapshot.docs.filter(doc => {
+                 const msgData = doc.data();
+                 return !msgData.readBy.includes(userId);
             }).length;
+
         } catch (e) {
-            console.warn("Could not query unread messages, likely due to Firestore limitations.", e);
-            unreadCount = 0;
+            console.warn("Could not query unread messages, likely due to Firestore rule complexity or index needed.", e);
+            unreadCount = 0; // Fallback
         }
 
         return {
@@ -304,8 +313,16 @@ export function getConversationsForUser(userId: string, callback: (conversations
           participants: participants.filter((p): p is User => p !== null),
           unreadCount: unreadCount,
         } as Conversation;
-      })
-    );
+    });
+
+    const conversations = (await Promise.all(conversationsPromises))
+        .filter((c): c is Conversation => c !== null)
+        .sort((a, b) => {
+            const timeA = a.lastMessage?.timestamp?.toMillis() || 0;
+            const timeB = b.lastMessage?.timestamp?.toMillis() || 0;
+            return timeB - timeA;
+        });
+
     callback(conversations);
   }, (error) => {
     console.error(`Error listening to conversations for user ${userId}: `, error);
