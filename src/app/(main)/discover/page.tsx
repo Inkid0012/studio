@@ -67,15 +67,15 @@ export default function DiscoverPage() {
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
-                <TabsTrigger value="recommended" className="text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
-                   <span className="opacity-50">⚪</span>
+                <TabsTrigger value="recommended" className="relative text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2">
+                   <span className="absolute top-1 left-4 text-[10px] text-gray-400 opacity-60 transform -rotate-12">⚪</span>
                    <span className="mx-2">Recommend</span>
-                   <span className="opacity-50">⚫</span>
+                   <span className="absolute bottom-1 right-3 text-[10px] text-black opacity-50 transform rotate-6">⚫</span>
                 </TabsTrigger>
-                <TabsTrigger value="nearby" className="text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
-                    <span className="opacity-50">🔵</span>
+                <TabsTrigger value="nearby" className="relative text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2">
+                   <span className="absolute top-1 right-4 text-[10px] text-blue-400 opacity-60 transform rotate-12">🔵</span>
                    <span className="mx-2">Nearby</span>
-                   <span className="opacity-50">⚪</span>
+                   <span className="absolute bottom-1 left-3 text-[10px] text-gray-400 opacity-50 transform -rotate-6">⚪</span>
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="recommended">
