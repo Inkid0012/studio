@@ -176,10 +176,10 @@ export default function ProfilePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
         <div className="absolute -bottom-16 left-4 right-4">
-          <Card className="shadow-lg bg-card/80 backdrop-blur-sm border-black">
+          <Card className="shadow-lg bg-card/80 backdrop-blur-sm border-none">
             <Link href="/profile/edit">
               <CardContent className="p-4 flex items-center space-x-4">
-                <Avatar className="w-16 h-16 border-2 border-black">
+                <Avatar className="w-16 h-16 border-2 border-transparent">
                   <AvatarImage src={user.profilePicture} alt={user.name} data-ai-hint="portrait person" />
                   <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -249,7 +249,7 @@ export default function ProfilePage() {
         )}
        
 
-        <Card className="border-black">
+        <Card className="border-none">
             <CardContent className="p-4">
                 <h3 className="font-bold mb-4">Other</h3>
                  <div className="grid grid-cols-4 gap-y-6">
