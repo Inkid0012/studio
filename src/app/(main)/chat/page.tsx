@@ -46,10 +46,10 @@ export default function ChatListPage() {
     <div className="pt-4">
       <NotificationPermissionBanner />
       <div className="p-4 space-y-4">
-        <Alert variant="destructive" className="bg-orange-100 border-orange-200 text-orange-800">
-          <ShieldAlert className="h-4 w-4 !text-orange-800" />
-          <AlertTitle className="font-bold">Stay Safe!</AlertTitle>
-          <AlertDescription>
+        <Alert variant="destructive" className="bg-red-100/50 border-red-200/50 text-red-900 p-3">
+          <ShieldAlert className="h-4 w-4 !text-red-900" />
+          <AlertTitle className="font-bold text-sm">Stay Safe!</AlertTitle>
+          <AlertDescription className="text-xs">
             Avoid sharing personal information like phone numbers or addresses to prevent any issues.
           </AlertDescription>
         </Alert>
