@@ -36,7 +36,7 @@ const Stat = ({ value, label, href }: { value: number, label: string, href: stri
 const OtherLink = ({ href, icon: Icon, label, disabled = false }: { href: string, icon: React.ElementType, label: string, disabled?: boolean }) => {
     const content = (
         <div className={`flex flex-col items-center space-y-2 group ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
-            <Icon className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
+            <Icon className="w-7 h-7 text-accent group-hover:text-accent/80" />
             <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
         </div>
     );
@@ -240,7 +240,7 @@ export default function ProfilePage() {
                     <AlertDialog>
                        <AlertDialogTrigger asChild>
                          <button className="flex flex-col items-center space-y-2 group cursor-pointer">
-                            <LogOut className="w-7 h-7 text-muted-foreground group-hover:text-primary" />
+                            <LogOut className="w-7 h-7 text-accent group-hover:text-accent/80" />
                             <span className="text-xs text-center text-muted-foreground group-hover:text-primary">Logout</span>
                         </button>
                        </AlertDialogTrigger>
