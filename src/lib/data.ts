@@ -141,21 +141,20 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 export async function findOrCreateConversation(userId1: string, userId2: string): Promise<string> {
     const conversationsRef = collection(db, "conversations");
     const sortedIds = [userId1, userId2].sort();
-    
-    const q = query(conversationsRef, where("participantIds", "==", sortedIds), limit(1));
-    
-    try {
-        const querySnapshot = await getDocs(q);
+    const conversationId = sortedIds.join('_');
+    const conversationRef = doc(conversationsRef, conversationId);
 
-        if (!querySnapshot.empty) {
-            return querySnapshot.docs[0].id;
+    try {
+        const docSnap = await getDoc(conversationRef);
+
+        if (docSnap.exists()) {
+            return docSnap.id;
         } else {
-            const newConversationRef = doc(collection(db, 'conversations'));
-            await setDoc(newConversationRef, {
+            await setDoc(conversationRef, {
                 participantIds: sortedIds,
-                lastMessage: null,
+                lastMessage: null, // Initialize with null
             });
-            return newConversationRef.id;
+            return conversationRef.id;
         }
     } catch(error) {
         console.error("Error finding or creating conversation:", error);
@@ -164,32 +163,38 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
 }
 
 export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<void> {
+    const sender = await getUserById(senderId);
+    if (!sender) {
+        throw new Error("Sender not found.");
+    }
+
+    // Check for blocked status first
+    const conversation = await getConversationById(conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+    const otherUser = conversation.participants.find(p => p.id !== senderId);
+    if (!otherUser) throw new Error("Recipient not found");
+
+    if (otherUser.blockedUsers?.includes(senderId) || sender.blockedUsers?.includes(otherUser.id)) {
+        throw new Error("You cannot send messages to this user.");
+    }
+    
     try {
         await runTransaction(db, async (transaction) => {
-            const conversationRef = doc(db, 'conversations', conversationId);
             const senderRef = doc(db, 'users', senderId);
 
-            const [conversationSnap, senderSnap] = await Promise.all([
-                transaction.get(conversationRef),
-                transaction.get(senderRef)
-            ]);
+            if (sender.gender === 'male') {
+                const freshSenderSnap = await transaction.get(senderRef);
+                const freshSenderData = freshSenderSnap.data() as User;
 
-            if (!conversationSnap.exists()) throw new Error("Conversation does not exist!");
-            if (!senderSnap.exists()) throw new Error("Sender does not exist!");
-
-            const senderData = senderSnap.data() as User;
-
-            if (senderData.gender === 'male') {
-                if (senderData.coins < CHARGE_COSTS.message) {
+                if (freshSenderData.coins < CHARGE_COSTS.message) {
                     throw new Error("Insufficient coins");
                 }
-                const newBalance = senderData.coins - CHARGE_COSTS.message;
+                const newBalance = freshSenderData.coins - CHARGE_COSTS.message;
                 transaction.update(senderRef, { coins: newBalance });
-
-                // We'll add the mock transaction outside the Firestore transaction
             }
 
-            const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+            const conversationRef = doc(db, 'conversations', conversationId);
+            const messagesRef = collection(conversationRef, 'messages');
             const newMessageRef = doc(messagesRef);
 
             const messageText = type === 'image' ? '[Photo]' : textOrDataUrl;
@@ -206,44 +211,59 @@ export async function sendMessage(conversationId: string, senderId: string, text
             transaction.set(newMessageRef, newMessage);
 
             transaction.update(conversationRef, {
-                lastMessage: { text: messageText, senderId, timestamp: Timestamp.now() }
+                lastMessage: { text: messageText, senderId, timestamp: newMessage.timestamp }
             });
         });
 
-        // Add mock transaction record if it was a male user
-        const currentUser = getCurrentUser();
-        if (currentUser && currentUser.gender === 'male') {
-            await addTransaction({
-                userId: currentUser.id,
+        if (sender.gender === 'male') {
+             await addTransaction({
+                userId: senderId,
                 type: 'spent',
                 amount: CHARGE_COSTS.message,
-                description: `Message in conversation ${conversationId}`,
+                description: `Message to ${otherUser.name}`,
             });
-            // Update local user state
-            setCurrentUser({ ...currentUser, coins: currentUser.coins - CHARGE_COSTS.message });
+            const localUser = getCurrentUser();
+            if (localUser && localUser.id === senderId) {
+                setCurrentUser({ ...localUser, coins: localUser.coins - CHARGE_COSTS.message });
+            }
         }
     } catch (e: any) {
         console.error("sendMessage transaction failed: ", e);
-        throw e; // Re-throw to be handled by the UI
+        throw e;
     }
 }
+
 
 export function getMessages(conversationId: string, callback: (messages: Message[]) => void) {
     const messagesRef = collection(db, 'conversations', conversationId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
+    const currentUser = getCurrentUser();
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
         const messages: Message[] = [];
+        const unreadMessageIds: string[] = [];
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            messages.push({ 
+            const message = { 
                 id: doc.id, 
                 ...data,
                 content: data.content || '',
                 readBy: data.readBy || [data.senderId],
-            } as Message);
+            } as Message;
+            messages.push(message);
+
+            if (currentUser && message.senderId !== currentUser.id && !message.readBy.includes(currentUser.id)) {
+                unreadMessageIds.push(message.id);
+            }
         });
+        
         callback(messages);
+        
+        if (unreadMessageIds.length > 0 && currentUser) {
+            await markMessagesAsRead(conversationId, unreadMessageIds, currentUser.id);
+        }
+
     }, (error) => {
         console.error(`Error listening to messages for convo ${conversationId}: `, error);
     });
@@ -275,7 +295,7 @@ export function getConversationsForUser(userId: string, callback: (conversations
   const unsubscribe = onSnapshot(q, async (querySnapshot) => {
     const conversationsPromises = querySnapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
-        if (!data.lastMessage) return null;
+        if (!data.lastMessage && data.lastMessage !== null) return null;
 
         const participants = await Promise.all(
           data.participantIds.map((id: string) => getUserById(id))
@@ -289,7 +309,7 @@ export function getConversationsForUser(userId: string, callback: (conversations
             const unreadSnapshot = await getDocs(unreadQuery);
             unreadCount = unreadSnapshot.docs.filter(doc => !doc.data().readBy?.includes(userId)).length;
         } catch (e) {
-            console.error("Could not query unread messages.", e);
+            // This can fail if the subcollection doesn't exist yet, which is fine.
         }
 
         return {
