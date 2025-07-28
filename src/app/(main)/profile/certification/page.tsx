@@ -76,6 +76,9 @@ export default function CertificationPage() {
           canvas.height = video.videoHeight;
           const context = canvas.getContext('2d');
           if (context) {
+            // Flip the context horizontally for the mirror effect before drawing
+            context.translate(video.videoWidth, 0);
+            context.scale(-1, 1);
             context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             setCapturedImage(canvas.toDataURL('image/png'));
             
@@ -145,7 +148,7 @@ export default function CertificationPage() {
                             <Image src={capturedImage} alt="Captured photo for certification" layout="fill" objectFit="cover" />
                         ) : (
                             <div className="w-full h-full bg-black flex items-center justify-center">
-                                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                                <video ref={videoRef} className="w-full h-full object-cover transform -scale-x-100" autoPlay muted playsInline />
                                 <canvas ref={canvasRef} className="hidden" />
                                 {hasCameraPermission === false && (
                                     <div className="absolute text-white flex flex-col items-center gap-2">
