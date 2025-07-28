@@ -4,7 +4,7 @@ import { getCurrentUser, getUserById, setCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Copy, ShieldCheck, Users, Settings, LogOut, ShieldAlert } from 'lucide-react';
+import { ChevronRight, Copy, ShieldCheck, Users, Settings, LogOut, ShieldAlert, Home } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
@@ -177,7 +177,7 @@ export default function ProfilePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
         <div className="absolute -bottom-16 left-4 right-4">
-          <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+          <Card className="shadow-lg bg-card/80 backdrop-blur-sm border-black">
             <Link href="/profile/edit">
               <CardContent className="p-4 flex items-center space-x-4">
                 <Avatar className="w-16 h-16 border-4 border-white">
@@ -263,4 +263,3 @@ export default function ProfilePage() {
       </div>
     </div>
   );
-}
