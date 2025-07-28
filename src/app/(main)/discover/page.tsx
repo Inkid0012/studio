@@ -11,6 +11,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { InkSplashIcon } from "@/components/icons/ink-splash-icon";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -68,14 +69,14 @@ export default function DiscoverPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
                 <TabsTrigger value="recommended" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
-                   <span className="absolute top-0 left-5 text-[9px] text-red-500 opacity-70 transform -rotate-12">●</span>
+                   <InkSplashIcon className="absolute top-0 left-5 text-red-500 opacity-70 transform -rotate-12" />
                    <span className="mx-2">Recommend</span>
-                   <span className="absolute bottom-0 right-4 text-[9px] text-green-500 opacity-70 transform rotate-6">●</span>
+                   <InkSplashIcon className="absolute bottom-0 right-4 text-green-500 opacity-70 transform rotate-6" />
                 </TabsTrigger>
                 <TabsTrigger value="nearby" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
-                   <span className="absolute top-0 right-5 text-[9px] text-purple-600 opacity-60 transform rotate-12">●</span>
+                   <InkSplashIcon className="absolute top-0 right-5 text-purple-600 opacity-60 transform rotate-12" />
                    <span className="mx-2">Nearby</span>
-                   <span className="absolute bottom-0 left-4 text-[9px] text-pink-300 opacity-70 transform -rotate-6">●</span>
+                   <InkSplashIcon className="absolute bottom-0 left-4 text-pink-300 opacity-70 transform -rotate-6" />
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="recommended">
