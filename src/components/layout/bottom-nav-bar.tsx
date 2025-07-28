@@ -27,10 +27,10 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
               href={item.href}
               className={cn(
                 "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group relative",
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? "text-primary" : "text-accent"
               )}
             >
-              <item.icon className={cn("w-7 h-7 mb-1", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
+              <item.icon className={cn("w-7 h-7 mb-1")} />
               <span className="text-sm font-body">{item.label}</span>
               {item.href === "/chat" && totalUnreadCount > 0 && (
                 <Badge className="absolute top-2 right-6 px-2 py-0.5 text-xs h-5">
