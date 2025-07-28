@@ -37,7 +37,7 @@ const OtherLink = ({ href, icon: Icon, label, disabled = false }: { href: string
     const content = (
         <div className={`flex flex-col items-center space-y-2 group ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
             <Icon className="w-7 h-7 text-accent group-hover:text-accent/80" />
-            <span className="text-xs text-center text-muted-foreground group-hover:text-primary">{label}</span>
+            <span className="text-xs text-center text-primary group-hover:text-primary/80">{label}</span>
         </div>
     );
     
@@ -241,7 +241,7 @@ export default function ProfilePage() {
                        <AlertDialogTrigger asChild>
                          <button className="flex flex-col items-center space-y-2 group cursor-pointer">
                             <LogOut className="w-7 h-7 text-accent group-hover:text-accent/80" />
-                            <span className="text-xs text-center text-muted-foreground group-hover:text-primary">Logout</span>
+                            <span className="text-xs text-center text-primary group-hover:text-primary/80">Logout</span>
                         </button>
                        </AlertDialogTrigger>
                        <AlertDialogContent>
