@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { getCurrentUser, getConversationsForUser } from "@/lib/data";
-import { MainHeader } from "@/components/layout/main-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import type { Conversation, User } from "@/types";
@@ -12,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { NotificationPermissionBanner } from "@/components/notification-permission-banner";
 
 export default function ChatListPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -44,6 +44,7 @@ export default function ChatListPage() {
 
   return (
     <div className="pt-4">
+      <NotificationPermissionBanner />
       <div className="p-4 space-y-4">
         <Alert variant="destructive" className="bg-orange-100 border-orange-200 text-orange-800">
           <ShieldAlert className="h-4 w-4 !text-orange-800" />
