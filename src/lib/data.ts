@@ -3,6 +3,7 @@
 
 
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -143,20 +144,28 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 
 export async function findOrCreateConversation(userId1: string, userId2: string): Promise<string> {
     const conversationsRef = collection(db, "conversations");
-    const participantIds = [userId1, userId2].sort();
-    const q = query(conversationsRef, where("participantIds", "==", participantIds), limit(1));
     
-    const querySnapshot = await getDocs(q);
+    // Firestore array equality queries require the order to be the same.
+    // We must check both permutations.
+    const q1 = query(conversationsRef, where("participantIds", "==", [userId1, userId2]), limit(1));
+    const q2 = query(conversationsRef, where("participantIds", "==", [userId2, userId1]), limit(1));
+    
+    const [querySnapshot1, querySnapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
 
-    if (!querySnapshot.empty) {
-        return querySnapshot.docs[0].id;
-    } else {
-        const newConversationRef = await addDoc(conversationsRef, {
-            participantIds: participantIds,
-            lastMessage: null,
-        });
-        return newConversationRef.id;
+    if (!querySnapshot1.empty) {
+        return querySnapshot1.docs[0].id;
     }
+    if (!querySnapshot2.empty) {
+        return querySnapshot2.docs[0].id;
+    }
+
+    // No existing conversation, so create a new one.
+    // We'll store it sorted to be consistent, though our query logic no longer relies on it.
+    const newConversationRef = await addDoc(conversationsRef, {
+        participantIds: [userId1, userId2].sort(),
+        lastMessage: null, // Initialize lastMessage as null
+    });
+    return newConversationRef.id;
 }
 
 export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<boolean> {
