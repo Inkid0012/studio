@@ -12,6 +12,7 @@ import { app } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { InkSplashIcon } from "@/components/icons/ink-splash-icon";
+import { PermissionsBanner } from "@/components/permissions-banner";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -65,6 +66,7 @@ export default function DiscoverPage() {
 
   return (
     <div className="pt-4">
+      <PermissionsBanner />
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
