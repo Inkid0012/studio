@@ -31,7 +31,6 @@ export default function ChargeSettingsPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                        <ChargeItem icon={MessageSquare} label="Message Charges" value={`-${CHARGE_COSTS.message}`} valueUnit="coins" />
-                       <ChargeItem icon={Phone} label="Call Charges" value={`-${CHARGE_COSTS.call}`} valueUnit="coins" />
                     </CardContent>
                 </Card>
             </div>

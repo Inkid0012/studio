@@ -61,11 +61,11 @@ export default function MainLayout({
     }
 
     // Listen for new incoming calls
-    const unsubscribeCalls = onIncomingCall(currentUser.id, (call: Call) => {
-        if (!pathname.startsWith('/call/')) {
-            router.push(`/call/${call.id}?otherUserId=${call.from}`);
-        }
-    });
+    // const unsubscribeCalls = onIncomingCall(currentUser.id, (call: Call) => {
+    //     if (!pathname.startsWith('/call/')) {
+    //         router.push(`/call/${call.id}?otherUserId=${call.from}`);
+    //     }
+    // });
 
     const unsubscribeConvos = getConversationsForUser(currentUser.id, (convos: Conversation[]) => {
       const total = convos.reduce((sum, convo) => sum + (convo.unreadCount || 0), 0);
@@ -73,7 +73,7 @@ export default function MainLayout({
     });
 
     return () => {
-      unsubscribeCalls();
+      // unsubscribeCalls();
       unsubscribeConvos();
     };
   }, [currentUser, router, pathname, isClient, toast]);

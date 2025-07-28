@@ -10,9 +10,7 @@ import {
     unfollowUser, 
     setCurrentUser as setLocalUser,
     blockUser,
-    unblockUser,
-    CHARGE_COSTS,
-    startCall
+    unblockUser
 } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,7 +74,6 @@ export default function UserProfilePage() {
   
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [isFollowLoading, setIsFollowLoading] = useState<boolean>(false);
-  const [isCallLoading, setIsCallLoading] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false); 
 
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -85,7 +82,6 @@ export default function UserProfilePage() {
   const [reportProof, setReportProof] = useState<string | null>(null);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const { toast } = useToast();
 
   const isFollowing = useMemo(() => currentUser?.following?.includes(userId), [currentUser, userId]);
@@ -136,39 +132,6 @@ export default function UserProfilePage() {
         console.error("Failed to start chat:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not start chat.' });
         setIsChatLoading(false);
-    }
-  };
-  
-  const handleCall = async () => {
-      if (!currentUser || !user || isBlocked) return;
-      setIsCallLoading(true);
-
-      try {
-        if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
-            setShowRechargeDialog(true);
-            setIsCallLoading(false);
-            return;
-        }
-
-        const callId = await startCall(currentUser.id, user.id);
-        if (callId) {
-            router.push(`/call/${callId}?otherUserId=${user.id}`);
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Could Not Start Call',
-                description: 'The user might be busy or has blocked you.',
-            });
-            setIsCallLoading(false);
-        }
-    } catch (error: any) {
-        console.error("Failed to start call:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Call Error',
-            description: error.message || 'An unexpected error occurred.',
-        });
-        setIsCallLoading(false);
     }
   };
   
@@ -402,13 +365,10 @@ export default function UserProfilePage() {
       {canInteract && !isBlocked && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
             <div className="max-w-md mx-auto flex items-center gap-3">
-                <Button onClick={handleChat} disabled={isChatLoading || isCallLoading || isFollowLoading} className="flex-1 py-6 text-base rounded-full bg-primary hover:bg-primary/90 text-white">
+                <Button onClick={handleChat} disabled={isChatLoading || isFollowLoading} className="flex-1 py-6 text-base rounded-full bg-primary hover:bg-primary/90 text-white">
                     {isChatLoading ? <Loader2 className="animate-spin" /> : 'Chat'}
                 </Button>
-                <Button onClick={handleCall} disabled={isChatLoading || isCallLoading || isFollowLoading} size="icon" className="w-14 h-14 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black">
-                     {isCallLoading ? <Loader2 className="animate-spin" /> : <Phone className="w-7 h-7" />}
-                </Button>
-                 <Button onClick={handleFollow} disabled={isChatLoading || isCallLoading || isFollowLoading} size="icon" className="w-14 h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white">
+                 <Button onClick={handleFollow} disabled={isChatLoading || isFollowLoading} size="icon" className="w-14 h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white">
                     {isFollowLoading ? <Loader2 className="animate-spin" /> : <Plus className="w-8 h-8"/>}
                  </Button>
             </div>
@@ -431,24 +391,6 @@ export default function UserProfilePage() {
              </div>
          </div>
       )}
-
-      <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Insufficient Coins</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        You need {CHARGE_COSTS.call} coins to make a voice call. Please recharge.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => router.push('/wallet')} className="bg-green-500 hover:bg-green-600">
-                        <Wallet className="mr-2 h-4 w-4" />
-                        Recharge
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
 
       <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
             <DialogContent>
