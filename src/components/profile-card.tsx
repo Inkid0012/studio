@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck } from "lucide-react";
+import { MapPin, ShieldCheck } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { getDistance } from "@/lib/data";
 
@@ -57,8 +57,8 @@ export function ProfileCard({ user, currentUser }: ProfileCardProps) {
                        {user.gender === 'male' ? '♂' : '♀'} {userAge}
                     </Badge>
                     {distance !== null && (
-                     <Badge className="bg-lime-400/80 text-black border-none text-xs h-5">
-                       {distance}km
+                     <Badge className="bg-lime-400/80 text-black border-none text-xs h-5 flex items-center gap-1">
+                       <MapPin className="h-3 w-3" /> {distance}km
                     </Badge>
                     )}
                 </div>
