@@ -26,16 +26,14 @@ export default function MainLayout({
   useEffect(() => {
     setIsClient(true);
     const user = getCurrentUser();
-    setCurrentUser(user);
-  }, []);
-
-  useEffect(() => {
-    if (isClient && !currentUser) {
-       if (!window.location.pathname.startsWith('/login')) {
-         router.push('/login');
-       }
+    if (!user) {
+        if (!window.location.pathname.startsWith('/login')) {
+            router.push('/login');
+        }
+    } else {
+        setCurrentUser(user);
     }
-  }, [currentUser, isClient, router]);
+  }, [router]);
 
   useEffect(() => {
     if (!currentUser || !isClient) return;
@@ -82,8 +80,8 @@ export default function MainLayout({
 
   const showNavBar = isClient && mainNavPaths.includes(pathname);
 
-  if (!currentUser && isClient) {
-      return null;
+  if (!currentUser) {
+      return null; // Don't render anything until we know if user is logged in
   }
 
   return (
