@@ -38,7 +38,7 @@ export default function DiscoverPage() {
             if (localUser?.location) {
                 const nearby = fetchedProfiles.filter(p => {
                     if (p.location) {
-                        return getDistance(localUser.location, p.location) < 50;
+                        return getDistance(localUser.location, p.location) < 30;
                     }
                     return false;
                 });
@@ -68,12 +68,12 @@ export default function DiscoverPage() {
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
-                <TabsTrigger value="recommended" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <TabsTrigger value="recommended" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
                    <InkSplashIcon className="absolute top-0 left-5 text-red-500 opacity-70 transform -rotate-12" />
                    <span className="mx-2">Recommend</span>
                    <InkSplashIcon className="absolute bottom-0 right-4 text-green-500 opacity-70 transform rotate-6" />
                 </TabsTrigger>
-                <TabsTrigger value="nearby" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <TabsTrigger value="nearby" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
                    <InkSplashIcon className="absolute top-0 right-5 text-purple-600 opacity-60 transform rotate-12" />
                    <span className="mx-2">Nearby</span>
                    <InkSplashIcon className="absolute bottom-0 left-4 text-pink-300 opacity-70 transform -rotate-6" />
@@ -98,7 +98,7 @@ export default function DiscoverPage() {
                 <p className="text-muted-foreground mt-2">
                     {activeTab === 'recommended' 
                         ? "There are no recommended profiles for you right now."
-                        : "No users found within 50km. Try expanding your range."
+                        : "No users found within 30km. Try expanding your range."
                     }
                 </p>
             </div>
