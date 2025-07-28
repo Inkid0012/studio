@@ -68,7 +68,10 @@ export async function seedInitialUsers() {
             const batch = writeBatch(db);
             mockUsers.forEach(user => {
                 const userRef = doc(db, 'users', user.id);
-                batch.set(userRef, user);
+                batch.set(userRef, {
+                    ...user,
+                    profilePicture: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'
+                });
             });
             await batch.commit();
             console.log('Initial users have been seeded.');
@@ -217,7 +220,7 @@ export async function sendMessage(conversationId: string, senderId: string, text
                     break;
                 case 'text':
                 default:
-                    content = ''; // No extra content for text messages
+                    content = textOrDataUrl; // Set content for text messages
                     messageText = textOrDataUrl;
                     break;
             }
@@ -302,16 +305,14 @@ export function getConversationsForUser(userId: string, callback: (conversations
         
         let unreadCount = 0;
         try {
-            const unreadMessagesSnapshot = await getDocs(unreadMessagesQuery);
-            unreadCount = unreadMessagesSnapshot.docs.filter(doc => doc.data().senderId !== userId).length;
-        } catch (e) {
-            console.warn("Could not query unread messages, likely due to Firestore limitations. Will count on client.", e);
-            // Fallback for when 'not-in' is not supported with other clauses
             const allMessagesSnapshot = await getDocs(query(messagesRef));
             unreadCount = allMessagesSnapshot.docs.filter(doc => {
                 const messageData = doc.data();
                 return messageData.senderId !== userId && (!messageData.readBy || !messageData.readBy.includes(userId));
             }).length;
+        } catch (e) {
+            console.warn("Could not query unread messages, likely due to Firestore limitations.", e);
+            unreadCount = 0;
         }
 
         return {
@@ -385,7 +386,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     const targetUserRef = doc(db, 'users', targetUserId);
     const batch = writeBatch(db);
     batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
-    batch.update(targetUserRef, { followers: arrayRemove(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
     await batch.commit();
 }
 
