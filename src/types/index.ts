@@ -6,6 +6,11 @@ export type Visitor = {
   timestamp: string; // ISO 8601 date string
 };
 
+export type Location = {
+  latitude: number;
+  longitude: number;
+};
+
 export type User = {
   id: string;
   name: string;
@@ -32,6 +37,7 @@ export type User = {
   pets?: string;
   personalityType?: string;
   horoscope?: string;
+  location?: Location;
 };
 
 export type Message = {

@@ -5,8 +5,9 @@ import { BottomNavBar } from "@/components/layout/bottom-nav-bar";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { getCurrentUser, getConversationsForUser, onIncomingCall } from "@/lib/data";
-import type { Call, User, Conversation } from "@/types";
+import { getCurrentUser, getConversationsForUser, onIncomingCall, updateUserLocation } from "@/lib/data";
+import type { Call, User, Conversation, Location } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 const mainNavPaths = ['/discover', '/chat', '/profile'];
 
@@ -20,17 +21,15 @@ export default function MainLayout({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // This effect runs once on mount to confirm we are on the client.
     setIsClient(true);
-    // We also get the user synchronously on the first check.
     const user = getCurrentUser();
     setCurrentUser(user);
   }, []);
 
   useEffect(() => {
-    // This separate effect handles redirection once we know we are on the client.
     if (isClient && !currentUser) {
        if (!window.location.pathname.startsWith('/login')) {
          router.push('/login');
@@ -40,6 +39,28 @@ export default function MainLayout({
 
   useEffect(() => {
     if (!currentUser || !isClient) return;
+    
+    // --- Location Handling ---
+    if (!currentUser.location && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const newLocation: Location = { latitude, longitude };
+          await updateUserLocation(currentUser.id, newLocation);
+          setCurrentUser(prevUser => prevUser ? { ...prevUser, location: newLocation } : null);
+        },
+        (error) => {
+          console.warn(`Location error: ${error.message}`);
+          if (error.code === 1) { // PERMISSION_DENIED
+             toast({
+              variant: 'destructive',
+              title: 'Location Access Denied',
+              description: 'Distance to other users cannot be calculated. Please enable location permissions.',
+            });
+          }
+        }
+      );
+    }
 
     // Listen for new incoming calls
     const unsubscribeCalls = onIncomingCall(currentUser.id, (call: Call) => {
@@ -57,15 +78,12 @@ export default function MainLayout({
       unsubscribeCalls();
       unsubscribeConvos();
     };
-  }, [currentUser, router, pathname, isClient]);
+  }, [currentUser, router, pathname, isClient, toast]);
 
-  // The nav bar should only appear on the exact main navigation paths.
   const showNavBar = isClient && mainNavPaths.includes(pathname);
 
-  // Avoid rendering children until we have confirmed auth status on the client.
-  // This prevents rendering content meant for logged-in users to logged-out users.
   if (!currentUser && isClient) {
-      return null; // or a loading spinner
+      return null;
   }
 
   return (

@@ -1,6 +1,7 @@
 
 
-import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call } from '@/types';
+
+import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
@@ -48,6 +49,19 @@ export function setCurrentUser(user: User | null) {
         } else {
             localStorage.removeItem('currentUser');
         }
+    }
+}
+
+export async function updateUserLocation(userId: string, location: Location) {
+    const userRef = doc(db, 'users', userId);
+    try {
+        await updateDoc(userRef, { location });
+        const localUser = getCurrentUser();
+        if (localUser && localUser.id === userId) {
+            setCurrentUser({ ...localUser, location });
+        }
+    } catch (error) {
+        console.error("Error updating user location:", error);
     }
 }
 
@@ -483,4 +497,17 @@ export function onIncomingCall(userId: string, callback: (call: Call) => void) {
     });
 
     return unsubscribe;
+}
+
+// Helper function to calculate distance between two points (Haversine formula)
+export function getDistance(loc1: Location, loc2: Location) {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (loc2.latitude - loc1.latitude) * Math.PI / 180;
+    const dLon = (loc2.longitude - loc1.longitude) * Math.PI / 180;
+    const a =
+        0.5 - Math.cos(dLat) / 2 +
+        Math.cos(loc1.latitude * Math.PI / 180) * Math.cos(loc2.latitude * Math.PI / 180) *
+        (1 - Math.cos(dLon)) / 2;
+
+    return R * 2 * Math.asin(Math.sqrt(a));
 }

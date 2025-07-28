@@ -9,15 +9,13 @@ import { ProfileCard } from "@/components/profile-card";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
-import { SearchDialog } from "@/components/search-dialog";
-
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
   const [displayedProfiles, setDisplayedProfiles] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
 
   useEffect(() => {
@@ -26,11 +24,12 @@ export default function DiscoverPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const localUser = getCurrentUser();
-        // Use local user data if it exists and matches, to avoid re-fetching
         if(localUser && localUser.id === user.uid) {
             setCurrentUser(localUser);
         } else {
-            setCurrentUser(user);
+            // This case is unlikely if layout redirect works, but as a fallback.
+            const userFromServer = await getCurrentUser();
+            setCurrentUser(userFromServer);
         }
         
         try {
@@ -43,7 +42,6 @@ export default function DiscoverPage() {
             setIsLoading(false);
         }
       } else {
-        // Handle case where user is not logged in
         setCurrentUser(null);
         setIsLoading(false);
         router.push('/login');
@@ -113,7 +111,7 @@ export default function DiscoverPage() {
         ) : (
             <div className="grid grid-cols-2 gap-4">
                 {displayedProfiles.map((user) => (
-                    <ProfileCard key={user.id} user={user} />
+                    <ProfileCard key={user.id} user={user} currentUser={currentUser} />
                 ))}
             </div>
         )}
