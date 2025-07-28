@@ -87,7 +87,7 @@ export default function MainLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-accent/20">
+    <div className="min-h-screen">
       <main className={cn(showNavBar && "pb-24")}>{children}</main>
       {showNavBar && <BottomNavBar totalUnreadCount={totalUnreadCount} />}
     </div>
