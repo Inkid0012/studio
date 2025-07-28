@@ -369,7 +369,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     const targetUserRef = doc(db, 'users', targetUserId);
     const batch = writeBatch(db);
     batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
-    batch.update(targetUserRef, { followers: arrayRemove(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
     await batch.commit();
 }
 

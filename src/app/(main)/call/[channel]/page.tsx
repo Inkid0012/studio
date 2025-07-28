@@ -208,12 +208,12 @@ export default function CallPage() {
   
   // Effect to handle ringtone playback based on component state
   useEffect(() => {
-    if (componentState === 'ringing') {
+    if (componentState === 'ringing' && call?.to === currentUser?.id) {
       playRingtone();
     } else {
       stopRingtone();
     }
-  }, [componentState]);
+  }, [componentState, call, currentUser]);
 
 
   const playRingtone = () => {
