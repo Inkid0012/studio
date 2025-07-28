@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { ShieldCheck } from "lucide-react";
 
 interface ProfileCardProps {
   user: User;
@@ -21,12 +22,18 @@ export function ProfileCard({ user }: ProfileCardProps) {
               className="object-cover w-full h-full"
               data-ai-hint="portrait person"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <div className="absolute bottom-2 left-3 text-white">
+                <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-lg drop-shadow-md">{user.name}</h3>
+                    {user.isCertified && (
+                        <ShieldCheck className="h-5 w-5 text-green-400 fill-green-900/50" />
+                    )}
+                </div>
+            </div>
           </div>
         </CardContent>
       </Card>
-      <div className="mt-2 text-center">
-        <h3 className="font-semibold text-foreground">{user.name}</h3>
-      </div>
     </Link>
   );
 }
