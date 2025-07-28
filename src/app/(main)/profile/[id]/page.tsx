@@ -144,11 +144,34 @@ export default function UserProfilePage() {
   const handleCall = async () => {
       if (!currentUser || !user || isBlocked) return;
       setIsCallLoading(true);
-      toast({
-        title: 'Coming Soon!',
-        description: 'This feature is under development.',
-      });
-      setIsCallLoading(false);
+
+      try {
+        if (currentUser.gender === 'male' && currentUser.coins < CHARGE_COSTS.call) {
+            setShowRechargeDialog(true);
+            setIsCallLoading(false);
+            return;
+        }
+
+        const callId = await startCall(currentUser.id, user.id);
+        if (callId) {
+            router.push(`/call/${callId}?otherUserId=${user.id}`);
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Could Not Start Call',
+                description: 'The user might be busy or has blocked you.',
+            });
+            setIsCallLoading(false);
+        }
+    } catch (error: any) {
+        console.error("Failed to start call:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Call Error',
+            description: error.message || 'An unexpected error occurred.',
+        });
+        setIsCallLoading(false);
+    }
   };
   
   const handleFollow = async () => {
@@ -489,3 +512,5 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
+    

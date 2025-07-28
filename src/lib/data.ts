@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -458,10 +453,10 @@ export async function startCall(from: string, to: string): Promise<string | null
         });
 
         return callId;
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error starting call:", e);
         // We can pass the error message to the UI if we want
-        return null;
+        throw e;
     }
 }
 
@@ -522,3 +517,5 @@ export function getDistance(loc1: Location, loc2: Location) {
 
     return R * 2 * Math.asin(Math.sqrt(a));
 }
+
+    

@@ -87,9 +87,11 @@ export default function MainLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    <div>
       <main className={cn(showNavBar && "pb-24")}>{children}</main>
       {showNavBar && <BottomNavBar totalUnreadCount={totalUnreadCount} />}
     </div>
   );
 }
+
+    
