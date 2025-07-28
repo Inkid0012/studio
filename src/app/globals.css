@@ -67,13 +67,6 @@
   }
 }
 
-@layer utilities {
-  .bg-gradient-fizu {
-     @apply bg-gradient-to-br from-primary/20 via-background to-accent/20;
-  }
-}
-
-
 @media print {
   body {
     -webkit-print-color-adjust: exact;

@@ -26,7 +26,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
         <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.2.js"></script>
       </head>
-      <body className={cn("font-body antialiased", "bg-gradient-fizu")}>
+      <body className={cn("font-body antialiased", "bg-background")}>
         <I18nProvider>
             <ThemeProvider
             attribute="class"
