@@ -308,7 +308,7 @@ export default function UserProfilePage() {
             <div className="bg-card p-4 rounded-xl shadow-lg">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h1 className="text-2xl font-bold flex items-center">
+                        <h1 className="text-xl font-bold flex items-center">
                             {user.name}, {userAge}
                              {user.isCertified && <ShieldCheck className="ml-2 h-6 w-6 text-green-500 fill-green-200" />}
                         </h1>
@@ -363,13 +363,13 @@ export default function UserProfilePage() {
       {canInteract && !isBlocked && (
          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
             <div className="max-w-md mx-auto flex items-center gap-3">
-                <Button onClick={handleChat} disabled={isProcessing} className="flex-1 py-6 text-base rounded-full bg-orange-500 hover:bg-orange-600 text-white">
+                <Button onClick={handleChat} disabled={isProcessing} className="flex-1 py-6 text-base rounded-full bg-primary hover:bg-primary/90 text-white">
                     {isProcessing ? <Loader2 className="animate-spin" /> : 'Chat'}
                 </Button>
-                <Button onClick={handleCall} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-lime-400 hover:bg-lime-500 text-black">
+                <Button onClick={handleCall} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black">
                     <Phone className="w-7 h-7" />
                 </Button>
-                 <Button onClick={handleFollow} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black">
+                 <Button onClick={handleFollow} disabled={isProcessing} size="icon" className="w-14 h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white">
                     <Plus className="w-8 h-8"/>
                  </Button>
             </div>
