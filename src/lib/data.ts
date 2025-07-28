@@ -52,17 +52,13 @@ export function setCurrentUser(user: User | null) {
 }
 
 export async function seedInitialUsers() {
-    const mockUsers: User[] = [
-      {
-        id: 'user-1', name: 'NightWhisper', email: 'nightwhisper@example.com', isAnonymous: false, age: 28, dob: new Date('1996-05-15').toISOString(), gender: 'male', bio: 'Software engineer by day, adventurer by weekend. Looking for someone to join me on my next journey.', profilePicture: 'https://placehold.co/600x800.png', interests: ['Hiking', 'Photography', 'Craft Beer'], isCertified: true, coins: 250, followers: ['user-2', 'user-4'], following: ['user-2', 'user-3'], visitors: [{ userId: 'user-2', timestamp: new Date().toISOString() }], blockedUsers: [], country: 'Kenya', exercise: 'Sometimes', education: 'Bachelor\'s Degree', smoking: 'Non-smoker', liquor: 'Socially', horoscope: 'Taurus',
-      },
-      {
-        id: 'user-2', name: 'Bella', email: 'bella@example.com', isAnonymous: false, age: 26, dob: new Date('1998-03-20').toISOString(), gender: 'female', bio: 'Artist and dog lover. My perfect date involves a walk in the park with my golden retriever, Leo.', profilePicture: 'https://placehold.co/600x800.png', interests: ['Painting', 'Dogs', 'Yoga'], isCertified: true, coins: 1000, followers: ['user-1'], following: ['user-1'], visitors: [], blockedUsers: [], country: 'USA', exercise: 'Frequently', education: 'Master\'s Degree', smoking: 'Non-smoker', liquor: 'Rarely', horoscope: 'Aries',
-      },
-      // ... more users if needed
-    ];
+    const mockUsers: User[] = [];
     
     try {
+        if (mockUsers.length === 0) {
+            return; // No users to seed
+        }
+        
         const usersCollection = collection(db, 'users');
         const q = query(usersCollection, limit(1));
         const snapshot = await getDocs(q);
@@ -302,13 +298,21 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadMessagesQuery = query(messagesRef, where('senderId', '!=', userId));
-        const unreadMessagesSnapshot = await getDocs(unreadMessagesQuery);
+        const unreadMessagesQuery = query(messagesRef, where('readBy', 'not-in', [userId]));
         
-        const unreadCount = unreadMessagesSnapshot.docs.filter(doc => {
-            const messageData = doc.data();
-            return !messageData.readBy || !messageData.readBy.includes(userId);
-        }).length;
+        let unreadCount = 0;
+        try {
+            const unreadMessagesSnapshot = await getDocs(unreadMessagesQuery);
+            unreadCount = unreadMessagesSnapshot.docs.filter(doc => doc.data().senderId !== userId).length;
+        } catch (e) {
+            console.warn("Could not query unread messages, likely due to Firestore limitations. Will count on client.", e);
+            // Fallback for when 'not-in' is not supported with other clauses
+            const allMessagesSnapshot = await getDocs(query(messagesRef));
+            unreadCount = allMessagesSnapshot.docs.filter(doc => {
+                const messageData = doc.data();
+                return messageData.senderId !== userId && (!messageData.readBy || !messageData.readBy.includes(userId));
+            }).length;
+        }
 
         return {
           id: docSnap.id,
