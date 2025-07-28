@@ -67,15 +67,15 @@ export default function DiscoverPage() {
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
-                <TabsTrigger value="recommended" className="relative text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2">
-                   <span className="absolute top-1 left-4 text-[10px] text-gray-400 opacity-60 transform -rotate-12">⚪</span>
+                <TabsTrigger value="recommended" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
+                   <span className="absolute top-0 left-5 text-[9px] text-red-500 opacity-70 transform -rotate-12">●</span>
                    <span className="mx-2">Recommend</span>
-                   <span className="absolute bottom-1 right-3 text-[10px] text-black opacity-50 transform rotate-6">⚫</span>
+                   <span className="absolute bottom-0 right-4 text-[9px] text-green-500 opacity-70 transform rotate-6">●</span>
                 </TabsTrigger>
-                <TabsTrigger value="nearby" className="relative text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2">
-                   <span className="absolute top-1 right-4 text-[10px] text-blue-400 opacity-60 transform rotate-12">🔵</span>
+                <TabsTrigger value="nearby" className="relative text-base data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground py-2 focus-visible:ring-0 focus-visible:ring-offset-0">
+                   <span className="absolute top-0 right-5 text-[9px] text-purple-600 opacity-60 transform rotate-12">●</span>
                    <span className="mx-2">Nearby</span>
-                   <span className="absolute bottom-1 left-3 text-[10px] text-gray-400 opacity-50 transform -rotate-6">⚪</span>
+                   <span className="absolute bottom-0 left-4 text-[9px] text-pink-300 opacity-70 transform -rotate-6">●</span>
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="recommended">
