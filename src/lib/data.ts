@@ -139,25 +139,19 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 
 export async function findOrCreateConversation(userId1: string, userId2: string): Promise<string> {
     const conversationsRef = collection(db, "conversations");
+    const sortedIds = [userId1, userId2].sort();
     
-    // Firestore array equality queries require the order to be the same.
-    // We must check both permutations.
-    const q1 = query(conversationsRef, where("participantIds", "==", [userId1, userId2]), limit(1));
-    const q2 = query(conversationsRef, where("participantIds", "==", [userId2, userId1]), limit(1));
+    const q = query(conversationsRef, where("participantIds", "==", sortedIds), limit(1));
     
-    const [querySnapshot1, querySnapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const querySnapshot = await getDocs(q);
 
-    if (!querySnapshot1.empty) {
-        return querySnapshot1.docs[0].id;
-    }
-    if (!querySnapshot2.empty) {
-        return querySnapshot2.docs[0].id;
+    if (!querySnapshot.empty) {
+        return querySnapshot.docs[0].id;
     }
 
     // No existing conversation, so create a new one.
-    // We'll store it sorted to be consistent, though our query logic no longer relies on it.
     const newConversationRef = await addDoc(conversationsRef, {
-        participantIds: [userId1, userId2].sort(),
+        participantIds: sortedIds,
         lastMessage: null, // Initialize lastMessage as null
     });
     return newConversationRef.id;
@@ -375,7 +369,7 @@ export async function unfollowUser(currentUserId: string, targetUserId: string) 
     const targetUserRef = doc(db, 'users', targetUserId);
     const batch = writeBatch(db);
     batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
-    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
+    batch.update(targetUserRef, { followers: arrayRemove(targetUserId) });
     await batch.commit();
 }
 
@@ -517,5 +511,3 @@ export function getDistance(loc1: Location, loc2: Location) {
 
     return R * 2 * Math.asin(Math.sqrt(a));
 }
-
-    

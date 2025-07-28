@@ -1,6 +1,6 @@
 @tailwind base;
-@tailwind components;
 @tailwind utilities;
+@tailwind components;
 
 @layer base {
   :root {
@@ -66,6 +66,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .bg-gradient-fizu {
+     @apply bg-gradient-to-br from-primary/20 via-background to-accent/20;
+  }
+}
+
 
 @media print {
   body {
