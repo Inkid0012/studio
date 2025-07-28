@@ -51,14 +51,96 @@ export function setCurrentUser(user: User | null) {
     }
 }
 
+const mockUsers: User[] = [
+    {
+        id: 'user-01',
+        name: 'Samia',
+        age: 24,
+        dob: '2000-01-15T00:00:00.000Z',
+        gender: 'female',
+        bio: 'Lover of art, music, and spontaneous adventures. Looking for someone to explore new cafes with.',
+        profilePicture: 'https://placehold.co/600x800.png',
+        interests: ['Art', 'Music', 'Travel', 'Foodie'],
+        isCertified: true,
+        coins: 1200,
+        followers: [], following: [], visitors: [],
+        email: 'samia@example.com', isAnonymous: false
+    },
+    {
+        id: 'user-02',
+        name: 'David',
+        age: 28,
+        dob: '1996-05-20T00:00:00.000Z',
+        gender: 'male',
+        bio: 'Software engineer by day, aspiring chef by night. My dog is my best friend. Let\'s hike?',
+        profilePicture: 'https://placehold.co/600x800.png',
+        interests: ['Hiking', 'Cooking', 'Dogs', 'Tech'],
+        isCertified: false,
+        coins: 500,
+        followers: [], following: [], visitors: [],
+        email: 'david@example.com', isAnonymous: false
+    },
+    {
+        id: 'user-03',
+        name: 'Chloe',
+        age: 26,
+        dob: '1998-09-10T00:00:00.000Z',
+        gender: 'female',
+        bio: 'Yoga instructor and bookworm. I believe in good vibes and great conversation.',
+        profilePicture: 'https://placehold.co/600x800.png',
+        interests: ['Yoga', 'Reading', 'Mindfulness'],
+        isCertified: true,
+        coins: 2500,
+        followers: [], following: [], visitors: [],
+        email: 'chloe@example.com', isAnonymous: false
+    },
+    {
+        id: 'user-04',
+        name: 'Marcus',
+        age: 30,
+        dob: '1994-03-25T00:00:00.000Z',
+        gender: 'male',
+        bio: 'Fitness enthusiast and movie lover. Always up for a challenge or a good film.',
+        profilePicture: 'https://placehold.co/600x800.png',
+        interests: ['Fitness', 'Movies', 'Gym'],
+        isCertified: false,
+        coins: 800,
+        followers: [], following: [], visitors: [],
+        email: 'marcus@example.com', isAnonymous: false
+    },
+    {
+        id: 'user-05',
+        name: 'Isabella',
+        age: 23,
+        dob: '2001-07-01T00:00:00.000Z',
+        gender: 'female',
+        bio: 'Fashion designer who loves to travel. My happy place is anywhere with a beach.',
+        profilePicture: 'https://placehold.co/600x800.png',
+        interests: ['Fashion', 'Travel', 'Beach', 'Photography'],
+        isCertified: true,
+        coins: 4200,
+        followers: [], following: [], visitors: [],
+        email: 'isabella@example.com', isAnonymous: false
+    },
+    {
+        id: 'user-06',
+        name: 'Leo',
+        age: 29,
+        dob: '1995-11-12T00:00:00.000Z',
+        gender: 'male',
+        bio: 'Musician and animal lover. I can play three instruments. Can you guess which ones?',
+        profilePicture: 'https://placehold.co/600x800.png',
+        interests: ['Music', 'Guitar', 'Animals', 'Concerts'],
+        isCertified: true,
+        coins: 150,
+        followers: [], following: [], visitors: [],
+        email: 'leo@example.com', isAnonymous: false
+    },
+];
+
+
 export async function seedInitialUsers() {
-    const mockUsers: User[] = [];
-    
     try {
-        if (mockUsers.length === 0) {
-            return; // No users to seed
-        }
-        
         const usersCollection = collection(db, 'users');
         const q = query(usersCollection, limit(1));
         const snapshot = await getDocs(q);
@@ -68,10 +150,12 @@ export async function seedInitialUsers() {
             const batch = writeBatch(db);
             mockUsers.forEach(user => {
                 const userRef = doc(db, 'users', user.id);
-                batch.set(userRef, {
+                // Assign a placeholder that will have a data-ai-hint
+                const updatedUser = {
                     ...user,
-                    profilePicture: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'
-                });
+                    profilePicture: `https://placehold.co/600x800.png?text=${user.name.charAt(0)}`
+                }
+                batch.set(userRef, updatedUser);
             });
             await batch.commit();
             console.log('Initial users have been seeded.');
