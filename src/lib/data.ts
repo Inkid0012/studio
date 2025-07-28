@@ -285,11 +285,13 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
+        // Correct query for unread messages: sender is not me, and my ID is not in the readBy array.
         const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
+            // This client-side filter is necessary because Firestore can't do array-not-contains directly
             unreadCount = unreadSnapshot.docs.filter(doc => {
                  const msgData = doc.data();
                  return !msgData.readBy?.includes(userId);

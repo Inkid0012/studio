@@ -7,10 +7,11 @@ import type { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, MessageSquare, ShieldCheck, Loader2 } from "lucide-react";
 import { Badge } from "./ui/badge";
-import { getDistance, findOrCreateConversation } from "@/lib/data";
+import { getDistance, findOrCreateConversation, getCurrentUser } from "@/lib/data";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileCardProps {
   user: User;
@@ -33,6 +34,7 @@ export function ProfileCard({ user, currentUser }: ProfileCardProps) {
   const userAge = calculateAge(user.dob);
   const router = useRouter();
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const { toast } = useToast();
 
   let distance: string | null = null;
   if (currentUser?.location && user.location) {
@@ -51,6 +53,11 @@ export function ProfileCard({ user, currentUser }: ProfileCardProps) {
         router.push(`/chat/${conversationId}`);
     } catch (error) {
         console.error("Failed to start chat from profile card:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not start a chat. Please try again."
+        });
     } finally {
         setIsCreatingChat(false);
     }

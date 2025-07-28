@@ -300,25 +300,20 @@ export default function ChatPage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(messageText, 'text')}
                     disabled={isSending}
                 />
+                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent absolute right-1 top-1/2 -translate-y-1/2" onClick={() => fileInputRef.current?.click()}>
+                    <ImageIcon className="h-6 w-6" />
+                </Button>
+                <Input 
+                    type="file" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept="image/*"
+                    disabled={isSending}
+                />
             </div>
             <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full" onClick={() => handleSendMessage(messageText, 'text')} disabled={isSending || !messageText}>
                 {isSending && !fileInputRef.current?.value ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-            </Button>
-        </div>
-         <div className="flex justify-around items-center mt-3">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent" onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon className="h-7 w-7" />
-            </Button>
-            <Input 
-                type="file" 
-                className="hidden" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*"
-                disabled={isSending}
-            />
-             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
-                <Phone className="h-7 w-7" />
             </Button>
         </div>
       </div>
