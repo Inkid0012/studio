@@ -74,11 +74,10 @@ export default function UserProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // Separate loading states for each button
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [isFollowLoading, setIsFollowLoading] = useState<boolean>(false);
   const [isCallLoading, setIsCallLoading] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false); // For general processing like block/unblock
+  const [isProcessing, setIsProcessing] = useState<boolean>(false); 
 
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -107,7 +106,6 @@ export default function UserProfilePage() {
       const userProfile = await getUserById(userId);
       if (userProfile) {
         setUser(userProfile);
-        // Only add visitor if it's not the current user's own profile
         if (localUser.id !== userId) {
           await addVisitor(userId, localUser.id);
         }
@@ -186,12 +184,14 @@ export default function UserProfilePage() {
           ...currentUser,
           following: currentUser.following.filter(id => id !== userId)
         };
+        toast({ title: 'Unfollowed', description: `You are no longer following ${user.name}.` });
       } else {
         await followUser(currentUser.id, userId);
         updatedUser = {
           ...currentUser,
           following: [...currentUser.following, userId]
         };
+        toast({ title: 'Followed', description: `You are now following ${user.name}.` });
       }
       setCurrentUser(updatedUser);
       setLocalUser(updatedUser);
@@ -512,5 +512,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    

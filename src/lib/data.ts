@@ -167,54 +167,38 @@ export async function sendMessage(conversationId: string, senderId: string, text
     try {
         await runTransaction(db, async (transaction) => {
             const conversationRef = doc(db, 'conversations', conversationId);
-            const conversationSnap = await transaction.get(conversationRef);
+            const senderRef = doc(db, 'users', senderId);
 
-            if (!conversationSnap.exists()) {
-                throw new Error("Conversation does not exist!");
-            }
+            const [conversationSnap, senderSnap] = await Promise.all([
+                transaction.get(conversationRef),
+                transaction.get(senderRef)
+            ]);
 
-            const participantIds = conversationSnap.data().participantIds;
-            const otherId = participantIds.find((id: string) => id !== senderId);
+            if (!conversationSnap.exists()) throw new Error("Conversation does not exist!");
+            if (!senderSnap.exists()) throw new Error("Sender does not exist!");
 
-            if (!otherId) {
-                throw new Error("Other user not found in conversation");
-            }
-            
-            const otherUserRef = doc(db, 'users', otherId);
-            const otherUserSnap = await transaction.get(otherUserRef);
+            const senderData = senderSnap.data() as User;
 
-            if (!otherUserSnap.exists()) {
-                throw new Error("Other user's profile does not exist");
-            }
+            if (senderData.gender === 'male') {
+                if (senderData.coins < CHARGE_COSTS.message) {
+                    throw new Error("Insufficient coins");
+                }
+                const newBalance = senderData.coins - CHARGE_COSTS.message;
+                transaction.update(senderRef, { coins: newBalance });
 
-            const otherUser = otherUserSnap.data() as User;
-            if (otherUser.blockedUsers?.includes(senderId)) {
-                throw new Error("You may have been blocked by this user.");
+                // We'll add the mock transaction outside the Firestore transaction
             }
 
             const messagesRef = collection(db, 'conversations', conversationId, 'messages');
             const newMessageRef = doc(messagesRef);
 
-            let content = '';
-            let messageText = '';
-
-            switch (type) {
-                case 'image':
-                    content = textOrDataUrl;
-                    messageText = '[Photo]';
-                    break;
-                case 'text':
-                default:
-                    content = textOrDataUrl;
-                    messageText = textOrDataUrl;
-                    break;
-            }
+            const messageText = type === 'image' ? '[Photo]' : textOrDataUrl;
 
             const newMessage: Omit<Message, 'id'> = {
                 senderId, 
                 text: messageText, 
                 type, 
-                content,
+                content: textOrDataUrl,
                 timestamp: Timestamp.now(),
                 readBy: [senderId],
             };
@@ -225,6 +209,19 @@ export async function sendMessage(conversationId: string, senderId: string, text
                 lastMessage: { text: messageText, senderId, timestamp: Timestamp.now() }
             });
         });
+
+        // Add mock transaction record if it was a male user
+        const currentUser = getCurrentUser();
+        if (currentUser && currentUser.gender === 'male') {
+            await addTransaction({
+                userId: currentUser.id,
+                type: 'spent',
+                amount: CHARGE_COSTS.message,
+                description: `Message in conversation ${conversationId}`,
+            });
+            // Update local user state
+            setCurrentUser({ ...currentUser, coins: currentUser.coins - CHARGE_COSTS.message });
+        }
     } catch (e: any) {
         console.error("sendMessage transaction failed: ", e);
         throw e; // Re-throw to be handled by the UI
@@ -285,21 +282,14 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        // Correct query for unread messages: sender is not me, and my ID is not in the readBy array.
         const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
-            // This client-side filter is necessary because Firestore can't do array-not-contains directly
-            unreadCount = unreadSnapshot.docs.filter(doc => {
-                 const msgData = doc.data();
-                 return !msgData.readBy?.includes(userId);
-            }).length;
-
+            unreadCount = unreadSnapshot.docs.filter(doc => !doc.data().readBy?.includes(userId)).length;
         } catch (e) {
             console.error("Could not query unread messages.", e);
-            unreadCount = 0;
         }
 
         return {
@@ -405,18 +395,20 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
     if (profileOwnerId === visitorId) return;
     const profileOwnerRef = doc(db, 'users', profileOwnerId);
     try {
-      await runTransaction(db, async (transaction) => {
-        const userSnap = await transaction.get(profileOwnerRef);
-        if (!userSnap.exists()) {
-            throw "Profile owner not found";
-        }
-        const userData = userSnap.data() as User;
-        const visitors = userData.visitors || [];
-        const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
-        const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
-        const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
-        transaction.update(profileOwnerRef, { visitors: updatedVisitors });
-      });
+        await runTransaction(db, async (transaction) => {
+            const userSnap = await transaction.get(profileOwnerRef);
+            if (!userSnap.exists()) {
+                throw "Profile owner not found";
+            }
+            const userData = userSnap.data() as User;
+            const visitors = userData.visitors || [];
+            // Remove existing entry for the same visitor
+            const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
+            const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
+            // Add the new visit to the front and limit the list size
+            const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
+            transaction.update(profileOwnerRef, { visitors: updatedVisitors });
+        });
     } catch (error) {
         console.error("Failed to add visitor:", error);
     }

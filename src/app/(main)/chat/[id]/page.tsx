@@ -114,9 +114,9 @@ export default function ChatPage() {
     if (!content.trim() || !currentUser || !otherUser || isBlocked || isSending) return;
 
     setIsSending(true);
-    const textToSend = content; // Keep the content for potential restoration
+    const textToSend = content;
     if (type === 'text') {
-        setMessageText(''); // Clear input immediately for better UX
+        setMessageText('');
     }
 
     try {
@@ -129,7 +129,7 @@ export default function ChatPage() {
                 description: moderationResult.reason || 'This message violates our policy on sharing contact information.',
             });
             setIsSending(false);
-            setMessageText(textToSend); // Restore message if blocked
+            setMessageText(textToSend);
             return;
         }
       }
@@ -151,29 +151,28 @@ export default function ChatPage() {
           if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
               handleInsufficientCoins(type);
               setIsSending(false);
-              if (type === 'text') setMessageText(textToSend); // Restore on failure
+              if (type === 'text') setMessageText(textToSend);
               return;
           }
-          const updatedCoins = freshUser.coins - CHARGE_COSTS.message;
-          const updatedUser: User = { ...freshUser, coins: updatedCoins };
-          setCurrentUserFromState(updatedUser);
-          setCurrentUser(updatedUser);
-          await createUserInFirestore(updatedUser);
-          await addTransaction({
-              type: 'spent',
-              amount: CHARGE_COSTS.message,
-              description: `${type.charAt(0).toUpperCase() + type.slice(1)} to ${otherUser?.name || 'user'}`,
-              userId: currentUser.id,
-          });
       }
       
       await sendMessage(convoId, currentUser.id, textToSend, type);
+      // After sending, update local current user state if male
+      if (currentUser.gender === 'male') {
+          const updatedUser = { ...currentUser, coins: currentUser.coins - CHARGE_COSTS.message };
+          setCurrentUserFromState(updatedUser);
+          setCurrentUser(updatedUser);
+      }
 
     } catch (error: any) {
         console.error("Error sending message:", error);
-        toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not send message.' });
+        if (error.message.includes('Insufficient coins')) {
+            handleInsufficientCoins(type);
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not send message.' });
+        }
         if (type === 'text') {
-            setMessageText(textToSend); // Restore on failure
+            setMessageText(textToSend);
         }
     } finally {
       setIsSending(false);
