@@ -1,4 +1,5 @@
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -202,10 +203,6 @@ export async function sendMessage(conversationId: string, senderId: string, text
                     content = textOrDataUrl;
                     messageText = '[Photo]';
                     break;
-                case 'voice':
-                    content = textOrDataUrl;
-                    messageText = '[Voice Note]';
-                    break;
                 case 'text':
                 default:
                     content = textOrDataUrl; // Set content for text messages
@@ -290,20 +287,21 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
+        // This is a valid query: get all messages in the chat not sent by the current user.
+        const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
-            // Firestore's 'not-in' requires a non-empty array, so we query for messages not read by [userId]
-            // and then filter locally to be absolutely sure. This is more robust.
+            // We then filter these results in-memory to find the ones that are truly unread.
+            // This is efficient and avoids the invalid query issue.
             unreadCount = unreadSnapshot.docs.filter(doc => {
                  const msgData = doc.data();
                  return !msgData.readBy.includes(userId);
             }).length;
 
         } catch (e) {
-            console.warn("Could not query unread messages, likely due to Firestore rule complexity or index needed.", e);
+            console.error("Could not query unread messages.", e);
             unreadCount = 0; // Fallback
         }
 
