@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 export default function DiscoverPage() {
   const [allProfiles, setAllProfiles] = useState<User[]>([]);
@@ -65,9 +66,17 @@ export default function DiscoverPage() {
     <div className="pt-4">
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="recommended">Recommended</TabsTrigger>
-                <TabsTrigger value="nearby">Nearby</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-transparent p-0">
+                <TabsTrigger value="recommended" className="text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
+                   <span className="opacity-50">⚪</span>
+                   <span className="mx-2">Recommend</span>
+                   <span className="opacity-50">⚫</span>
+                </TabsTrigger>
+                <TabsTrigger value="nearby" className="text-lg data-[state=active]:font-bold data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
+                    <span className="opacity-50">🔵</span>
+                   <span className="mx-2">Nearby</span>
+                   <span className="opacity-50">⚪</span>
+                </TabsTrigger>
             </TabsList>
             <TabsContent value="recommended">
                 {/* Content rendered below */}
