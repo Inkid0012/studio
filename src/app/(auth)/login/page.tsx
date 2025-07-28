@@ -36,7 +36,7 @@ export default function LoginPage() {
         dob: new Date().toISOString(),
         gender: 'other',
         bio: '',
-        profilePicture: 'https://placehold.co/400x400.png',
+        profilePicture: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png',
         interests: [],
         isCertified: false,
         coins: 0,
