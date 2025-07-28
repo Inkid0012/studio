@@ -3,12 +3,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageCircle, User } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { CustomHomeIcon } from "../icons/custom-home-icon";
 
 const navItems = [
-  { href: "/discover", icon: Home, label: "Home" },
+  { href: "/discover", icon: CustomHomeIcon, label: "Home" },
   { href: "/chat", icon: MessageCircle, label: "Chat" },
   { href: "/profile", icon: User, label: "Me" },
 ];
@@ -26,7 +27,7 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
               key={item.href}
               href={item.href}
               className={cn(
-                "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group relative",
+                "inline-flex flex-col items-center justify-center px-5 hover:bg-primary/5 group",
                 isActive ? "text-primary" : "text-accent"
               )}
             >
