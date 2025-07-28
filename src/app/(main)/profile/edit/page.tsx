@@ -86,7 +86,7 @@ export default function EditProfilePage() {
     if (!currentUser) {
         return (
             <div>
-                <MainHeader title="Edit Profile" />
+                <MainHeader title="Edit Profile" showBackButton={true} />
                 <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-8">
                      <div className="flex justify-center">
                          <Skeleton className="w-40 h-40 rounded-full" />
@@ -179,7 +179,7 @@ export default function EditProfilePage() {
 
     return (
         <div>
-            <MainHeader title="Edit Profile" />
+            <MainHeader title="Edit Profile" showBackButton={true} />
             <div className="p-4 md:p-8 max-w-2xl mx-auto">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -387,3 +387,5 @@ const CountryRow = ({ label, value, onCountryChange }: { label: string; value?: 
         </Select>
     </div>
 );
+
+    
