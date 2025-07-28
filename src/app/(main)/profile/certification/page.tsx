@@ -120,7 +120,7 @@ export default function CertificationPage() {
 
 
     return (
-        <div className="bg-muted/30 min-h-screen">
+        <div>
             <MainHeader title="Certification" showBackButton={true} />
             <div className="p-4 space-y-6 pb-24">
                 <Card>

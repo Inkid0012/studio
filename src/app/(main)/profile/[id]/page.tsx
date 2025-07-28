@@ -263,7 +263,7 @@ export default function UserProfilePage() {
 
   if (!user || !currentUser) {
     return (
-        <div className="bg-background min-h-screen">
+        <div>
             <div className="relative h-[50vh] bg-muted">
                 <Skeleton className="h-full w-full" />
             </div>
@@ -281,7 +281,7 @@ export default function UserProfilePage() {
   const canInteract = currentUser.id !== user.id;
 
   return (
-    <div className="bg-muted/30 min-h-screen pb-32">
+    <div className="pb-32">
         <div className="relative h-[45vh]">
             <Image 
                 src={user.profilePicture}

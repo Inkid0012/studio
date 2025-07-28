@@ -117,7 +117,7 @@ export default function PermissionsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-muted/30">
+        <div>
             <MainHeader title="App Permissions" showBackButton={true} />
             <div className="p-4">
                 <Card>

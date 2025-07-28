@@ -120,7 +120,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="bg-muted/30 min-h-screen">
+    <div>
       <MainHeader title="Wallet" showBackButton={true}>
         <Button variant="ghost" size="icon" onClick={() => router.push('/wallet/history')}>
             <History className="h-6 w-6" />

@@ -126,7 +126,7 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-        <div className="bg-background">
+        <div>
             <div className="relative h-64">
                 <Skeleton className="h-full w-full" />
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
@@ -164,7 +164,7 @@ export default function ProfilePage() {
   const visitorsCount = user.visitors?.length || 0;
 
   return (
-    <div className="bg-background">
+    <div>
       <div className="relative h-64">
         <Image 
           src={user.profilePicture}
