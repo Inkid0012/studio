@@ -1,11 +1,16 @@
 
+'use client';
+
 import Link from "next/link";
 import Image from "next/image";
 import type { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, ShieldCheck } from "lucide-react";
+import { MapPin, MessageSquare, ShieldCheck, Loader2 } from "lucide-react";
 import { Badge } from "./ui/badge";
-import { getDistance } from "@/lib/data";
+import { getDistance, findOrCreateConversation } from "@/lib/data";
+import { Button } from "./ui/button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface ProfileCardProps {
   user: User;
@@ -26,11 +31,30 @@ const calculateAge = (dob: string | Date) => {
 
 export function ProfileCard({ user, currentUser }: ProfileCardProps) {
   const userAge = calculateAge(user.dob);
+  const router = useRouter();
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   let distance: string | null = null;
   if (currentUser?.location && user.location) {
     distance = getDistance(currentUser.location, user.location).toFixed(1);
   }
+
+  const handleChatClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!currentUser) return;
+
+    setIsCreatingChat(true);
+    try {
+        const conversationId = await findOrCreateConversation(currentUser.id, user.id);
+        router.push(`/chat/${conversationId}`);
+    } catch (error) {
+        console.error("Failed to start chat from profile card:", error);
+    } finally {
+        setIsCreatingChat(false);
+    }
+  };
 
   return (
     <Link href={`/profile/${user.id}`} className="block group">
@@ -45,6 +69,17 @@ export function ProfileCard({ user, currentUser }: ProfileCardProps) {
               data-ai-hint="portrait person"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            
+             <Button
+                size="icon"
+                variant="ghost"
+                className="absolute top-2 right-2 w-9 h-9 bg-black/30 text-white rounded-full hover:bg-black/50 hover:text-white"
+                onClick={handleChatClick}
+                disabled={isCreatingChat}
+              >
+                {isCreatingChat ? <Loader2 className="animate-spin" /> : <MessageSquare className="w-5 h-5" />}
+              </Button>
+
             <div className="absolute bottom-2 left-3 text-white w-full pr-4">
                 <div className="flex items-center gap-1.5">
                     <h3 className="font-bold text-sm drop-shadow-md">{user.name}</h3>
