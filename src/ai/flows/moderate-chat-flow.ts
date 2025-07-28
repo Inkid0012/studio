@@ -28,6 +28,7 @@ export async function moderateMessage(input: ModerateMessageInput): Promise<Mode
   return moderateMessageFlow(input);
 }
 
+// This prompt is no longer used in the flow but is kept for reference.
 const prompt = ai.definePrompt({
   name: 'moderateMessagePrompt',
   input: { schema: ModerateMessageInputSchema },
@@ -55,16 +56,24 @@ const moderateMessageFlow = ai.defineFlow(
     outputSchema: ModerateMessageOutputSchema,
   },
   async (input) => {
-    // First, do a simple regex check for any digit to quickly block simple cases.
-    if (/\d/.test(input.text)) {
-        return {
-            isBlocked: true,
-            reason: "Messages containing numbers are not allowed.",
-        };
+    // Regex to detect digits, spelled-out numbers, and keywords for sharing info.
+    const contactInfoRegex = new RegExp(
+      '\\d{7,}|' + // 7 or more digits in a row
+      '\\b(\\d|one|two|three|four|five|six|seven|eight|nine|zero)\\b|' + // standalone digits or spelled-out numbers
+      '\\b(number|phone|contact|whatsapp|ig|instagram|snapchat)\\b', // keywords
+      'i' // case-insensitive
+    );
+
+    if (contactInfoRegex.test(input.text)) {
+      return {
+        isBlocked: true,
+        reason: "Sharing contact information is not allowed.",
+      };
     }
     
-    // If no digits, use the LLM for more nuanced checks (words, intent).
-    const { output } = await prompt(input);
-    return output!;
+    // If no contact info is detected by the regex, the message is allowed.
+    return {
+        isBlocked: false,
+    };
   }
 );

@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CalendarIcon, Camera, ChevronRight, Save, Upload, Loader2 } from 'lucide-react';
+import { CalendarIcon, Camera, ChevronRight, Save, Upload, Loader2, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -33,7 +33,7 @@ const profileSchema = z.object({
         required_error: "A date of birth is required.",
     }),
     bio: z.string().max(500, "Bio can't be more than 500 characters.").min(10, "Bio must be at least 10 characters.").refine(s => !/\d/.test(s), {
-        message: "Your bio cannot contain numbers. Please remove them and try again.",
+        message: "For your safety, please do not include numbers in your bio.",
     }),
 });
 
@@ -179,7 +179,11 @@ export default function EditProfilePage() {
 
     return (
         <div>
-            <MainHeader title="Edit Profile" showBackButton={true} />
+            <MainHeader title="Edit Profile" showBackButton={true}>
+                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                    <ArrowLeft className="h-6 w-6" />
+                </Button>
+            </MainHeader>
             <div className="p-4 md:p-8 max-w-2xl mx-auto">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -387,5 +391,3 @@ const CountryRow = ({ label, value, onCountryChange }: { label: string; value?: 
         </Select>
     </div>
 );
-
-    
