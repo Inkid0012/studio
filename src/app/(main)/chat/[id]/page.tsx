@@ -111,17 +111,17 @@ export default function ChatPage() {
   };
   
   const handleSendMessage = async (content: string, type: Message['type'] = 'text') => {
-    if (!content.trim() || !currentUser || isBlocked || isSending) return;
+    if (!content.trim() || !currentUser || !otherUser || isBlocked || isSending) return;
 
     setIsSending(true);
-
+    const textToSend = content; // Keep the content for potential restoration
     if (type === 'text') {
         setMessageText(''); // Clear input immediately for better UX
     }
 
     try {
       if (type === 'text') {
-        const moderationResult = await moderateMessage({ text: content });
+        const moderationResult = await moderateMessage({ text: textToSend });
         if (moderationResult.isBlocked) {
             toast({
                 variant: 'destructive',
@@ -129,12 +129,12 @@ export default function ChatPage() {
                 description: moderationResult.reason || 'This message violates our policy on sharing contact information.',
             });
             setIsSending(false);
-            setMessageText(content); // Restore message if blocked
+            setMessageText(textToSend); // Restore message if blocked
             return;
         }
       }
       if (type === 'image') {
-        const moderationResult = await moderateImage({ photoDataUri: content });
+        const moderationResult = await moderateImage({ photoDataUri: textToSend });
         if (moderationResult.isBlocked) {
           toast({
               variant: 'destructive',
@@ -145,16 +145,17 @@ export default function ChatPage() {
           return;
         }
       }
-
+      
       if (currentUser.gender === 'male') {
           const freshUser = await getUserById(currentUser.id);
           if (!freshUser || freshUser.coins < CHARGE_COSTS.message) {
               handleInsufficientCoins(type);
               setIsSending(false);
-              if (type === 'text') setMessageText(content); // Restore on failure
+              if (type === 'text') setMessageText(textToSend); // Restore on failure
               return;
           }
-          const updatedUser = { ...freshUser, coins: freshUser.coins - CHARGE_COSTS.message };
+          const updatedCoins = freshUser.coins - CHARGE_COSTS.message;
+          const updatedUser: User = { ...freshUser, coins: updatedCoins };
           setCurrentUserFromState(updatedUser);
           setCurrentUser(updatedUser);
           await createUserInFirestore(updatedUser);
@@ -165,14 +166,14 @@ export default function ChatPage() {
               userId: currentUser.id,
           });
       }
-
-      await sendMessage(convoId, currentUser.id, content, type);
+      
+      await sendMessage(convoId, currentUser.id, textToSend, type);
 
     } catch (error: any) {
         console.error("Error sending message:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not send message. You may be blocked or have connection issues.' });
+        toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not send message.' });
         if (type === 'text') {
-            setMessageText(content); // Restore on failure
+            setMessageText(textToSend); // Restore on failure
         }
     } finally {
       setIsSending(false);

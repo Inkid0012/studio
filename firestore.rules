@@ -4,34 +4,44 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /users/{userId} {
-      // Public profiles are listable by any authenticated user for discovery
-      allow list: if request.auth != null;
-      // Users can only read, update, or delete their own document
-      allow get, update, delete: if request.auth != null && request.auth.uid == userId;
-      // Allow users to create their own document
-      allow create: if request.auth != null && request.auth.uid == userId;
+    // Helper function to check authentication
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if the user is a participant of a conversation
+    function isParticipant(conversationId) {
+      return request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
     }
 
-    match /conversations/{conversationId} {
-      // Allow read/write if the user is a participant
-      allow read, update, delete: if request.auth != null && request.auth.uid in resource.data.participantIds;
-      // Allow create if the user's ID is in the participant list of the new doc
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participantIds;
+    // USERS
+    // Users can read any profile, but only write to their own.
+    // This allows the discover page to function while keeping user data secure.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
 
+    // CONVERSATIONS
+    // Users can read/write conversations they are part of.
+    match /conversations/{conversationId} {
+      allow read, update: if isAuthenticated() && isParticipant(conversationId);
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
+
+      // MESSAGES (Subcollection)
+      // Users can read/write messages in conversations they are part of.
       match /messages/{messageId} {
-        // Allow users to read/create messages in conversations they are part of.
-        // This rule is more robust and correctly checks for participation.
-        allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        // Don't allow direct updates/deletes to messages for now to keep things simple
-        allow update, delete: if false;
+        allow read: if isAuthenticated() && isParticipant(conversationId);
+        allow create: if isAuthenticated() && isParticipant(conversationId) && request.auth.uid == request.resource.data.senderId;
       }
     }
     
+    // CALLS
+    // Users can create/update calls they are involved in.
     match /calls/{callId} {
-        // Allow read, create, update if user is part of the call
-        allow read, create, update: if request.auth != null && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
-        allow delete: if false;
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.from || request.auth.uid == request.resource.data.to);
+        allow update: if isAuthenticated() && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
     }
   }
 }

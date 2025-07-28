@@ -153,17 +153,17 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
             const newConversationRef = doc(collection(db, 'conversations'));
             await setDoc(newConversationRef, {
                 participantIds: sortedIds,
-                lastMessage: null, // Initialize lastMessage as null
+                lastMessage: null,
             });
             return newConversationRef.id;
         }
     } catch(error) {
         console.error("Error finding or creating conversation:", error);
-        throw error; // Re-throw the error to be handled by the caller
+        throw error;
     }
 }
 
-export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<boolean> {
+export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<void> {
     try {
         await runTransaction(db, async (transaction) => {
             const conversationRef = doc(db, 'conversations', conversationId);
@@ -189,7 +189,6 @@ export async function sendMessage(conversationId: string, senderId: string, text
 
             const otherUser = otherUserSnap.data() as User;
             if (otherUser.blockedUsers?.includes(senderId)) {
-                // This is a specific, expected error condition, not a general failure.
                 throw new Error("You may have been blocked by this user.");
             }
 
@@ -226,16 +225,9 @@ export async function sendMessage(conversationId: string, senderId: string, text
                 lastMessage: { text: messageText, senderId, timestamp: Timestamp.now() }
             });
         });
-        return true; // Transaction was successful
     } catch (e: any) {
-        // Log the actual error for debugging, but return false to the UI.
-        console.error("sendMessage transaction failed: ", e.message);
-        // The UI will handle the 'false' return value, e.g., by showing a toast.
-        // The specific "blocked" message from the transaction will be caught here.
-        if (e.message === "You may have been blocked by this user.") {
-             throw e; // Re-throw the specific error to be caught by the calling component
-        }
-        return false;
+        console.error("sendMessage transaction failed: ", e);
+        throw e; // Re-throw to be handled by the UI
     }
 }
 
@@ -251,7 +243,7 @@ export function getMessages(conversationId: string, callback: (messages: Message
                 id: doc.id, 
                 ...data,
                 content: data.content || '',
-                readBy: data.readBy || [data.senderId], // Backwards compatibility
+                readBy: data.readBy || [data.senderId],
             } as Message);
         });
         callback(messages);
@@ -286,7 +278,7 @@ export function getConversationsForUser(userId: string, callback: (conversations
   const unsubscribe = onSnapshot(q, async (querySnapshot) => {
     const conversationsPromises = querySnapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
-        if (!data.lastMessage) return null; // Filter out conversations without any messages yet
+        if (!data.lastMessage) return null;
 
         const participants = await Promise.all(
           data.participantIds.map((id: string) => getUserById(id))
@@ -305,7 +297,7 @@ export function getConversationsForUser(userId: string, callback: (conversations
 
         } catch (e) {
             console.error("Could not query unread messages.", e);
-            unreadCount = 0; // Fallback
+            unreadCount = 0;
         }
 
         return {
