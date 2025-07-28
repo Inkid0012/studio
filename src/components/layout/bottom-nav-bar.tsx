@@ -3,13 +3,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, User } from "lucide-react";
+import { Home, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { FizuLogo } from "../icons/fizu-logo";
 
 const navItems = [
-  { href: "/discover", icon: FizuLogo, label: "Home" },
+  { href: "/discover", icon: Home, label: "Home" },
   { href: "/chat", icon: MessageCircle, label: "Chat" },
   { href: "/profile", icon: User, label: "Me" },
 ];
@@ -22,7 +21,6 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
       <div className="grid h-full max-w-lg grid-cols-3 mx-auto font-medium">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
-          const isHomeIcon = item.label === "Home";
 
           return (
             <Link
@@ -35,8 +33,7 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
             >
               <item.icon
                 className={cn(
-                  "w-7 h-7 mb-1",
-                   isHomeIcon && "text-2xl" // Special sizing for the logo
+                  "w-7 h-7 mb-1"
                 )}
               />
               <span className="text-sm font-body">{item.label}</span>
