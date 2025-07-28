@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, subYears } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import type { User, PersonalInfoOption } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -175,6 +175,8 @@ export default function EditProfilePage() {
         setImageToCrop(null);
     }
 
+    const eighteenYearsAgo = subYears(new Date(), 18);
+
     return (
         <div>
             <MainHeader title="Edit Profile" />
@@ -269,12 +271,13 @@ export default function EditProfilePage() {
                                             selected={tempDate}
                                             onSelect={setTempDate}
                                             disabled={(date) =>
-                                            date > new Date() || date < new Date("1900-01-01")
+                                                date > eighteenYearsAgo || date < new Date("1900-01-01")
                                             }
+                                            defaultMonth={tempDate || eighteenYearsAgo}
                                             initialFocus
                                             captionLayout="dropdown-buttons"
                                             fromYear={1900}
-                                            toYear={new Date().getFullYear()}
+                                            toYear={eighteenYearsAgo.getFullYear()}
                                         />
                                         <div className="p-2 border-t border-border">
                                             <Button
@@ -291,7 +294,7 @@ export default function EditProfilePage() {
                                         </PopoverContent>
                                     </Popover>
                                     <FormDescription>
-                                        Your age will be calculated from your date of birth.
+                                        You must be at least 18 years old.
                                     </FormDescription>
                                     <FormMessage />
                                 </FormItem>
