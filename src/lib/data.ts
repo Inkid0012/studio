@@ -153,7 +153,7 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
             const newConversationRef = doc(collection(db, 'conversations'));
             await setDoc(newConversationRef, {
                 participantIds: sortedIds,
-                lastMessage: null,
+                lastMessage: null, // Initialize lastMessage as null
             });
             return newConversationRef.id;
         }
@@ -189,7 +189,8 @@ export async function sendMessage(conversationId: string, senderId: string, text
 
             const otherUser = otherUserSnap.data() as User;
             if (otherUser.blockedUsers?.includes(senderId)) {
-                throw new Error("You have been blocked by this user.");
+                // This is a specific, expected error condition, not a general failure.
+                throw new Error("You may have been blocked by this user.");
             }
 
             const messagesRef = collection(db, 'conversations', conversationId, 'messages');
@@ -205,11 +206,10 @@ export async function sendMessage(conversationId: string, senderId: string, text
                     break;
                 case 'text':
                 default:
-                    content = textOrDataUrl; // Set content for text messages
+                    content = textOrDataUrl;
                     messageText = textOrDataUrl;
                     break;
             }
-
 
             const newMessage: Omit<Message, 'id'> = {
                 senderId, 
@@ -217,7 +217,7 @@ export async function sendMessage(conversationId: string, senderId: string, text
                 type, 
                 content,
                 timestamp: Timestamp.now(),
-                readBy: [senderId], // Initialize with sender
+                readBy: [senderId],
             };
             
             transaction.set(newMessageRef, newMessage);
@@ -226,9 +226,15 @@ export async function sendMessage(conversationId: string, senderId: string, text
                 lastMessage: { text: messageText, senderId, timestamp: Timestamp.now() }
             });
         });
-        return true;
-    } catch (e) {
-        console.error("Transaction failed: ", e);
+        return true; // Transaction was successful
+    } catch (e: any) {
+        // Log the actual error for debugging, but return false to the UI.
+        console.error("sendMessage transaction failed: ", e.message);
+        // The UI will handle the 'false' return value, e.g., by showing a toast.
+        // The specific "blocked" message from the transaction will be caught here.
+        if (e.message === "You may have been blocked by this user.") {
+             throw e; // Re-throw the specific error to be caught by the calling component
+        }
         return false;
     }
 }
@@ -287,17 +293,14 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        // This is a valid query: get all messages in the chat not sent by the current user.
         const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
-            // We then filter these results in-memory to find the ones that are truly unread.
-            // This is efficient and avoids the invalid query issue.
             unreadCount = unreadSnapshot.docs.filter(doc => {
                  const msgData = doc.data();
-                 return !msgData.readBy.includes(userId);
+                 return !msgData.readBy?.includes(userId);
             }).length;
 
         } catch (e) {

@@ -6,7 +6,7 @@ import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Send, Wallet, Image as ImageIcon, MessageCircle, Ban, Loader2, Circle, CheckCircle, Download } from 'lucide-react';
+import { Phone, Send, Wallet, Image as ImageIcon, Ban, Loader2, Circle, CheckCircle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -160,17 +160,17 @@ export default function ChatPage() {
           });
       }
 
-      const success = await sendMessage(convoId, currentUser.id, content, type);
-      if (success) {
-        if (type === 'text') {
-          setMessageText('');
-        }
-      } else {
-        toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
+      await sendMessage(convoId, currentUser.id, content, type);
+      if (type === 'text') {
+        setMessageText('');
       }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error sending message:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+        if (error.message.includes('blocked')) {
+             toast({ variant: 'destructive', title: 'Message not sent', description: 'You may have been blocked by this user.' });
+        } else {
+             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+        }
     } finally {
       setIsSending(false);
     }
@@ -251,8 +251,6 @@ export default function ChatPage() {
                           </a>
                         </DialogContent>
                       </Dialog>
-                    ) : message.type === 'voice' ? (
-                       <p className="text-sm italic text-muted-foreground">[Voice note not supported]</p>
                     ) : (
                       <p className="text-sm">{message.text}</p>
                     )}
@@ -317,9 +315,6 @@ export default function ChatPage() {
             />
              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
                 <Phone className="h-7 w-7" />
-            </Button>
-             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
-                <MessageCircle className="h-7 w-7" />
             </Button>
         </div>
       </div>
