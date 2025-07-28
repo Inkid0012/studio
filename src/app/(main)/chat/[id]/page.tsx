@@ -6,7 +6,7 @@ import { MainHeader } from '@/components/layout/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Phone, Send, Wallet, Image as ImageIcon, Ban, Loader2, Circle, CheckCircle, Download } from 'lucide-react';
+import { Phone, Send, Wallet, Image as ImageIcon, Ban, Loader2, Circle, CheckCircle, Download, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +35,8 @@ export default function ChatPage() {
   const [rechargeContext, setRechargeContext] = useState<{title: string, description: string}>({title: '', description: ''});
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [showScrollDownButton, setShowScrollDownButton] = useState(false);
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,14 +73,26 @@ export default function ChatPage() {
   const areYouBlocked = useMemo(() => otherUser?.blockedUsers?.includes(currentUser?.id || ''), [otherUser, currentUser]);
   const isBlocked = isBlockedByYou || areYouBlocked;
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'smooth') => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({
         top: scrollAreaRef.current.scrollHeight,
-        behavior: 'smooth',
+        behavior: behavior,
       });
     }
   }, []);
+
+  const handleScroll = () => {
+    if (scrollAreaRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
+        // Show button if user has scrolled up more than a certain threshold (e.g., 300px)
+        if (scrollHeight - scrollTop - clientHeight > 300) {
+            setShowScrollDownButton(true);
+        } else {
+            setShowScrollDownButton(false);
+        }
+    }
+  };
 
   useEffect(() => {
     if (!convoId || !currentUser?.id) return;
@@ -87,12 +101,13 @@ export default function ChatPage() {
       const isAtBottom = scrollAreaRef.current
         ? scrollAreaRef.current.scrollHeight - scrollAreaRef.current.scrollTop <= scrollAreaRef.current.clientHeight + 1
         : false;
+        
+      const isNewMessageFromOther = newMessages.length > messages.length && newMessages[newMessages.length - 1].senderId !== currentUser.id;
 
       setMessages(newMessages);
-
-      // Only auto-scroll if user was already at the bottom
-      if (isAtBottom || messages.length === 0) {
-        setTimeout(scrollToBottom, 100);
+      
+      if (isAtBottom || isNewMessageFromOther) {
+        setTimeout(() => scrollToBottom('smooth'), 100);
       }
       
       const unreadMessageIds = newMessages
@@ -106,12 +121,11 @@ export default function ChatPage() {
 
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [convoId, currentUser?.id, scrollToBottom]);
+  }, [convoId, currentUser?.id]);
   
   useEffect(() => {
-    // Initial scroll to bottom when messages first load
     if (messages.length > 0) {
-      setTimeout(scrollToBottom, 100);
+      setTimeout(() => scrollToBottom('auto'), 100);
     }
   }, [messages.length, scrollToBottom]);
 
@@ -130,11 +144,11 @@ export default function ChatPage() {
   const handleSendMessage = async (content: string, type: Message['type'] = 'text') => {
     if (!content.trim() || !currentUser || !otherUser || isBlocked || isSending) return;
 
-    setIsSending(true);
     const textToSend = content;
     if (type === 'text') {
-        setMessageText('');
+      setMessageText('');
     }
+    setIsSending(true);
 
     try {
       if (type === 'text') {
@@ -225,8 +239,8 @@ export default function ChatPage() {
                 </Avatar>
             </Link>
         </MainHeader>
-
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef as any}>
+    <div className="flex-1 relative">
+      <ScrollArea className="absolute inset-0 p-4" ref={scrollAreaRef as any} onScroll={handleScroll}>
         <div className="space-y-4">
           {messages.map((message) => {
             const isSender = message.senderId === currentUser.id;
@@ -291,6 +305,16 @@ export default function ChatPage() {
           })}
         </div>
       </ScrollArea>
+        {showScrollDownButton && (
+            <Button
+                size="icon"
+                className="absolute bottom-4 right-4 rounded-full bg-primary/80 backdrop-blur-sm text-primary-foreground hover:bg-primary z-10 animate-in fade-in"
+                onClick={() => scrollToBottom('smooth')}
+            >
+                <ArrowDown className="h-5 w-5" />
+            </Button>
+        )}
+     </div>
       
       {isBlocked ? (
         <div className="p-4 bg-background border-t text-center">
@@ -349,3 +373,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
