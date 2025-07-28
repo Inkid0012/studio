@@ -4,7 +4,7 @@ import { getCurrentUser, getUserById, setCurrentUser } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Copy, ShieldCheck, Users, Settings, LogOut, ShieldAlert, Home } from 'lucide-react';
+import { ChevronRight, Copy, ShieldCheck, Users, Settings, LogOut, ShieldAlert, Home, DollarSign } from 'lucide-react';
 import Image from "next/image";
 import Link from 'next/link';
 import { useEffect, useState } from "react";
@@ -68,7 +68,6 @@ export default function ProfilePage() {
         // Use local user data for immediate UI, then fetch fresh data
         if (localUser && localUser.id === firebaseUser.uid) {
             setUser(localUser);
-            setIsLoading(false); // Render immediately with cached data
         }
 
         // Fetch from Firestore to get the most up-to-date profile
@@ -210,20 +209,45 @@ export default function ProfilePage() {
           <Stat value={visitorsCount} label="Visitors" href="/profile/visitors" />
         </div>
         
-        <div className="grid grid-cols-1 gap-4">
-             <Button asChild className="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-6 text-base rounded-lg">
-                <Link href="/wallet" className="flex items-center justify-center gap-2">
-                    {user.coins > 0 ? (
-                        <>
-                            <CoinIcon />
-                            <span className="text-lg">{user.coins.toLocaleString()}</span>
-                        </>
-                    ) : (
-                        'Recharge'
-                    )}
-                </Link>
-            </Button>
-        </div>
+        {user.gender === 'female' ? (
+             <div className="grid grid-cols-2 gap-4">
+                <Button asChild className="bg-red-800 hover:bg-red-900 text-white font-bold py-4 text-base rounded-lg">
+                    <Link href="/wallet" className="flex items-center justify-center gap-2">
+                        {user.coins > 0 ? (
+                            <>
+                                <CoinIcon />
+                                <span className="text-lg">{user.coins.toLocaleString()}</span>
+                            </>
+                        ) : (
+                            'Recharge'
+                        )}
+                    </Link>
+                </Button>
+                <Button 
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-base rounded-lg"
+                    onClick={() => toast({ title: 'Coming Soon!', description: 'The earnings feature is under development.' })}
+                >
+                    <DollarSign className="mr-2 h-5 w-5" />
+                    Earnings
+                </Button>
+             </div>
+        ) : (
+             <div className="grid grid-cols-1 gap-4">
+                 <Button asChild className="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-6 text-base rounded-lg">
+                    <Link href="/wallet" className="flex items-center justify-center gap-2">
+                        {user.coins > 0 ? (
+                            <>
+                                <CoinIcon />
+                                <span className="text-lg">{user.coins.toLocaleString()}</span>
+                            </>
+                        ) : (
+                            'Recharge'
+                        )}
+                    </Link>
+                </Button>
+            </div>
+        )}
+       
 
         <Card className="border-black">
             <CardContent className="p-4">
@@ -263,3 +287,4 @@ export default function ProfilePage() {
       </div>
     </div>
   );
+}
