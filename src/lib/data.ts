@@ -1,6 +1,7 @@
 
 
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -145,17 +146,19 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     const conversationRef = doc(db, 'conversations', conversationId);
 
     try {
-        const docSnap = await getDoc(conversationRef);
-        if (!docSnap.exists()) {
-            await setDoc(conversationRef, {
-                participantIds: sortedIds,
-                lastMessage: null,
-            });
-        }
+        await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(conversationRef);
+            if (!docSnap.exists()) {
+                transaction.set(conversationRef, {
+                    participantIds: sortedIds,
+                    lastMessage: null,
+                });
+            }
+        });
         return conversationId;
     } catch (error) {
-        console.error("Error finding or creating conversation:", error);
-        throw error; // Re-throw the error to be handled by the caller
+        console.error("Error in findOrCreateConversation transaction:", error);
+        throw error;
     }
 }
 
