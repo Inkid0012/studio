@@ -180,7 +180,7 @@ export default function ProfilePage() {
           <Card className="shadow-lg bg-card/80 backdrop-blur-sm border-black">
             <Link href="/profile/edit">
               <CardContent className="p-4 flex items-center space-x-4">
-                <Avatar className="w-16 h-16 border-4 border-black">
+                <Avatar className="w-16 h-16 border-2 border-black">
                   <AvatarImage src={user.profilePicture} alt={user.name} data-ai-hint="portrait person" />
                   <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
                 </Avatar>

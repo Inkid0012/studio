@@ -1,8 +1,7 @@
 
 'use client';
 
-import { getDiscoverProfiles, getCurrentUser, seedInitialUsers } from "@/lib/data";
-import { MainHeader } from "@/components/layout/main-header";
+import { getDiscoverProfiles, getCurrentUser } from "@/lib/data";
 import { useEffect, useState } from "react";
 import { User } from "@/types";
 import { Loader2 } from "lucide-react";
@@ -35,7 +34,6 @@ export default function DiscoverPage() {
         }
         
         try {
-            await seedInitialUsers();
             const fetchedProfiles = await getDiscoverProfiles(user.uid, true); 
             setAllProfiles(fetchedProfiles);
             setDisplayedProfiles(fetchedProfiles);
@@ -99,10 +97,7 @@ export default function DiscoverPage() {
   const showPlaceholder = !isLoading && displayedProfiles.length === 0;
 
   return (
-    <div>
-      <MainHeader title="Discover" showBackButton={false}>
-         <SearchDialog onSearch={handleSearch} />
-      </MainHeader>
+    <div className="pt-4">
       <div className="p-4">
         {isLoading ? (
             <div className="flex items-center justify-center h-96">

@@ -17,7 +17,7 @@ export function BottomNavBar({ totalUnreadCount }: { totalUnreadCount: number })
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background/90 backdrop-blur-sm border-t border-black rounded-t-2xl">
+    <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background/90 backdrop-blur-sm border-t border-black rounded-t-2xl">
       <div className="grid h-full max-w-lg grid-cols-3 mx-auto font-medium">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);

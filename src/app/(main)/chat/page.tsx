@@ -43,8 +43,7 @@ export default function ChatListPage() {
   const showPlaceholder = !isLoading && conversations.length === 0;
 
   return (
-    <div>
-      <MainHeader title="Chats" showBackButton={false} />
+    <div className="pt-4">
       <div className="p-4 space-y-4">
         <Alert variant="destructive" className="bg-orange-100 border-orange-200 text-orange-800">
           <ShieldAlert className="h-4 w-4 !text-orange-800" />
