@@ -32,6 +32,7 @@ export default function RootLayout({
             defaultTheme="light"
             enableSystem={false}
             >
+                <div id="screenshot-blocker" style={{ visibility: 'hidden' }}></div>
                 {children}
                 <Toaster />
             </ThemeProvider>

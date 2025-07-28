@@ -66,3 +66,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #screenshot-blocker {
+    visibility: visible !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    color: black;
+    z-index: 9999;
+  }
+  main, header, footer, nav {
+    visibility: hidden !important;
+  }
+}
