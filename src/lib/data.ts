@@ -139,90 +139,101 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 }
 
 export async function findOrCreateConversation(userId1: string, userId2: string): Promise<string> {
-    const conversationsRef = collection(db, "conversations");
     const sortedIds = [userId1, userId2].sort();
     const conversationId = sortedIds.join('_');
-    const conversationRef = doc(conversationsRef, conversationId);
+    const conversationRef = doc(db, 'conversations', conversationId);
 
     try {
-        await runTransaction(db, async (transaction) => {
-            const docSnap = await transaction.get(conversationRef);
-            if (!docSnap.exists()) {
-                transaction.set(conversationRef, {
-                    participantIds: sortedIds,
-                    lastMessage: null,
-                });
-            }
-        });
+        const docSnap = await getDoc(conversationRef);
+        if (!docSnap.exists()) {
+            await setDoc(conversationRef, {
+                participantIds: sortedIds,
+                lastMessage: null,
+            });
+        }
         return conversationId;
-    } catch(error) {
+    } catch (error) {
         console.error("Error finding or creating conversation:", error);
-        throw error;
+        throw error; // Re-throw the error to be handled by the caller
     }
 }
 
-export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<void> {
-    const sender = await getUserById(senderId);
-    if (!sender) {
-        throw new Error("Sender not found.");
-    }
-    
-    const conversation = await getConversationById(conversationId);
-    if (!conversation) throw new Error("Conversation not found");
-    const otherUser = conversation.participants.find(p => p.id !== senderId);
-    if (!otherUser) throw new Error("Recipient not found");
-    
-    if (otherUser.blockedUsers?.includes(senderId)) {
-        throw new Error("Cannot send message: This user has blocked you.");
-    }
-    if (sender.blockedUsers?.includes(otherUser.id)) {
-        throw new Error("Cannot send message: You have blocked this user.");
-    }
 
+export async function sendMessage(conversationId: string, senderId: string, textOrDataUrl: string, type: Message['type'] = 'text'): Promise<void> {
     try {
         await runTransaction(db, async (transaction) => {
             const senderRef = doc(db, 'users', senderId);
-            
-            if (sender.gender === 'male') {
-                const freshSenderSnap = await transaction.get(senderRef);
-                if (!freshSenderSnap.exists()) throw new Error("Sender not found in transaction.");
-                const freshSenderData = freshSenderSnap.data() as User;
-                
-                if (freshSenderData.coins < CHARGE_COSTS.message) {
-                    throw new Error("Insufficient coins");
-                }
-                const newBalance = freshSenderData.coins - CHARGE_COSTS.message;
-                transaction.update(senderRef, { coins: newBalance });
+            const senderSnap = await transaction.get(senderRef);
+            if (!senderSnap.exists()) {
+                throw new Error("Sender not found.");
             }
+            const sender = senderSnap.data() as User;
             
             const conversationRef = doc(db, 'conversations', conversationId);
+            const conversationSnap = await transaction.get(conversationRef);
+            if (!conversationSnap.exists()) {
+                throw new Error("Conversation not found");
+            }
+            const conversation = conversationSnap.data();
+            const otherUserId = conversation.participantIds.find((id: string) => id !== senderId);
+            if (!otherUserId) {
+                 throw new Error("Other user not found in conversation");
+            }
+            const otherUserRef = doc(db, 'users', otherUserId);
+            const otherUserSnap = await transaction.get(otherUserRef);
+             if (!otherUserSnap.exists()) {
+                throw new Error("Recipient user profile does not exist.");
+            }
+            const otherUser = otherUserSnap.data() as User;
+
+            if (otherUser.blockedUsers?.includes(senderId)) {
+                throw new Error("This user has blocked you.");
+            }
+            if (sender.blockedUsers?.includes(otherUserId)) {
+                throw new Error("You have blocked this user.");
+            }
+
+            // Deduct coins if sender is male
+            if (sender.gender === 'male') {
+                if (sender.coins < CHARGE_COSTS.message) {
+                    throw new Error("Insufficient coins");
+                }
+                transaction.update(senderRef, { coins: sender.coins - CHARGE_COSTS.message });
+            }
+
             const messagesRef = collection(conversationRef, 'messages');
             const newMessageRef = doc(messagesRef);
 
             const messageText = type === 'image' ? '[Photo]' : textOrDataUrl;
 
             const newMessage: Omit<Message, 'id'> = {
-                senderId, 
-                text: messageText, 
-                type, 
+                senderId,
+                text: messageText,
+                type,
                 content: textOrDataUrl,
-                timestamp: Timestamp.now(),
+                timestamp: serverTimestamp() as Timestamp,
                 readBy: [senderId],
             };
             
             transaction.set(newMessageRef, newMessage);
 
             transaction.update(conversationRef, {
-                lastMessage: { text: messageText, senderId, timestamp: newMessage.timestamp }
+                lastMessage: {
+                    text: messageText,
+                    senderId,
+                    timestamp: serverTimestamp(),
+                },
             });
         });
 
-        if (sender.gender === 'male') {
+        // Handle post-transaction tasks outside the transaction
+        const currentUser = getCurrentUser();
+        if (currentUser && currentUser.gender === 'male') {
              await addTransaction({
                 userId: senderId,
                 type: 'spent',
                 amount: CHARGE_COSTS.message,
-                description: `Message to ${otherUser.name}`,
+                description: `Message to user`, // Generic description
             });
             const localUser = getCurrentUser();
             if (localUser && localUser.id === senderId) {
@@ -230,8 +241,8 @@ export async function sendMessage(conversationId: string, senderId: string, text
             }
         }
     } catch (e: any) {
-        console.error("sendMessage transaction failed: ", e);
-        throw e;
+        console.error("sendMessage transaction failed: ", e.message);
+        throw new Error(`sendMessage transaction failed:  "${e.message}"`);
     }
 }
 
@@ -284,14 +295,19 @@ export function getConversationsForUser(userId: string, callback: (conversations
         );
         
         const messagesRef = collection(db, 'conversations', docSnap.id, 'messages');
-        const unreadQuery = query(messagesRef, where('senderId', '!=', userId), where('readBy', 'not-in', [[userId]]));
+        const unreadQuery = query(messagesRef, where('senderId', '!=', userId));
         
         let unreadCount = 0;
         try {
             const unreadSnapshot = await getDocs(unreadQuery);
-            unreadCount = unreadSnapshot.docs.length;
+            unreadSnapshot.forEach(doc => {
+                const message = doc.data() as Message;
+                if (!message.readBy || !message.readBy.includes(userId)) {
+                    unreadCount++;
+                }
+            });
         } catch (e) {
-            console.warn("Could not query unread messages, possibly because the collection is empty.", e);
+            console.warn("Could not query unread messages.", e);
         }
 
         return {
