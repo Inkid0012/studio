@@ -84,9 +84,9 @@ export default function UserProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const isFollowing = useMemo(() => currentUser?.following?.includes(userId), [currentUser, userId]);
-  const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(userId), [currentUser, userId]);
-  const areYouBlocked = useMemo(() => user?.blockedUsers?.includes(currentUser?.id || ''), [user, currentUser]);
+  const isFollowing = useMemo(() => currentUser?.following?.includes(userId) ?? false, [currentUser, userId]);
+  const isBlockedByYou = useMemo(() => currentUser?.blockedUsers?.includes(userId) ?? false, [currentUser, userId]);
+  const areYouBlocked = useMemo(() => user?.blockedUsers?.includes(currentUser?.id || '') ?? false, [user, currentUser]);
   const isBlocked = isBlockedByYou || areYouBlocked;
 
   useEffect(() => {
@@ -131,7 +131,8 @@ export default function UserProfilePage() {
     } catch (error) {
         console.error("Failed to start chat:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not start chat.' });
-        setIsChatLoading(false);
+    } finally {
+      setIsChatLoading(false);
     }
   };
   
@@ -157,7 +158,7 @@ export default function UserProfilePage() {
         toast({ title: 'Followed', description: `You are now following ${user.name}.` });
       }
       setCurrentUser(updatedUser);
-      setLocalUser(updatedUser);
+      setLocalUser(updatedUser); // persist to local storage
     } catch (error) {
       toast({ variant: 'destructive', title: 'Action Failed', description: 'Could not update follow status.'})
       console.error("Failed to update follow status", error);

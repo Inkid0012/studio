@@ -3,6 +3,7 @@
 
 
 
+
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -407,6 +408,7 @@ export async function blockUser(currentUserId: string, targetUserId: string) {
     await updateDoc(currentUserRef, {
         blockedUsers: arrayUnion(targetUserId)
     });
+    // It's good practice to ensure they are not following each other upon blocking
     await unfollowUser(currentUserId, targetUserId).catch(e => console.error("Error unfollowing after block:", e));
     await unfollowUser(targetUserId, currentUserId).catch(e => console.error("Error unfollowing after block (reverse):", e));
 }
@@ -430,9 +432,11 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
             const userData = userSnap.data() as User;
             const visitors = userData.visitors || [];
             
+            // Remove previous visit from the same user to prevent duplicates
             const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
             const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
             
+            // Add new visit to the top and limit the list size
             const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
             transaction.update(profileOwnerRef, { visitors: updatedVisitors });
         });
