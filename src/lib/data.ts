@@ -145,9 +145,14 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
         await runTransaction(db, async (transaction) => {
             const docSnap = await transaction.get(conversationRef);
             if (!docSnap.exists()) {
+                 const now = serverTimestamp();
                 transaction.set(conversationRef, {
                     participantIds: sortedIds,
-                    lastMessage: null,
+                    lastMessage: {
+                        senderId: '',
+                        text: 'Chat created',
+                        timestamp: now,
+                    },
                 });
             }
         });
