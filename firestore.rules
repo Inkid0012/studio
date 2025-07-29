@@ -3,49 +3,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Function to check if a user is authenticated
-    function isAuthenticated() {
+
+    // Helper function to check if a user is authenticated
+    function isSignedIn() {
       return request.auth != null;
     }
-    
-    // Function to check if the user is the owner of a document
+
+    // Helper function to check if the user is the owner of a document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow anyone to read user profiles (for discover, profile view, etc.)
-      allow read: if true;
+      // ANYONE can read a user's profile (for discover, chat, etc.)
+      allow get: if true;
       
-      // Allow a user to create their own document
+      // ANY authenticated user can see the list of users
+      allow list: if isSignedIn();
+
+      // A user can CREATE their OWN profile document
       allow create: if isOwner(userId);
-      
-      // Allow a user to update only their own document
-      allow update: if isOwner(userId);
-      
-      // Allow a user to delete their own document
+
+      // A user can UPDATE their OWN document, OR be updated by another user for following/unfollowing
+      allow update: if isSignedIn() && (
+                    isOwner(userId) || 
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers', 'visitors']))
+                  );
+
+      // A user can DELETE their OWN document
       allow delete: if isOwner(userId);
     }
 
+    // Rules for the 'conversations' collection
     match /conversations/{conversationId} {
-      // Allow read/write if the user is a participant in the conversation
-      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      // Participants of a conversation can read/write to it
+      allow read, write: if isSignedIn() && request.auth.uid in resource.data.participantIds;
       
-      // Allow a user to create a new conversation only if they are a participant
-      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
-    }
-
-    match /conversations/{conversationId}/messages/{messageId} {
-      // Allow a participant to read and write messages in a conversation
-      allow read, create: if isAuthenticated() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+      // Authenticated users can create a new conversation IFF they are a participant in it
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participantIds;
+      
+      // Rules for the 'messages' subcollection
+      match /messages/{messageId} {
+         // A user can read/write messages if they are part of the parent conversation
+         allow read, write: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+      }
     }
     
+    // Rules for the 'calls' collection
     match /calls/{callId} {
-      // Allow create for any authenticated user
-      allow create: if isAuthenticated();
-      // Allow read/update if the user is the caller or receiver
-      allow read, update: if isAuthenticated() && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+        // Only authenticated users who are part of the call can access it
+        allow read, update: if isSignedIn() && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
+        
+        // Only an authenticated user can create a call, and they must be the sender
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.from;
     }
   }
 }
