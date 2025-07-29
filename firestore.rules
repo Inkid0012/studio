@@ -4,38 +4,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users:
-    // - Anyone can create a user profile (for signup).
-    // - Logged-in users can update their own profile.
-    // - Logged-in users can read other users' profiles (for discover/profile view).
+    // Users can read any user profile, but can only write to their own.
+    // This allows the Discover page to function while keeping user data secure.
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
     }
 
-    // Conversations:
-    // - A user can create a conversation IF their own UID is in the participantIds.
-    // - A user can read or update a conversation (e.g., lastMessage) IF they are a participant.
+    // Rules for conversations
     match /conversations/{conversationId} {
-      allow read, update: if request.auth.uid in resource.data.participantIds;
+      // Allow read/write if the user is a participant in the conversation.
+      allow read, update, delete: if request.auth.uid in resource.data.participantIds;
+      
+      // Allow create if the user's ID is in the new conversation's participant list.
+      // This is the key fix for the "insufficient permissions" error.
       allow create: if request.auth.uid in request.resource.data.participantIds;
 
-      // Messages:
-      // - A user can create a message in a conversation IF they are a participant.
-      // - A user can read messages in a conversation IF they are a participant.
+      // Rules for messages within a conversation
       match /messages/{messageId} {
-        allow read: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[0] == request.auth.uid || get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[1] == request.auth.uid;
-        allow create: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[0] == request.auth.uid || get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[1] == request.auth.uid;
+        // Allow read if the user is a participant in the parent conversation.
+        allow read: if get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+        
+        // Allow create if the user is the sender and is a participant in the conversation.
+        allow create: if request.resource.data.senderId == request.auth.uid && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+        
+        // Disallow updates and deletes on messages to preserve chat history.
+        allow update, delete: if false;
       }
     }
     
-    // Calls:
-    // - A user can create a call if their UID is the 'from' user.
-    // - A participant can read or update the call status.
+    // Rules for call documents
     match /calls/{callId} {
-       allow read, update: if request.auth.uid == resource.data.from || request.auth.uid == resource.data.to;
-       allow create: if request.auth.uid == request.resource.data.from;
+        allow read, write: if request.auth != null && (request.auth.uid == resource.data.from || request.auth.uid == resource.data.to);
     }
   }
 }
