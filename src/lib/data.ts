@@ -383,33 +383,39 @@ export async function followUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
     
-    // In a real production app, this should be a single backend operation (e.g., a Cloud Function)
-    // to ensure atomicity and handle permissions safely.
-    // For this project, we'll perform two separate writes. The new rules allow this.
-    const batch = writeBatch(db);
-    batch.update(currentUserRef, { following: arrayUnion(targetUserId) });
-    batch.update(targetUserRef, { followers: arrayUnion(currentUserId) });
-    await batch.commit();
+    await runTransaction(db, async (transaction) => {
+        transaction.update(currentUserRef, { following: arrayUnion(targetUserId) });
+        transaction.update(targetUserRef, { followers: arrayUnion(currentUserId) });
+    });
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
     
-    const batch = writeBatch(db);
-    batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
-    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
-    await batch.commit();
+     await runTransaction(db, async (transaction) => {
+        transaction.update(currentUserRef, { following: arrayRemove(targetUserId) });
+        transaction.update(targetUserRef, { followers: arrayRemove(currentUserId) });
+    });
 }
 
 export async function blockUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
-    await updateDoc(currentUserRef, {
-        blockedUsers: arrayUnion(targetUserId)
+    // Unfollowing is now handled by a transaction, let's ensure block is atomic too.
+    await runTransaction(db, async (transaction) => {
+        const targetUserRef = doc(db, 'users', targetUserId);
+
+        // Block the user
+        transaction.update(currentUserRef, { 
+            blockedUsers: arrayUnion(targetUserId),
+            following: arrayRemove(targetUserId) // Also remove from following
+        });
+
+        // Remove from the other user's followers list
+        transaction.update(targetUserRef, {
+            followers: arrayRemove(currentUserId)
+        });
     });
-    // It's good practice to ensure they are not following each other upon blocking
-    await unfollowUser(currentUserId, targetUserId).catch(e => console.error("Error unfollowing after block:", e));
-    await unfollowUser(targetUserId, currentUserId).catch(e => console.error("Error unfollowing after block:", e));
 }
 
 export async function unblockUser(currentUserId: string, targetUserId: string) {
