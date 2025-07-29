@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 import type { User, Conversation, Message, PersonalInfoOption, Transaction, Visitor, Call, Location } from '@/types';
 import { Atom, Beer, Cigarette, Dumbbell, Ghost, GraduationCap, Heart, Sparkles, Smile } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, orderBy, onSnapshot, Timestamp, limit, writeBatch, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -149,16 +142,18 @@ export async function findOrCreateConversation(userId1: string, userId2: string)
     const conversationRef = doc(db, 'conversations', conversationId);
 
     try {
-        const docSnap = await getDoc(conversationRef);
-        if (!docSnap.exists()) {
-            await setDoc(conversationRef, {
-                participantIds: sortedIds,
-                lastMessage: null,
-            });
-        }
+        await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(conversationRef);
+            if (!docSnap.exists()) {
+                transaction.set(conversationRef, {
+                    participantIds: sortedIds,
+                    lastMessage: null,
+                });
+            }
+        });
         return conversationId;
     } catch (error) {
-        console.error("Error in findOrCreateConversation:", error);
+        console.error("Error in findOrCreateConversation transaction:", error);
         throw error;
     }
 }
@@ -387,29 +382,24 @@ export async function addTransaction(data: Omit<Transaction, 'id' | 'timestamp'>
 export async function followUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
-    // The new rules don't allow one user to write to another user's doc.
-    // This needs to be done via a Cloud Function or by relaxing rules.
-    // For now, we will just update the current user's document.
-    await updateDoc(currentUserRef, { following: arrayUnion(targetUserId) });
     
-    // In a real app, a Cloud Function would listen for this change and update the target user's followers.
-    // We can simulate this on the client for now, but it's not ideal.
-    await updateDoc(targetUserRef, { followers: arrayUnion(currentUserId) }).catch((e) => {
-        // This will fail with the new rules, which is expected.
-        // The UI might not reflect the follower count on the other user's side immediately.
-        console.warn("Could not update target user's followers due to security rules. This should be handled by a backend function.");
-    });
+    // In a real production app, this should be a single backend operation (e.g., a Cloud Function)
+    // to ensure atomicity and handle permissions safely.
+    // For this project, we'll perform two separate writes. The new rules allow this.
+    const batch = writeBatch(db);
+    batch.update(currentUserRef, { following: arrayUnion(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayUnion(currentUserId) });
+    await batch.commit();
 }
 
 export async function unfollowUser(currentUserId: string, targetUserId: string) {
     const currentUserRef = doc(db, 'users', currentUserId);
     const targetUserRef = doc(db, 'users', targetUserId);
-    // Similar to followUser, this should ideally be a backend operation.
-    await updateDoc(currentUserRef, { following: arrayRemove(targetUserId) });
-
-    await updateDoc(targetUserRef, { followers: arrayRemove(currentUserId) }).catch((e) => {
-        console.warn("Could not update target user's followers due to security rules. This should be handled by a backend function.");
-    });
+    
+    const batch = writeBatch(db);
+    batch.update(currentUserRef, { following: arrayRemove(targetUserId) });
+    batch.update(targetUserRef, { followers: arrayRemove(currentUserId) });
+    await batch.commit();
 }
 
 export async function blockUser(currentUserId: string, targetUserId: string) {
@@ -419,7 +409,7 @@ export async function blockUser(currentUserId: string, targetUserId: string) {
     });
     // It's good practice to ensure they are not following each other upon blocking
     await unfollowUser(currentUserId, targetUserId).catch(e => console.error("Error unfollowing after block:", e));
-    // The reverse unfollow will fail with strict rules, which is acceptable here.
+    await unfollowUser(targetUserId, currentUserId).catch(e => console.error("Error unfollowing after block:", e));
 }
 
 export async function unblockUser(currentUserId: string, targetUserId: string) {
@@ -433,23 +423,24 @@ export async function addVisitor(profileOwnerId: string, visitorId: string) {
     if (profileOwnerId === visitorId) return;
     const profileOwnerRef = doc(db, 'users', profileOwnerId);
     try {
-        const userSnap = await getDoc(profileOwnerRef);
-        if (!userSnap.exists()) {
-            throw "Profile owner not found";
-        }
-        const userData = userSnap.data() as User;
-        const visitors = userData.visitors || [];
-        
-        // Remove previous visit from the same user to prevent duplicates
-        const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
-        const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
-        
-        // Add new visit to the top and limit the list size
-        const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
-        await updateDoc(profileOwnerRef, { visitors: updatedVisitors });
+        await runTransaction(db, async (transaction) => {
+            const userSnap = await transaction.get(profileOwnerRef);
+            if (!userSnap.exists()) {
+                throw "Profile owner not found";
+            }
+            const userData = userSnap.data() as User;
+            const visitors = userData.visitors || [];
+            
+            // Remove previous visit from the same user to prevent duplicates
+            const filteredVisitors = visitors.filter(v => v.userId !== visitorId);
+            const newVisitor: Visitor = { userId: visitorId, timestamp: new Date().toISOString() };
+            
+            // Add new visit to the top and limit the list size
+            const updatedVisitors = [newVisitor, ...filteredVisitors].slice(0, 50);
+            transaction.update(profileOwnerRef, { visitors: updatedVisitors });
+        });
     } catch (error) {
-        // This might fail if rules are strict. It's a non-critical feature.
-        console.warn("Could not add visitor, likely due to security rules:", error);
+        console.warn("Could not add visitor:", error);
     }
 }
 
